@@ -18,6 +18,14 @@ const fuseOptions = {
 // Also include a mod command to clear cache (in case files are changed directly)
 // 
 
+// 
+// Ideas:
+// Command to upload photos of different parts of each box?
+// Mark Robot command
+// 
+
+
+
 // Register client
 client = new Client({
     intents: 0,
