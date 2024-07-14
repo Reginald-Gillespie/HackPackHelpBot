@@ -1,7 +1,6 @@
 ### Quick Help for Arduino issues
 ---
 Title: Turret Remove Guide Card
-Description: For all connection issues.
 Message:
 First, take the arduino out of the breadboard, then take out the guide card below it. Then push the arduino firmly into the breadboard without the guide card, and make sure to put the purple wire back in pin D9
 ---

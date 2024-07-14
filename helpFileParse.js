@@ -5,6 +5,12 @@
 
 const fs = require("fs");
 
+
+
+function getSubtopics() {
+    return fs.readdirSync("./GeneralTopicStore");
+}
+
 function grabFromStringToString(string="", start=null, end=null, inclusive=false) {
     if (start) string = string.substring(string.indexOf(start) + (inclusive ? 0 : start.length)) // cut everything before start
     if (end)   string = string.substring(0, string.indexOf(end) - (inclusive ? end.length : 0)) // cut everything after end
@@ -40,6 +46,27 @@ function getHelpMessageBySubjectTitle(subject, title) {
     return "No content found for this query";
 }
 
+function appendHelpMessage(subtopic, title, message) {
+    // Filter fields with regex
+    subtopic = subtopic.match(/\w/g).join("");
+    title = title.match(/[\w\/&\(\)]/g).join("");
+    message = message.match(/[\x20-\x7E\n]/g).join(""); // ASCII
+    message = message.replace(/\-{3}/g, ""); // Three dashes is used to parse file
+
+    // Trim extra newlines or spaces
+    [subtopic, title, message] = [subtopic.trim(), title.trim(), message.trim()];
+
+    var helpMessaage = "";
+    helpMessaage += `Title: ${title}\n`;
+    helpMessaage += `Message:\n`;
+    helpMessaage += `${message}\n`;
+    helpMessaage += `---`;
+
+    console.log("Message added:");
+    console.log(helpMessaage)
+    fs.appendFileSync(`./GeneralTopicStore/${subtopic}`, helpMessaage);
+}
+
 function getFileContent(fileName) {
     return fs.readFileSync(`./GeneralTopicStore/${fileName}`).toString();
 }
@@ -50,5 +77,7 @@ module.exports = {
     getDescription,
     getHelpMessageTitlesArray,
     getHelpMessageBySubjectTitle,
-    getFileContent
+    getFileContent,
+    getSubtopics,
+    appendHelpMessage
 };

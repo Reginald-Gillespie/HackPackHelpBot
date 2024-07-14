@@ -8,6 +8,7 @@ const Context_UserOnly = [2]
 const Integration_UserOnly = [1]
 const extraInfo = {
 	"lookup": { "contexts": [0,1,2], "integration_types": [0,1] },
+	"create": { "contexts": [0,1,2], "integration_types": [0,1] },
 };
 
 
@@ -31,9 +32,16 @@ subtopics.forEach(topic => {
 	)	
 })
 
+// Create other commands
+var createCommand = new SlashCommandBuilder().setName("create").setDescription("Create new Help Message to store in the bot")
+	.addStringOption(option=>
+		option.setName("subtopic").setDescription("The category this Help Message fits under").setAutocomplete(true).setRequired(true)
+	)
+
 // Build commands, assign registration info, register 
 const commands = [
-	lookupCommand
+	lookupCommand,
+	createCommand
 ].map(command => Object.assign(command.toJSON(), extraInfo[command.toJSON().name]));
 
 
