@@ -48,7 +48,7 @@ function getHelpMessageBySubjectTitle(subject, title) {
 function appendHelpMessage(subtopic, title, message) {
     // Filter fields with regex
     subtopic = subtopic.match(/\w/g).join("");
-    // title = title.match(/[\w\/&\(\)]/g).join(""); // This should have already been verified it exists so it is filtered
+    title = title.match(/[\s\w\/&\(\)]/g).join("");
     message = message.match(/[\x20-\x7E\n]/g).join(""); // ASCII
     message = message.replace(/\-{3}/g, ""); // Three dashes is used to parse file
 
@@ -66,12 +66,12 @@ function appendHelpMessage(subtopic, title, message) {
     fs.appendFileSync(`./GeneralTopicStore/${subtopic}`, helpMessaage);
 }
 
-function editHelpMessage(subtopic, title, message, formerSubtopic=null) {
+function editHelpMessage(subtopic, title, message, formerTitle, formerSubtopic) {
     // We'll start off by removing this message from the file
     const currentSubtopicStore = getFileContent(formerSubtopic);
 
     // Regex out the old message
-    const newFile = currentSubtopicStore.replace(new RegExp(`\n.+${title}(.|\n|\r)+?---`), "");
+    const newFile = currentSubtopicStore.replace(new RegExp(`\n.+${formerTitle}(.|\n|\r)+?---`), "");
 
     // Write the modified file
     fs.writeFileSync(`./GeneralTopicStore/${formerSubtopic}`, newFile);

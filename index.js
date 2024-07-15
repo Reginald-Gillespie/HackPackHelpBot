@@ -64,8 +64,12 @@ function arrayToAutocorrect(array) {
 }
 
 // The meat of the code
+var lastUser = "";
 client.on("interactionCreate", async cmd => {
-    console.log(cmd?.member?.user?.username || cmd);
+    const username = cmd?.member?.user?.username;
+    if (username !== lastUser) {
+        console.log(username);
+    }
     
     // Autocomplete interactions are requesting what to suggest to the user to put in a command's string option
     if (cmd.isAutocomplete()) {
@@ -113,26 +117,30 @@ client.on("interactionCreate", async cmd => {
             case "createModal":
                 const isEditing = cmd.customId == "editModal";
 
-                const title = cmd.fields.getTextInputValue('Title');
-                const message = cmd.fields.getTextInputValue('Message');
-
-                // The subtopic may have other data (the previous subtopic if this is an edit) embeded in it after a hyphen ( currentSTopic-formerSTopic ) 
+                // Some fields have embeded data, so extract that ( fieldName-data ) 
                 const modalFields = cmd.fields.fields.map(field => field.customId);
-                const subtopicFieldID = modalFields.filter(field => field.startsWith("Subtopic"))[0];
-                const formerSubtopic = subtopicFieldID.split("-")[1];
-
-                // Now we can actually grab the subtopic provided
+                const subtopicFieldID = modalFields.filter(field => field.startsWith("S-"))[0];
+                const titleFieldID = modalFields.filter(field => field.startsWith("T-"))[0];
+                
+                const message = cmd.fields.getTextInputValue('Message');
+                const title = cmd.fields.getTextInputValue(titleFieldID);
                 const subtopic = cmd.fields.getTextInputValue(subtopicFieldID);
+
+                // Embeded data from fields
+                const formerSubtopic = subtopicFieldID.split("-")[1];
+                const formerTitle = titleFieldID.split("-")[1];
             
+                // Make sure topic exists
                 if (!subtopics.includes(subtopic)) {
                     cmd.reply({ content: "That is not a valid subtopic.", ephemeral: true })
                     break;
-                }
+                }                
 
-                if (isEditing) editHelpMessage(subtopic, title, message, formerSubtopic)
+                // Add / edit message
+                if (isEditing) editHelpMessage(subtopic, title, message, formerTitle, formerSubtopic)
                 else appendHelpMessage(subtopic, title, message);
 
-                cmd.reply({ content: "Your Help Message has been added, thanks!", ephemeral: true })
+                cmd.reply({ content: `${isEditing ? "This" : "Your"} Help Message has been ${isEditing ? "edited" : "added"}, thanks!`, ephemeral: true })
                 break;
         }
     }
@@ -173,13 +181,14 @@ client.on("interactionCreate", async cmd => {
                     .setTitle(`"${isEditing ? "Edit a" : "Create a new"} Help Message"`);
                 
                 const title = new TextInputBuilder()
-                    .setCustomId("Title")
+                    .setCustomId("T-") // we embed more data here later if editing
                     .setLabel("Title")
                     .setPlaceholder("Turret Remove Guide Card")
+                    .setMaxLength(49)
                     .setStyle(TextInputStyle.Short);
 
                 const category = new TextInputBuilder()
-                    .setCustomId("Subtopic-"+createSubtopic) // We embed the subtopic in the ID in case it's changed so we can know which file the message came from (if moving from one stopic to another)
+                    .setCustomId("S-"+createSubtopic) // We embed the subtopic in the ID in case it's changed so we can know which file the message came from (if moving from one stopic to another)
                     .setLabel("Subtopic")
                     .setPlaceholder("ide")
                     .setValue(createSubtopic)
@@ -194,13 +203,11 @@ client.on("interactionCreate", async cmd => {
                 // If we're editing, lookup and set the values of each field so they don't have to be reentered to edit
                 if (isEditing) {
                     // Fill title field
-                    const titleToEdit = cmd.options.getString("title");
+                    const titleToEdit = cmd.options.getString("title").match(/[\s\w\/&\(\)]/g).join(""); // Filter out special characters before using as custom ID - TODO this would be better placed in helpFileParse to keep regexes togetehr
                     title.setValue(titleToEdit);
+                    title.setCustomId("T-"+titleToEdit)
 
                     // Confirm it is a valid title
-                    console.log(getHelpMessageTitlesArray(createSubtopic));
-                    console.log(createSubtopic);
-                    console.log(titleToEdit);
                     if (!getHelpMessageTitlesArray(getFileContent(createSubtopic)).includes(titleToEdit)) {
                         cmd.reply({ content: "No Help Message exists with that title.", ephemeral: true })
                         break;
