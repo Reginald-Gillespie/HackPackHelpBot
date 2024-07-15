@@ -3,15 +3,13 @@
 // If I want to add per-user storage, storage create messages from users if they are failed and insert them as starting point when they run create again.
 // Limit autocomplete reply to max responses
 // Lots of other limiting char counts
-// Editing Help Message title... (this requires tracking old title, maybe assining an ID to each message to fit char count)
+// Command to upload photos from photo database of different parts of each box?
 // 
 
-
-process.env=require("./env.json");
+process.env = require("./env.json");
 var client;
-const {Client, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, GatewayIntentBits, ModalBuilder, TextInputBuilder, TextInputStyle, Partials, ActivityType, PermissionFlagsBits, DMChannel, RoleSelectMenuBuilder, ChannelSelectMenuBuilder, ChannelType,AuditLogEvent, StringSelectMenuBuilder, StringSelectMenuOptionBuilder}=require("discord.js");
-const fs=require("fs");
-const cmds = require("./commands.json");
+const {Client, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, Partials } = require("discord.js");
+const fs = require("fs");
 const { getDescription, getHelpMessageTitlesArray, getHelpMessageBySubjectTitle, getFileContent, appendHelpMessage, editHelpMessage, getSubtopics } = require("./helpFileParse")
 const subtopics = getSubtopics();
 const Fuse = require('fuse.js');
@@ -26,6 +24,9 @@ const MessageCreators = [
     "1242930479439544461", // tom
     "703724617583296613",  // mark lol
 ]; // userIDs of those allowed to create help messages with the bot
+const MarkRobot = require("./markRobot")
+const markRobotInstances = {}; // Technically it would be good to clean old convos every week or so
+
 
 
 //
@@ -34,15 +35,6 @@ const MessageCreators = [
 // If a command is then added to change the help files, clear cache / pull in new files so it is visible right away. 
 // Also include a mod command to clear cache (in case files are changed directly)
 // 
-
-
-
-// 
-// Ideas:
-// Command to upload photos from photo database of different parts of each box?
-// Mark Robot command
-// 
-
 
 
 // Register client
@@ -69,6 +61,7 @@ client.on("interactionCreate", async cmd => {
     const username = cmd?.member?.user?.username;
     if (username !== lastUser) {
         console.log(username);
+        lastUser = username;
     }
     
     // Autocomplete interactions are requesting what to suggest to the user to put in a command's string option
@@ -224,7 +217,27 @@ client.on("interactionCreate", async cmd => {
                 modal.addComponents(categoryRow, titleRow, messageRow);
         
                 await cmd.showModal(modal);
+                break;
 
+            case "mark-robot":
+                // Mark Robot takes a few seconds so we can't reply right away
+                await cmd.deferReply({ ephemeral: true });
+
+                const userID = cmd.member.user.id;
+
+                const robotMessage = cmd.options.getString("message");
+                const shouldClear = cmd.options.getBoolean("clear") || false;
+
+                // Create a Robot instance for this user if they don't have one already
+                if (shouldClear || !markRobotInstances[userID]) {
+                    markRobotInstances[userID] = new MarkRobot();
+                }
+
+                // Get response from Mark Robot
+                var response = await markRobotInstances[userID].message(robotMessage);
+
+                // cmd.reply({ content: response, ephemeral: true });
+                cmd.editReply(response);
                 break;
         }
     }

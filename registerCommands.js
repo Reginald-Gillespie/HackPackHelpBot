@@ -10,6 +10,7 @@ const extraInfo = {
 	"lookup": { "contexts": [0,1,2], "integration_types": [0,1] },
 	"create": { "contexts": [0,1,2], "integration_types": [0,1] },
 	"edit": { "contexts": [0,1,2], "integration_types": [0,1] },
+	"mark-robot": { "contexts": [0,1,2], "integration_types": [0,1] },
 };
 
 
@@ -47,11 +48,20 @@ var editCommand = new SlashCommandBuilder().setName("edit").setDescription("Edit
 		option.setName("title").setDescription("The Help Message to edit").setAutocomplete(true).setRequired(true)
 	)
 
+var markRobot = new SlashCommandBuilder().setName("mark-robot").setDescription("Chat with Mark Robot!")
+	.addStringOption(option=>
+		option.setName("message").setDescription("What to ask Mark Robot").setRequired(true)
+	)
+	.addBooleanOption(option=>
+		option.setName("clear").setDescription("Start a new conversation").setRequired(false)
+	)
+
 // Build commands, assign registration info, register 
 const commands = [
 	lookupCommand,
 	createCommand,
-	editCommand
+	editCommand,
+	markRobot
 ].map(command => Object.assign(command.toJSON(), extraInfo[command.toJSON().name]));
 
 
