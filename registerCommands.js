@@ -9,6 +9,7 @@ const Integration_UserOnly = [1]
 const extraInfo = {
 	"lookup": { "contexts": [0,1,2], "integration_types": [0,1] },
 	"create": { "contexts": [0,1,2], "integration_types": [0,1] },
+	"edit": { "contexts": [0,1,2], "integration_types": [0,1] },
 };
 
 
@@ -27,7 +28,7 @@ var lookupCommand = new SlashCommandBuilder().setName("lookup").setDescription("
 subtopics.forEach(topic => {
 	lookupCommand.addSubcommand(command =>
 		command.setName(topic).setDescription(subtopicDescriptions[topic]).addStringOption(option=>
-			option.setName("title").setDescription("The help message to lookup").setAutocomplete(true).setRequired(true)
+			option.setName("title").setDescription("The Help Message to lookup").setAutocomplete(true).setRequired(true)
 		)
 	)	
 })
@@ -38,10 +39,19 @@ var createCommand = new SlashCommandBuilder().setName("create").setDescription("
 		option.setName("subtopic").setDescription("The category this Help Message fits under").setAutocomplete(true).setRequired(true)
 	)
 
+var editCommand = new SlashCommandBuilder().setName("edit").setDescription("Edit an existing Help Message")
+	.addStringOption(option=>
+		option.setName("subtopic").setDescription("The category this Help Message fits under").setAutocomplete(true).setRequired(true)
+	)
+	.addStringOption(option=>
+		option.setName("title").setDescription("The Help Message to edit").setAutocomplete(true).setRequired(true)
+	)
+
 // Build commands, assign registration info, register 
 const commands = [
 	lookupCommand,
-	createCommand
+	createCommand,
+	editCommand
 ].map(command => Object.assign(command.toJSON(), extraInfo[command.toJSON().name]));
 
 

@@ -6,7 +6,6 @@
 const fs = require("fs");
 
 
-
 function getSubtopics() {
     return fs.readdirSync("./GeneralTopicStore");
 }
@@ -49,14 +48,14 @@ function getHelpMessageBySubjectTitle(subject, title) {
 function appendHelpMessage(subtopic, title, message) {
     // Filter fields with regex
     subtopic = subtopic.match(/\w/g).join("");
-    title = title.match(/[\w\/&\(\)]/g).join("");
+    // title = title.match(/[\w\/&\(\)]/g).join(""); // This should have already been verified it exists so it is filtered
     message = message.match(/[\x20-\x7E\n]/g).join(""); // ASCII
     message = message.replace(/\-{3}/g, ""); // Three dashes is used to parse file
 
     // Trim extra newlines or spaces
     [subtopic, title, message] = [subtopic.trim(), title.trim(), message.trim()];
 
-    var helpMessaage = "";
+    var helpMessaage = "\n";
     helpMessaage += `Title: ${title}\n`;
     helpMessaage += `Message:\n`;
     helpMessaage += `${message}\n`;
@@ -65,6 +64,21 @@ function appendHelpMessage(subtopic, title, message) {
     console.log("Message added:");
     console.log(helpMessaage)
     fs.appendFileSync(`./GeneralTopicStore/${subtopic}`, helpMessaage);
+}
+
+function editHelpMessage(subtopic, title, message, formerSubtopic=null) {
+    // We'll start off by removing this message from the file
+    const currentSubtopicStore = getFileContent(formerSubtopic);
+
+    // Regex out the old message
+    const newFile = currentSubtopicStore.replace(new RegExp(`\n.+${title}(.|\n|\r)+?---`), "");
+
+    // Write the modified file
+    fs.writeFileSync(`./GeneralTopicStore/${formerSubtopic}`, newFile);
+
+    // Now write this Help Message to the subfile it was chosen to go to 
+    //  (most of the time the same one, so we could technically save one io operation by not doing the above in these cases)
+    appendHelpMessage(subtopic, title, message);
 }
 
 function getFileContent(fileName) {
@@ -79,5 +93,6 @@ module.exports = {
     getHelpMessageBySubjectTitle,
     getFileContent,
     getSubtopics,
+    editHelpMessage,
     appendHelpMessage
 };
