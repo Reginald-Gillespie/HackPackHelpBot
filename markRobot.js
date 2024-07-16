@@ -1,22 +1,6 @@
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 const { v4: uuidv4 } = require('uuid');
 
-// fetch("https://askmark-d0ry.onrender.com/api/v1/prediction/1065228a-5b00-4f47-917e-0a6fb8cf4c9d", {
-//   "headers": {
-//     "accept": "*/*",
-//     "accept-language": "en-US",
-//     "priority": "u=1, i",
-//     "sec-fetch-dest": "empty",
-//     "sec-fetch-mode": "cors",
-//     "sec-fetch-site": "cross-site",
-//     "sec-gpc": "1",
-//     "Referer": "https://ide.crunchlabs.com/",
-//     "Referrer-Policy": "strict-origin-when-cross-origin"
-//   },
-//   "body": null,
-//   "method": "OPTIONS"
-// });
-
 
 // Each MarkRobot instance is intended for one person, history and all is managed by this class
 class MarkRobot {

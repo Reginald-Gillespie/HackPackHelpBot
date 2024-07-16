@@ -1,7 +1,6 @@
 // TODO:
 // Check for message under current name before adding / moving
 // If I want to add per-user storage, storage create messages from users if they are failed and insert them as starting point when they run create again.
-// Limit autocomplete reply to max responses
 // Lots of other limiting char counts
 // Command to upload photos from photo database of different parts of each box?
 // 
@@ -46,13 +45,13 @@ client = new Client({
 
 // Utility functions
 function arrayToAutocorrect(array) {
-    return array.map(choice => {
+    const choices = array.map(choice => {
         return {
             "name": choice,
             "value": choice
         }
     });
-    // TODO: I don't actually know if there is a limit here. Probably 25, limit reply to that much
+    return choices.slice(0, 25); // Discord limit is 25 responses
 }
 
 // The meat of the code
@@ -119,15 +118,30 @@ client.on("interactionCreate", async cmd => {
                 const title = cmd.fields.getTextInputValue(titleFieldID);
                 const subtopic = cmd.fields.getTextInputValue(subtopicFieldID);
 
-                // Embeded data from fields
-                const formerSubtopic = subtopicFieldID.split("-")[1];
-                const formerTitle = titleFieldID.split("-")[1];
+                // Embeded data from fields, default to the current values if not specified
+                const formerSubtopic = subtopicFieldID.split("-")[1] || subtopic;
+                const formerTitle = titleFieldID.split("-")[1] || title;
             
                 // Make sure topic exists
                 if (!subtopics.includes(subtopic)) {
                     cmd.reply({ content: "That is not a valid subtopic.", ephemeral: true })
                     break;
-                }                
+                }
+                
+                // Make sure the title does not already exist (unless it's an edit AND it's going into the same file)
+                // TODO: cleanup logic when it isn't 11:30 PM lol
+                const tilesInNewLocation = getHelpMessageTitlesArray(getFileContent(subtopic));
+                if (
+                    // If this title already exists where we're trying to put it and we are create a new post
+                    (tilesInNewLocation.includes(title) && !isEditing) || 
+                    // Or if we're editing, and the subtopic changed
+                    (tilesInNewLocation.includes(title) && isEditing && formerSubtopic != subtopic) ||
+                    // Or if we're editing, the subtopic did not changed, but the name has (possibly mimicking another entry)
+                    (tilesInNewLocation.includes(title) && isEditing && formerSubtopic == subtopic && title != formerTitle)
+                ) {
+                    cmd.reply({ content: "A Help Message already exists with that title in that location.", ephemeral: true })
+                    break;
+                }
 
                 // Add / edit message
                 if (isEditing) editHelpMessage(subtopic, title, message, formerTitle, formerSubtopic)
