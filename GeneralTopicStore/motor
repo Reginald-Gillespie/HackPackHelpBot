@@ -1,2 +1,10 @@
 ### Quick Help for Motor issues
 ---
+Title: Breadboard Bypass
+Message:
+Try this: you see how each of the multicolored wires is below an arduino pin, for example purple is below D9? Pull the multicolored wires out of the breadboard and hold the tips of them directly against the arduino's corresponding pin, and see if pitch moves at all when held like this.
+---
+Title: D9 Breadboard Bypass
+Message:
+Try this: Pull the multicolored wires out of the breadboard and hold the tips of the purple wire directly against pin D9, we want to see if the green light turns off
+---

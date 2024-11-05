@@ -2,9 +2,38 @@
 ---
 Title: IDE Setup Guide
 Message:
-`https://discord.com/channels/1229106258749948056/1255274074343473293/1255274074343473293`
+https://discord.com/channels/1229106258749948056/1255274074343473293/1255274074343473293
+---
+Title: IDE Errors Uploading Checklist
+Message:
+1. Use Chrome.
+2. Use the Arduino IDE.
+3. Turn off bluetooth.
+4. Turn off unneeded applications from task manager.
+4. Restart computer.
+---
+Title: Mac Guide
+Message:
+So you need to go to Finder -> Downloads -> Find CrunchLabsArduinoCreateAgent -> Open -> Drag the CreateAgent Icon into the Applications Folder -> Go back to Finder -> Applications -> CrunchlabsArduinoCreateAgent -> Open. The CreateAgent does not have a window that opens when you open it, it runs in the background. You can check to make sure it is running by looking at your system tray in the top right. If you see a black circle with the Hack Pack logo on it, then it is running. Also make sure to use chrome as Safari will not work unless you want to mess with your settings as described here https://discord.com/channels/1229106258749948056/1261395362963263488
+---
+Title: Arduino IDE Setup Guide
+Message:
+https://discord.com/channels/1229106258749948056/1255274074343473293/1255274204673347585
 ---
 Title: Coding Guide
 Message:
-`https://discord.com/channels/1229106258749948056/1255319724611600384/1255319724611600384`
+Mine: https://discord.com/channels/1229106258749948056/1255319724611600384/1255319724611600384
+
+Dan + Evan's resources thread: https://discord.com/channels/1229106258749948056/1235701503096782911/1235701578615361647
+---
+Title: Raspberry Pi Create Agent
+Message:
+Strongly recommend using the Arduino 2 instead (see some random blog for install, TODO: find a good one myself)
+
+Link to raspberry pi create agent binary and install instructions:
+https://discord.com/channels/1229106258749948056/1245199999164350556/1285779167886966884
+---
+Title: Allow IDE without administrator
+Message:
+Best option is Arduino IDE. Alternative would be modifying some security settings per https://discord.com/channels/1229106258749948056/1262069792643219536/1262917038293389444
 ---

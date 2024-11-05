@@ -19,6 +19,7 @@ const fuseOptions = {
 const MessageCreators = [
     "724416180097384498",  // myself
     "1233957025256570951", // ashbro
+    "1242941939662323774", // HeavyFalcon
     "1229105394849284127", // dan
     "1242930479439544461", // tom
     "703724617583296613",  // mark lol
