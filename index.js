@@ -120,8 +120,8 @@ client.on("interactionCreate", async cmd => {
                 const subtopic = cmd.fields.getTextInputValue(subtopicFieldID);
 
                 // Embeded data from fields, default to the current values if not specified
-                const formerSubtopic = subtopicFieldID.split("-")[1] || subtopic;
-                const formerTitle = titleFieldID.split("-")[1] || title;
+                const formerSubtopic = subtopicFieldID.split("-").slice(1).join("-") || subtopic;
+                const formerTitle = titleFieldID.split("-").slice(1).join("-") || title;
             
                 // Make sure topic exists
                 if (!subtopics.includes(subtopic)) {

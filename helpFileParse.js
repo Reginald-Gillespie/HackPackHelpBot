@@ -47,7 +47,7 @@ function getHelpMessageBySubjectTitle(subject, title) {
 
 function appendHelpMessage(subtopic, title, message) {
     // Filter fields with regex
-    subtopic = subtopic.match(/\w/g).join("");
+    subtopic = subtopic.match(/[\w-]/g).join("");
     title = title.match(/[\s\w\/&\(\)]/g).join("");
     message = message.match(/[\x20-\x7E\n]/g).join(""); // ASCII
     message = message.replace(/\-{3}/g, ""); // Three dashes is used to parse file
