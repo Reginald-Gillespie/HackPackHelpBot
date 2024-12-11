@@ -10,13 +10,24 @@ var client;
 const {Client, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, Partials } = require("discord.js");
 const fs = require("fs");
 const { getDescription, getHelpMessageTitlesArray, getHelpMessageBySubjectTitle, getFileContent, appendHelpMessage, editHelpMessage, getSubtopics } = require("./helpFileParse")
+const { getChartOptions, getPathToFlowchart } = require("./flowcharter")
 const subtopics = getSubtopics();
 const Fuse = require('fuse.js');
 const fuseOptions = {
     includeScore: true,
     keys: ['title']
 };
-const MessageCreators = [
+function sortByMatch(items, text) {
+    if (!text) return items;
+    const fuse = new Fuse(items.map(title => ({ title })), fuseOptions);            
+    const scoredResults = fuse.search(text)
+        .filter(result => result.score <= 2) // Roughly similar-ish
+        .sort((a, b) => a.score - b.score);
+    return scoredResults.map(entry => entry.item.title);
+}
+
+
+const MessageCreators = [// TODO: port to whitelist file with /whitelist devadmin command
     "724416180097384498",  // myself
     "1233957025256570951", // ashbro
     "1242941939662323774", // HeavyFalcon
@@ -100,6 +111,11 @@ client.on("interactionCreate", async cmd => {
                 cmd.respond(arrayToAutocorrect(options))
                 break;
 
+            case "chart":
+                const chartOptions = getChartOptions();
+                const matching = sortByMatch(chartOptions, typedSoFar);
+                cmd.respond(arrayToAutocorrect(matching))
+                break
         }
     }
 

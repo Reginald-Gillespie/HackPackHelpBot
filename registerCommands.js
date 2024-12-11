@@ -11,6 +11,8 @@ const extraInfo = {
 	"create": { "contexts": [0,1,2], "integration_types": [0,1] },
 	"edit": { "contexts": [0,1,2], "integration_types": [0,1] },
 	"mark-robot": { "contexts": [0,1,2], "integration_types": [0,1] },
+	"flowchart": { "contexts": [0,1,2], "integration_types": [0,1] },
+	"help": { "contexts": [0,1,2], "integration_types": [0,1] },
 };
 
 
@@ -24,7 +26,7 @@ subtopics.forEach( file => { // Read file and parse out topic descriptions for c
 	helpMessagesList[file] = getHelpMessageTitlesArray(fileContent)
 })
 
-// Build the lookup command based on the files we have
+// Build a lookup command for each topic file
 var lookupCommand = new SlashCommandBuilder().setName("lookup").setDescription("Lookup Command");
 subtopics.forEach(topic => {
 	lookupCommand.addSubcommand(command =>
@@ -48,6 +50,19 @@ var editCommand = new SlashCommandBuilder().setName("edit").setDescription("Edit
 		option.setName("title").setDescription("The Help Message to edit").setAutocomplete(true).setRequired(true)
 	)
 
+var flowchartCommand = new SlashCommandBuilder().setName("flowchart").setDescription("Lookup the latest flowcharts for any box")
+	.addStringOption(option=>
+		option.setName("chart").setDescription("The chart to bring up").setAutocomplete(true).setRequired(true)
+	)
+
+var helpCommand = new SlashCommandBuilder().setName("help").setDescription("Walk a user through the a debugging flowcharts")
+	.addStringOption(option=>
+		option.setName("chart").setDescription("The chart to walk through").setAutocomplete(true).setRequired(true)
+	)
+	.addStringOption(option=>
+		option.setName("who").setDescription("Select a user who should walk through this chart").setRequired(false)
+	)
+
 var markRobot = new SlashCommandBuilder().setName("mark-robot").setDescription("Chat with Mark Robot!")
 	.addStringOption(option=>
 		option.setName("message").setDescription("What to ask Mark Robot").setRequired(true)
@@ -61,6 +76,8 @@ const commands = [
 	lookupCommand,
 	createCommand,
 	editCommand,
+	flowchartCommand,
+	helpCommand,
 	markRobot
 ].map(command => Object.assign(command.toJSON(), extraInfo[command.toJSON().name]));
 
