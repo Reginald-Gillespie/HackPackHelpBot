@@ -50,9 +50,17 @@ var editCommand = new SlashCommandBuilder().setName("edit").setDescription("Edit
 		option.setName("title").setDescription("The Help Message to edit").setAutocomplete(true).setRequired(true)
 	)
 
+var editFlowchartCommand = new SlashCommandBuilder().setName("edit_flowchart").setDescription("Edit a a flowchart")
+	.addStringOption(option=>
+		option.setName("chart").setDescription("The flowchart to edit").setAutocomplete(true).setRequired(true)
+	)
+
 var flowchartCommand = new SlashCommandBuilder().setName("flowchart").setDescription("Lookup the latest flowcharts for any box")
 	.addStringOption(option=>
 		option.setName("chart").setDescription("The chart to bring up").setAutocomplete(true).setRequired(true)
+	)
+	.addBooleanOption(option=>
+		option.setName("attach-html").setDescription("Send the chart HTML with the response").setRequired(false)
 	)
 	.addBooleanOption(option=>
 		option.setName("override-cache").setDescription("Recreate the chart ignoring the cached version").setRequired(false)
@@ -79,6 +87,7 @@ const commands = [
 	lookupCommand,
 	createCommand,
 	editCommand,
+	editFlowchartCommand,
 	flowchartCommand,
 	helpCommand,
 	markRobot

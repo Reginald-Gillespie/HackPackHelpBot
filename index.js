@@ -189,8 +189,9 @@ client.on("interactionCreate", async cmd => {
                 const chart = cmd.options.getString("chart");
                 const overrideCacheAttempt = cmd.options.getBoolean("override-cache")
                 const overrideCache = overrideCacheAttempt && AuthorizedEditors.includes(cmd.user.id);
+                const sendHTML = cmd.options.getBoolean("attach-html")
 
-                const [chartPath, error] = await getPathToFlowchart(chart, false, false, overrideCache);
+                var [chartPath, error] = await getPathToFlowchart(chart, false, false, overrideCache);
                 if (error) {
                     cmd.followUp({ content: error, ephemeral: true });
                     break
@@ -209,6 +210,16 @@ client.on("interactionCreate", async cmd => {
                     ephemeral: false
                 });
                 break
+
+            case "edit_flowchart":
+                var [chartPath, error] = await getPathToFlowchart(chart, true); // only fetching mermaid path
+                if (error) {
+                    cmd.followUp({ content: error, ephemeral: true });
+                    break
+                }
+                let mermaidContent = fs.readFileSync(chartPath);
+
+
 
             case "edit": //both edit and create open basically the same modals
             case "create":
