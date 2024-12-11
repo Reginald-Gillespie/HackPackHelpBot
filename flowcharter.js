@@ -12,8 +12,8 @@ function hash(data) {
 function getChartOptions() {
     let files = fs.readdirSync("./Flowcharts");
     files = files
-        .filter(filename => filename.endsWith(".mm"))
-        .map(filename => filename.slice(0, -3))
+        .filter(filename => filename.endsWith(".mmd"))
+        .map(filename => filename.slice(0, -4))
     return files
 }
 
@@ -48,7 +48,7 @@ async function getPathToFlowchart(chartName, mermaidOnly=false, dumpHTML=false, 
     }
 
     // Create HTML
-    const mermaidPath = `./Flowcharts/${chartName}.mm`;
+    const mermaidPath = `./Flowcharts/${chartName}.mmd`;
     if (mermaidOnly) return [mermaidPath, null]; // for editing the template we don't need the whole thiing
     const templatePath = `./Flowcharts/template.html`;
     const mermaidContent = fs.readFileSync(mermaidPath).toString()

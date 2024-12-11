@@ -8,7 +8,7 @@ flowchart TD
 
     %% LCD Issues
     Screen --> ScreenPushIn[Push the arduino firmly into the breadboard, it might click into place. Does it work now?]
-    ScreenPushIn --> CheckBacklight[Is the backlight on?]
+    ScreenPushIn --> |No| CheckBacklight[Is the backlight on?]
     CheckBacklight --> |No| ReplaceLCD[Contact CrunchLabs for a replacement screen]
     CheckBacklight --> |Yes| LCDAnotherArduino[Try uploading Label Maker code to a different Arduino from ide.crunchlabs.com, and use this arduino. Does it work now?]
     LCDAnotherArduino --> |No| ReplaceLCD

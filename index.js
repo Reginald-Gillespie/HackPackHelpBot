@@ -263,7 +263,13 @@ client.on("interactionCreate", async cmd => {
                 } else {
                     let mermaidContent = fs.readFileSync(chartPath);
                     cmd.reply({
-                        content: `Here is the current \`${chart}\` flowchart`, 
+                        content: 
+                            `Here is the current \`${chart}\` flowchart` +
+                            `## Flowchart must follow these rules:` +
+                            `1. Every "Question" has either:` +
+                            `   a. Named lines as options, going to the next questions` +
+                            `   b. Unnamed lines going to the next options, which each have a single link to the next question` +
+                            `2. All nodes must have IDs`,
                         files: [ 
                             new AttachmentBuilder(Buffer.from(mermaidContent), { name: `${chart}.txt` })
                         ],
