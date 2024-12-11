@@ -9,23 +9,17 @@ Object.assign(process.env, require('./env.json'));
 var client;
 const {Client, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, Partials, MessageAttachment, AttachmentBuilder } = require("discord.js");
 const fs = require("fs");
+const { get } = require('https');
 const puppeteer = require('puppeteer'); // Import is needed here to set ENVs (temp dir)
 const { getDescription, getHelpMessageTitlesArray, getHelpMessageBySubjectTitle, getFileContent, appendHelpMessage, editHelpMessage, getSubtopics } = require("./helpFileParse")
 const { getChartOptions, getPathToFlowchart } = require("./flowcharter")
 const subtopics = getSubtopics();
 const Fuse = require('fuse.js');
+const path = require("path")
 const fuseOptions = {
     includeScore: true,
     keys: ['title']
 };
-function sortByMatch(items, text) {
-    if (!text) return items;
-    const fuse = new Fuse(items.map(title => ({ title })), fuseOptions);            
-    const scoredResults = fuse.search(text)
-        .filter(result => result.score <= 2) // Roughly similar-ish
-        .sort((a, b) => a.score - b.score);
-    return scoredResults.map(entry => entry.item.title);
-}
 
 const AuthorizedEditors = [// TODO: port to whitelist file with /whitelist devadmin command
     "724416180097384498",  // WKoA
@@ -57,7 +51,15 @@ client = new Client({
 });
 
 
-// Utility functions
+//#region functions
+function sortByMatch(items, text) {
+    if (!text) return items;
+    const fuse = new Fuse(items.map(title => ({ title })), fuseOptions);            
+    const scoredResults = fuse.search(text)
+        .filter(result => result.score <= 2) // Roughly similar-ish
+        .sort((a, b) => a.score - b.score);
+    return scoredResults.map(entry => entry.item.title);
+}
 function arrayToAutocorrect(array) {
     const choices = array.map(choice => {
         return {
@@ -67,6 +69,30 @@ function arrayToAutocorrect(array) {
     });
     return choices.slice(0, 25); // Discord limit is 25 responses
 }
+async function downloadFile(fileUrl, downloadPath) {
+    return new Promise((resolve, reject) => {
+        // Ensure the download path exists
+        const fullPath = path.resolve(downloadPath);
+
+        // Create a write stream
+        const file = fs.createWriteStream(fullPath);
+
+        // Download the file
+        get(fileUrl, (response) => {
+            response.pipe(file);
+
+            file.on('finish', () => {
+                file.close();
+                resolve(fullPath);
+            });
+        }).on('error', (err) => {
+            file.close();
+            reject(err);
+        });
+    });
+}
+//#endregion functions
+
 
 // The meat of the code
 var lastUser = "";
@@ -186,40 +212,65 @@ client.on("interactionCreate", async cmd => {
 
             case "flowchart":
                 await cmd.deferReply(); // Puppeteer can take a while, this gives us much longer to respond
-                const chart = cmd.options.getString("chart");
+                var chart = cmd.options.getString("chart");
                 const overrideCacheAttempt = cmd.options.getBoolean("override-cache")
                 const overrideCache = overrideCacheAttempt && AuthorizedEditors.includes(cmd.user.id);
                 const sendHTML = cmd.options.getBoolean("attach-html")
 
-                var [chartPath, error] = await getPathToFlowchart(chart, false, false, overrideCache);
+                var [chartPath, error] = await getPathToFlowchart(chart, false, sendHTML, overrideCache);
                 if (error) {
                     cmd.followUp({ content: error, ephemeral: true });
                     break
                 }
 
                 var response = `Here is the \`${chart}\` chart`;
-
                 // Add message if user tried to flush cache without perms
                 if (overrideCacheAttempt != overrideCache) {
                     response += ` - cached was not overridden as you are not authorized to do so`
                 }
 
+                let files = [
+                    new AttachmentBuilder(chartPath),
+                ]
+                if (sendHTML) files.push( new AttachmentBuilder(`./Flowcharts/generated.html`) ) // ideally the path would be determined by flowcharter.js, oh well 
+
                 cmd.followUp({
                     content: response, 
-                    files: [ new AttachmentBuilder(chartPath) ],
+                    files: files,
                     ephemeral: false
                 });
                 break
 
             case "edit_flowchart":
+                if (!AuthorizedEditors.includes(cmd.user.id)) {
+                    return cmd.reply({ content: "You are not authorized to use this command", ephemeral: true });
+                }
+                const fileUpload = cmd.options.getAttachment("file");
+                var chart = cmd.options.getString("chart");
                 var [chartPath, error] = await getPathToFlowchart(chart, true); // only fetching mermaid path
                 if (error) {
-                    cmd.followUp({ content: error, ephemeral: true });
+                    cmd.reply({ content: error, ephemeral: true });
                     break
                 }
-                let mermaidContent = fs.readFileSync(chartPath);
 
-
+                // If we have the file, we use it - otherwise, send the user the current file
+                if (fileUpload) {
+                    downloadFile(fileUpload.url, chartPath)
+                    cmd.reply({
+                        content: `The chart has been updated`, 
+                        ephemeral: true
+                    });
+                } else {
+                    let mermaidContent = fs.readFileSync(chartPath);
+                    cmd.reply({
+                        content: `Here is the current \`${chart}\` flowchart`, 
+                        files: [ 
+                            new AttachmentBuilder(Buffer.from(mermaidContent), { name: `${chart}.txt` })
+                        ],
+                        ephemeral: true
+                    });
+                }
+                break;
 
             case "edit": //both edit and create open basically the same modals
             case "create":

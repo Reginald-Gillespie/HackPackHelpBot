@@ -54,6 +54,9 @@ var editFlowchartCommand = new SlashCommandBuilder().setName("edit_flowchart").s
 	.addStringOption(option=>
 		option.setName("chart").setDescription("The flowchart to edit").setAutocomplete(true).setRequired(true)
 	)
+	.addAttachmentOption(option =>
+        option.setName('file').setDescription('The new mermaid flowchart as a text file').setRequired(false)
+	)
 
 var flowchartCommand = new SlashCommandBuilder().setName("flowchart").setDescription("Lookup the latest flowcharts for any box")
 	.addStringOption(option=>
