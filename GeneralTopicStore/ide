@@ -4,14 +4,6 @@ Title: IDE Setup Guide
 Message:
 https://discord.com/channels/1229106258749948056/1255274074343473293/1255274074343473293
 ---
-Title: IDE Errors Uploading Checklist
-Message:
-1. Use Chrome.
-2. Use the Arduino IDE.
-3. Turn off bluetooth.
-4. Turn off unneeded applications from task manager.
-4. Restart computer.
----
 Title: Mac Guide
 Message:
 So you need to go to Finder -> Downloads -> Find CrunchLabsArduinoCreateAgent -> Open -> Drag the CreateAgent Icon into the Applications Folder -> Go back to Finder -> Applications -> CrunchlabsArduinoCreateAgent -> Open. The CreateAgent does not have a window that opens when you open it, it runs in the background. You can check to make sure it is running by looking at your system tray in the top right. If you see a black circle with the Hack Pack logo on it, then it is running. Also make sure to use chrome as Safari will not work unless you want to mess with your settings as described here https://discord.com/channels/1229106258749948056/1261395362963263488
@@ -46,4 +38,16 @@ Broosky's youtube: <https://www.youtube.com/@HackPackHackers>
 Title: Run As Administrator Steps Image
 Message:
 https://discord.com/channels/1229106258749948056/1245199186014634044/1309297668526309408
+---
+Title: IDE Errors Uploading Checklist
+Message:
+1. Use Chrome.
+2. Use provided USB cable.
+3. Connecting cable to silver USB-C on arduino, not black breadboard box.
+4. Reload webpage.
+5. Try in incognito mode
+6. Turn off bluetooth + restart computer.
+7. Try *multiple* other USB-A to USB-C cables.
+8. Go to http://127.0.0.1:8991/ and send the "list" command
+9. Worst case, try the Arduino IDE.
 ---
