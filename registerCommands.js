@@ -54,12 +54,15 @@ var flowchartCommand = new SlashCommandBuilder().setName("flowchart").setDescrip
 	.addStringOption(option=>
 		option.setName("chart").setDescription("The chart to bring up").setAutocomplete(true).setRequired(true)
 	)
+	.addBooleanOption(option=>
+		option.setName("override-cache").setDescription("Recreate the chart ignoring the cached version").setRequired(false)
+	)
 
 var helpCommand = new SlashCommandBuilder().setName("help").setDescription("Walk a user through the a debugging flowcharts")
 	.addStringOption(option=>
 		option.setName("chart").setDescription("The chart to walk through").setAutocomplete(true).setRequired(true)
 	)
-	.addStringOption(option=>
+	.addUserOption(option=>
 		option.setName("who").setDescription("Select a user who should walk through this chart").setRequired(false)
 	)
 

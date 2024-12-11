@@ -17,13 +17,13 @@ function getChartOptions() {
     return files
 }
 
-async function renderHTML(html) {
+async function renderHTML(html, overrideCache=false) {
     // returns imageLoc
 
     const fileLoc = `./Flowcharts/cache/${hash(html)}.jpg`;
 
     // Render with puppeteer if this HTML has not been rendered before
-    if (!fs.existsSync(fileLoc)) {
+    if (overrideCache || !fs.existsSync(fileLoc)) {
         var debug = false;
         const browser = await puppeteer.launch({headless: !debug});
         const page = await browser.newPage();
@@ -33,15 +33,15 @@ async function renderHTML(html) {
             deviceScaleFactor: 4
         });
         await page.setContent(html);
-        await new Promise(resolve => setTimeout(resolve, debug ? 100000 : 1000));
+        await new Promise(resolve => setTimeout(resolve, debug ? 100000 : 2000));
         await page.screenshot({path: fileLoc, fullPage: true});
-        await browser.close();      
+        await browser.close();
     }
 
     return fileLoc;
 }
 
-async function getPathToFlowchart(chartName, dumpHTML=false) {
+async function getPathToFlowchart(chartName, mermaidOnly=false, dumpHTML=false, overrideCache=false) {
     // returns [imagePath, errorString]
     if (!getChartOptions().includes(chartName)) {
         return [null, "That does not seem to be a valid chart."]
@@ -49,6 +49,7 @@ async function getPathToFlowchart(chartName, dumpHTML=false) {
 
     // Create HTML
     const mermaidPath = `./Flowcharts/${chartName}.mm`;
+    if (mermaidOnly) return [mermaidPath, null]; // for editing the template we don't need the whole thiing
     const templatePath = `./Flowcharts/template.html`;
     const mermaidContent = fs.readFileSync(mermaidPath).toString()
     let templateContent = fs.readFileSync(templatePath).toString()
@@ -60,17 +61,15 @@ async function getPathToFlowchart(chartName, dumpHTML=false) {
         fs.writeFileSync(`./Flowcharts/generated.html`, templateContent)
     }
 
-    console.log(templateContent)
-
-    const imageLoc = await renderHTML(templateContent);
-    return imageLoc;
+    const imageLoc = await renderHTML(templateContent, overrideCache);
+    return [imageLoc, null];
 }
 
 
 
 if (require.main == module) {
     (async function main(){
-        console.log(await getPathToFlowchart("label", true))
+        console.log(await getPathToFlowchart("label", false, true))
     })()
 } else {
     module.exports = { getPathToFlowchart, getChartOptions };

@@ -5,10 +5,11 @@
 // Command to upload photos from photo database of different parts of each box?
 // 
 
-process.env = require("./env.json");
+Object.assign(process.env, require('./env.json'));
 var client;
-const {Client, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, Partials } = require("discord.js");
+const {Client, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, Partials, MessageAttachment, AttachmentBuilder } = require("discord.js");
 const fs = require("fs");
+const puppeteer = require('puppeteer'); // Import is needed here to set ENVs (temp dir)
 const { getDescription, getHelpMessageTitlesArray, getHelpMessageBySubjectTitle, getFileContent, appendHelpMessage, editHelpMessage, getSubtopics } = require("./helpFileParse")
 const { getChartOptions, getPathToFlowchart } = require("./flowcharter")
 const subtopics = getSubtopics();
@@ -26,15 +27,16 @@ function sortByMatch(items, text) {
     return scoredResults.map(entry => entry.item.title);
 }
 
-
-const MessageCreators = [// TODO: port to whitelist file with /whitelist devadmin command
-    "724416180097384498",  // myself
-    "1233957025256570951", // ashbro
+const AuthorizedEditors = [// TODO: port to whitelist file with /whitelist devadmin command
+    "724416180097384498",  // WKoA
+    "1233957025256570951", // AshBro
     "1242941939662323774", // HeavyFalcon
-    "1229105394849284127", // dan
-    "1242930479439544461", // tom
-    "703724617583296613",  // mark lol
-]; // userIDs of those allowed to create help messages with the bot
+    "1229105394849284127", // Dan
+    "1242930479439544461", // Tom
+    "145346537004728320",  // Sean
+    "703724617583296613",  // Mark lol
+]; // userIDs of those allowed to edit bot content storage
+
 const MarkRobot = require("./markRobot")
 const markRobotInstances = {}; // Technically it would be good to clean old convos every week or so
 
@@ -80,7 +82,7 @@ client.on("interactionCreate", async cmd => {
         const field = cmd.options.getFocused(true);
         const typedSoFar = field.value;
 
-        switch(field.name) { // we base the switch off what the the feild is, either a topic autocomplete or a title autocomplete
+        switch(field.name) { // we base the switch off what the the felid is, either a topic autocomplete or a title autocomplete
             case "title":
                 var subtopic = cmd.options.getSubcommand(false);
 
@@ -119,7 +121,7 @@ client.on("interactionCreate", async cmd => {
         }
     }
 
-    // Modal submot interactions from creating and editing messages
+    // Modal submit interactions from creating and editing messages
     else if (cmd.isModalSubmit()) {
         switch(cmd.customId) {
             case "editModal":
@@ -182,12 +184,38 @@ client.on("interactionCreate", async cmd => {
                 cmd.reply({ content: reply, ephemeral: true });
                 break;
 
-            case "edit": //both edit and create are similar enough
+            case "flowchart":
+                await cmd.deferReply(); // Puppeteer can take a while, this gives us much longer to respond
+                const chart = cmd.options.getString("chart");
+                const overrideCacheAttempt = cmd.options.getBoolean("override-cache")
+                const overrideCache = overrideCacheAttempt && AuthorizedEditors.includes(cmd.user.id);
+
+                const [chartPath, error] = await getPathToFlowchart(chart, false, false, overrideCache);
+                if (error) {
+                    cmd.followUp({ content: error, ephemeral: true });
+                    break
+                }
+
+                var response = `Here is the \`${chart}\` chart`;
+
+                // Add message if user tried to flush cache without perms
+                if (overrideCacheAttempt != overrideCache) {
+                    response += ` - cached was not overridden as you are not authorized to do so`
+                }
+
+                cmd.followUp({
+                    content: response, 
+                    files: [ new AttachmentBuilder(chartPath) ],
+                    ephemeral: false
+                });
+                break
+
+            case "edit": //both edit and create open basically the same modals
             case "create":
                 const isEditing = cmd.commandName == "edit";
 
                 // Check authorization
-                if (!MessageCreators.includes(cmd.member?.user?.id)) {
+                if (!AuthorizedEditors.includes(cmd.member?.user?.id)) {
                     cmd.reply({ content: `You are not authorized to ${isEditing ? "edit" : "create"} messages.`, ephemeral: true })
                     break;
                 }
