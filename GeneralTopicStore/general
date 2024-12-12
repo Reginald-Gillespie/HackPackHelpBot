@@ -4,3 +4,14 @@ Title: Advent of Code invite
 Message:
 https://discord.com/channels/1229106258749948056/1313188305017241651/1313188477655060560
 ---
+Title: Bot Install Link
+Message:
+General:
+https://discord.com/oauth2/authorize?client_id=1261392544152027206
+
+User install:
+https://discord.com/oauth2/authorize?client_id=1261392544152027206&permissions=274878286912&integration_type=1&scope=bot+applications.commands
+
+Server install:
+https://discord.com/oauth2/authorize?client_id=1261392544152027206&permissions=274878286912&integration_type=0&scope=bot+applications.commands
+---

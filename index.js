@@ -1,4 +1,5 @@
 // TODO:
+// Cache fs.readFileSync calls
 // Check for message under current name before adding / moving
 // If I want to add per-user storage, storage create messages from users if they are failed and insert them as starting point when they run create again.
 // Lots of other limiting char counts
@@ -7,12 +8,13 @@
 
 Object.assign(process.env, require('./env.json'));
 var client;
-const {Client, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, Partials, MessageAttachment, AttachmentBuilder } = require("discord.js");
+const {Client, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, Partials, EmbedBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder, ComponentType } = require("discord.js");
 const fs = require("fs");
 const { get } = require('https');
 const puppeteer = require('puppeteer'); // Import is needed here to set ENVs (temp dir)
 const { getDescription, getHelpMessageTitlesArray, getHelpMessageBySubjectTitle, getFileContent, appendHelpMessage, editHelpMessage, getSubtopics } = require("./helpFileParse")
 const { getChartOptions, getPathToFlowchart } = require("./flowcharter")
+const { getQuestionAndAnswers, validateQuestionAnswers } = require("./mermaidParse")
 const subtopics = getSubtopics();
 const Fuse = require('fuse.js');
 const path = require("path")
@@ -91,6 +93,16 @@ async function downloadFile(fileUrl, downloadPath) {
         });
     });
 }
+function findButtonOfId(actionRows, ID) {
+    for (const actionRow of actionRows) {
+        // Find a button within the components of the action row
+        const button = actionRow.components.find(
+          component => component.type === ComponentType.Button && component.customId === ID
+        );
+        if (button) return button
+    }
+    return null
+}
 //#endregion functions
 
 
@@ -102,6 +114,82 @@ client.on("interactionCreate", async cmd => {
         console.log(username);
         lastUser = username;
     }
+
+    // Buttons for flowchart walkthrough
+    if (cmd.isButton()) {
+        // Extract JSON from first button in the row
+        const currentButtons = cmd.message.components[0];
+        const thisButton = findButtonOfId(cmd.message.components, cmd.customId)
+        const jsonButton = currentButtons.components[0];
+        const context = JSON.parse(jsonButton.customId.split("|")[1])
+        const customId = cmd.customId.split("|")[0]; // do this for all buttons just because
+
+        if (cmd.user.id !== context.id) {
+            return cmd.reply({content: "This flowchart is not for you, you can run /help to start your own", ephemeral: true})
+        }
+
+        // Follow the flowchart
+        var [mermaidPath, error] = await getPathToFlowchart(context.chart, true);
+        const mermaidContent = fs.readFileSync(mermaidPath).toString()
+        const [ questionData, answerDataArray ] = getQuestionAndAnswers(mermaidContent, context.questionID, customId);
+
+        // Fetch the embed to update
+        const message = await cmd.message.fetch();
+        const hasAnswerEmbed = message.embeds.length > 1;
+        const questionEmbed = message.embeds[hasAnswerEmbed ? 1 : 0];
+        let questionField = questionEmbed.fields[2];
+        const question = questionField.value.match(/```(.+?)```/)?.[1] || "[Error parsing question]"
+        let answerEmbed = hasAnswerEmbed ? message.embeds[0] : null;
+
+
+        // Create answer embed template it does not exist
+        if (!answerEmbed) {
+            answerEmbed = new EmbedBuilder()
+                .setColor(0)
+                .setTitle(`Recorded answers`)
+                .setFields([])
+        }
+        
+        // Add the recorded answers to the answer embed
+        answerEmbed.data.fields.push({ name: `Q: ${question}`, value: `> ${thisButton.data.label}` })
+
+        // Pack question back into question embed
+        questionField.value = "```" + questionData.question + "```"
+
+        // Pack answers into row
+        const buttons = [];
+        for (let i = 0; i < answerDataArray.length; i++) {
+            const answerData = answerDataArray[i];
+            buttons.push(
+                new ButtonBuilder()
+                    .setCustomId(""+answerData.answerID)
+                    .setLabel(""+answerData.answer)
+                    .setStyle(ButtonStyle.Secondary)
+            );
+        }
+        if (buttons[0]) {
+            // This might not be defined if there are no more answers
+            buttons[0].data.custom_id += "|" + JSON.stringify({
+                id: context.id,
+                questionID: questionData.questionID,
+                chart: context.chart
+            })
+        }
+        const rows = [];
+        for (let i = 0; i < buttons.length; i += 5) {
+            rows.push(new ActionRowBuilder().addComponents(buttons.slice(i, i + 5)));
+        }
+
+
+        await message.edit({ 
+            embeds: [ answerEmbed, questionEmbed ],
+            files: [], // force not reuploading image
+            components: rows,
+        });
+        await cmd.deferUpdate();
+        return;
+    }
+
     
     // Autocomplete interactions are requesting what to suggest to the user to put in a command's string option
     if (cmd.isAutocomplete()) {
@@ -200,6 +288,88 @@ client.on("interactionCreate", async cmd => {
     // Command interactions
     else {
         switch(cmd.commandName) {
+            case "help":
+                // This command only works if it is installed in the server
+                if (!cmd.guild) {
+                    return cmd.reply({ content: "This command only works when the bot is installed in the server", ephemeral: true });
+                }
+
+                var chart = cmd.options.getString("chart");;
+                const who = cmd.options.getUser("who") || cmd.user;
+
+                var [mermaidPath, error] = await getPathToFlowchart(chart, true); // only fetching mermaid path
+                if (error) {
+                    cmd.reply({ content: error, ephemeral: true });
+                    break
+                }
+
+                // Parse out the first question
+                const mermaidContent = fs.readFileSync(mermaidPath).toString();
+                const [questionData, answerDataArray] = getQuestionAndAnswers(mermaidContent)
+
+                // Make sure this data seems valid
+                if (!validateQuestionAnswers([questionData, answerDataArray])) {
+                    cmd.reply({ content: "There is some unknown error with this flowchart.", ephemeral: true });
+                    break
+                }
+
+                // Now for building the embed
+                const templateColor = parseInt(mermaidContent.match(/%% templateColor #?([a-z\d]+)/)?.[1] || "dd8836", 16)
+
+                const [ flowchart, _ ] = await getPathToFlowchart(chart)
+                const flowchartAttachment = new AttachmentBuilder(flowchart, { name: 'flowchart.png' });
+
+                const embed = new EmbedBuilder()
+                    .setColor(templateColor)
+                    .setTitle(`Flowchart Walkthrough: \`${chart}\``)
+                    .setThumbnail(`attachment://flowchart.png`)
+                    .addFields(
+                        // Storage for interaction log
+                        // { name: "Answer log:", value: `Started ${chart} flowchart` },
+                        // Instructions
+                        { name: "Instructions", value: `<@${cmd.user.id}> Please answer these questions:` },
+                        { name: '\n', value: '\n' },
+                        // Question
+                        { name: "Question", value: `\`\`\`${questionData.question}\`\`\`` },
+                        { name: '\n', value: '\n' },
+                    )
+                
+                // Parse buttons - Each button's ID will be the AnswerID
+                //                 The first button's ID will always always have "|<content>", 
+                //                 where content is a json payload of userID and questionID
+                const buttons = [];
+                for (let i = 0; i < answerDataArray.length; i++) {
+                    const answerData = answerDataArray[i];
+                    buttons.push(
+                        new ButtonBuilder()
+                            .setCustomId(""+answerData.answerID)
+                            .setLabel(""+answerData.answer)
+                            .setStyle(ButtonStyle.Secondary)
+                    );
+                }
+
+                // Inject the JSON data into the first button ID
+                buttons[0].data.custom_id += "|" + JSON.stringify({
+                    id: who.id,
+                    questionID: questionData.questionID,
+                    chart
+                })
+
+                // Split buttons into rows of 5 (discord max)
+                const rows = [];
+                for (let i = 0; i < buttons.length; i += 5) {
+                    rows.push(new ActionRowBuilder().addComponents(buttons.slice(i, i + 5)));
+                }
+
+                // Send
+                await cmd.reply({
+                    embeds: [embed],
+                    components: rows,
+                    files: [ flowchartAttachment ]
+                });
+                
+                break;
+            
             case "lookup":
                 const subtopic = cmd.options.getSubcommand();
                 const messageTopic = cmd.options.getString("title");

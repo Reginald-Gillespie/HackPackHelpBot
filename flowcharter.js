@@ -44,7 +44,7 @@ async function renderHTML(html, overrideCache=false) {
 async function getPathToFlowchart(chartName, mermaidOnly=false, dumpHTML=false, overrideCache=false) {
     // returns [imagePath, errorString]
     if (!getChartOptions().includes(chartName)) {
-        return [null, "That does not seem to be a valid chart."]
+        return [null, "That chart could not be found, check the spelling and try using the autocompletes options."]
     }
 
     // Create HTML

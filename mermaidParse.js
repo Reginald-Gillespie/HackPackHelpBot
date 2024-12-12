@@ -14,6 +14,22 @@ function matchMultipleGroups(content, regex=/./) {
     return results;
 }
 
+function validateQuestionAnswers(data) {
+    // TODO: build a function to recursively validate all paths of a graph when submitted as validation...
+    // TODO: return exact text here?
+    if (data?.length !== 2) return false;
+    const [ questionData, answerDataArray ] = data;
+    if (Object.keys(questionData).length !== 2) return false
+    if (!Array.isArray(answerDataArray)) return false
+    answerDataArray.forEach((item, index) => {
+        if (!(typeof item === 'object' && item !== null && Object.keys(item).length === 2)) {
+            return false;
+        }
+    });
+    // NOTE: this function does NOT validate that the data keys are valid or contain content, just they exist
+    return true;
+}
+
 // answerID is the ID of the answer box, otherwise the line name. 
 // Line names take president over answer box IDs
 function getQuestionAndAnswers(chartContent, cQuestionID, cAnswerID) {
@@ -31,7 +47,7 @@ function getQuestionAndAnswers(chartContent, cQuestionID, cAnswerID) {
             questionID = entryNode[1]
             question = entryNode[2]
         } else {
-            // Try to match a dirrect answer box
+            // Try to match a direct answer box
             const answerBoxRegex = `${cAnswerID}\\s*-->\\s*(\\w+)\\['?(.+?)"?\\]`
             const inlineRegex = `^\\s*${cQuestionID}\\s*-->\\s*\\|${cAnswerID}\\|\\s*(\\w+)(\\["?(.+?)"?\\])?` // content group is optional for inline
             const selectedNode = chartContent.match(RegExp(`(${answerBoxRegex}|${inlineRegex})`, "m"))
@@ -48,12 +64,12 @@ function getQuestionAndAnswers(chartContent, cQuestionID, cAnswerID) {
         }
 
         // Now that we have the question we're asking, grab the answers.
-        var dirrectAnswers = matchMultipleGroups(chartContent, RegExp(`${questionID}\\s*-->\\s*(\\w+)\\['?(.+?)"?\\]`)); // answers pointed to
+        var directAnswers = matchMultipleGroups(chartContent, RegExp(`${questionID}\\s*-->\\s*(\\w+)\\['?(.+?)"?\\]`)); // answers pointed to
         var lineAnswers = matchMultipleGroups(chartContent, RegExp(`^\\s*${questionID}\\s*-->\\s*\\|(.+?)\\|\\s*(\\w+)(\\["?.+?"?\\])?`)); // answers in the lines
 
         // Parse into answer format
         let answers = []
-        dirrectAnswers.forEach(answerData => {
+        directAnswers.forEach(answerData => {
             let answerID = answerData[1]
             let answer = answerData[2]
             answers.push({answerID, answer})
@@ -75,7 +91,7 @@ function getQuestionAndAnswers(chartContent, cQuestionID, cAnswerID) {
     }
 }
 
-module.exports = { getQuestionAndAnswers }
+module.exports = { getQuestionAndAnswers, validateQuestionAnswers }
 
 
 // const fileLoc = "Flowcharts/label.mmd"
