@@ -6,12 +6,5 @@ https://discord.com/channels/1229106258749948056/1313188305017241651/13131884776
 ---
 Title: Bot Install Link
 Message:
-General:
 https://discord.com/oauth2/authorize?client_id=1261392544152027206
-
-User install:
-https://discord.com/oauth2/authorize?client_id=1261392544152027206&permissions=274878286912&integration_type=1&scope=bot+applications.commands
-
-Server install:
-https://discord.com/oauth2/authorize?client_id=1261392544152027206&permissions=274878286912&integration_type=0&scope=bot+applications.commands
 ---

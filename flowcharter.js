@@ -21,11 +21,17 @@ async function renderHTML(html, overrideCache=false) {
     // returns imageLoc
 
     const fileLoc = `./Flowcharts/cache/${hash(html)}.jpg`;
+    fs.mkdirSync("./Flowcharts/cache/")
 
     // Render with puppeteer if this HTML has not been rendered before
     if (overrideCache || !fs.existsSync(fileLoc)) {
         var debug = false;
-        const browser = await puppeteer.launch({headless: !debug});
+        // const browser = await puppeteer.launch({headless: !debug});
+        const browser = await puppeteer.launch({
+            executablePath: fs.existsSync("/usr/bin/chromium-browser") ? "/usr/bin/chromium-browser" : undefined, // Use system Chromium if available
+            args: ['--no-sandbox', '--disable-setuid-sandbox'],
+            headless: !debug
+        });
         const page = await browser.newPage();
         await page.setViewport({
             width: 1920*1,
