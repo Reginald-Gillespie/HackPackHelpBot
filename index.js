@@ -14,7 +14,7 @@ const { get } = require('https');
 const puppeteer = require('puppeteer'); // Import is needed here to set ENVs (temp dir)
 const { getDescription, getHelpMessageTitlesArray, getHelpMessageBySubjectTitle, getFileContent, appendHelpMessage, editHelpMessage, getSubtopics } = require("./helpFileParse")
 const { getChartOptions, getPathToFlowchart } = require("./flowcharter")
-const { getQuestionAndAnswers, validateQuestionAnswers } = require("./mermaidParse")
+const { getQuestionAndAnswers, validateQuestionAnswers, postProcessForDiscord } = require("./mermaidParse")
 const subtopics = getSubtopics();
 const Fuse = require('fuse.js');
 const path = require("path")
@@ -111,7 +111,6 @@ var lastUser = "";
 client.on("interactionCreate", async cmd => {
     const username = cmd?.member?.user?.username;
     if (username !== lastUser) {
-        console.log(username);
         lastUser = username;
     }
 
@@ -138,7 +137,7 @@ client.on("interactionCreate", async cmd => {
         const hasAnswerEmbed = message.embeds.length > 1;
         const questionEmbed = message.embeds[hasAnswerEmbed ? 1 : 0];
         let questionField = questionEmbed.fields[2];
-        const question = questionField.value.match(/```(.+?)```/)?.[1] || "[Error parsing question]"
+        const question = questionField.value; //.match(/```(.+?)```/)?.[1] || "[Error parsing question]"
         let answerEmbed = hasAnswerEmbed ? message.embeds[0] : null;
 
 
@@ -154,7 +153,7 @@ client.on("interactionCreate", async cmd => {
         answerEmbed.data.fields.push({ name: `Q: ${question}`, value: `> ${thisButton.data.label}` })
 
         // Pack question back into question embed
-        questionField.value = "```" + questionData.question + "```"
+        questionField.value = postProcessForDiscord(questionData.question)
 
         // Pack answers into row
         const buttons = [];
@@ -180,10 +179,16 @@ client.on("interactionCreate", async cmd => {
             rows.push(new ActionRowBuilder().addComponents(buttons.slice(i, i + 5)));
         }
 
+        // Reattach flowchart
+        questionEmbedBuild = EmbedBuilder.from(questionEmbed)
+        questionEmbedBuild.setThumbnail("attachment://flowchart.png");
+        // const [ flowchart, _ ] = await getPathToFlowchart(context.chart)
+        // const flowchartAttachment = new AttachmentBuilder(flowchart, { name: 'flowchart.png' });
+
 
         await message.edit({ 
-            embeds: [ answerEmbed, questionEmbed ],
-            files: [], // force not reuploading image
+            embeds: [ answerEmbed, questionEmbedBuild ],
+            // files: [ flowchartAttachment ],
             components: rows,
         });
         await cmd.deferUpdate();
@@ -314,7 +319,7 @@ client.on("interactionCreate", async cmd => {
                 }
 
                 // Now for building the embed
-                const templateColor = parseInt(mermaidContent.match(/%% templateColor #?([a-z\d]+)/)?.[1] || "dd8836", 16)
+                const templateColor = parseInt(mermaidContent.match(/%% templateColor #?([a-zA-Z\d]+)/)?.[1] || "dd8836", 16)
 
                 const [ flowchart, _ ] = await getPathToFlowchart(chart)
                 const flowchartAttachment = new AttachmentBuilder(flowchart, { name: 'flowchart.png' });
@@ -330,7 +335,7 @@ client.on("interactionCreate", async cmd => {
                         { name: "Instructions", value: `<@${cmd.user.id}> Please answer these questions:` },
                         { name: '\n', value: '\n' },
                         // Question
-                        { name: "Question", value: `\`\`\`${questionData.question}\`\`\`` },
+                        { name: "Question:", value: postProcessForDiscord(questionData.question) },
                         { name: '\n', value: '\n' },
                     )
                 
@@ -550,7 +555,7 @@ client.once("ready",async ()=>{
 
 // Error handling (async crashes in discord.js threads can still crash it)
 function handleException(e) {
-    console.log(e);
+    console.log(e); // TODO: notify myself through webhooks
 }
 process.on('unhandledRejection', handleException);
 process.on('unhandledException', handleException);

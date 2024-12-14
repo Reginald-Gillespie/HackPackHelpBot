@@ -2,6 +2,13 @@ const fs = require("fs")
 
 // If my flowcharts start using more advanced stuff, this file will need to be changed to support more.
 
+function postProcessForDiscord(message) {
+    message = String(message);
+    message = message.replaceAll("#quot;", '"')
+    message = message.replaceAll("https:\\/\\/", "https://")
+    return message;
+}
+
 function matchMultipleGroups(content, regex=/./) {
     // returns [ [match array], [match array] ]
     const matchFinder = new RegExp(regex.source, "gm");
@@ -48,8 +55,8 @@ function getQuestionAndAnswers(chartContent, cQuestionID, cAnswerID) {
             question = entryNode[2]
         } else {
             // Try to match a direct answer box
-            const answerBoxRegex = `${cAnswerID}\\s*-->\\s*(\\w+)\\['?(.+?)"?\\]`
-            const inlineRegex = `^\\s*${cQuestionID}\\s*-->\\s*\\|${cAnswerID}\\|\\s*(\\w+)(\\["?(.+?)"?\\])?` // content group is optional for inline
+            const answerBoxRegex = `${cAnswerID}\\s*-?-->\\s*(\\w+)\\['?(.+?)"?\\]`
+            const inlineRegex = `^\\s*${cQuestionID}\\s*-?-->\\s*\\|${cAnswerID}\\|\\s*(\\w+)(\\["?(.+?)"?\\])?` // content group is optional for inline
             const selectedNode = chartContent.match(RegExp(`(${answerBoxRegex}|${inlineRegex})`, "m"))
 
             questionID = selectedNode[2] || selectedNode[4]
@@ -64,8 +71,8 @@ function getQuestionAndAnswers(chartContent, cQuestionID, cAnswerID) {
         }
 
         // Now that we have the question we're asking, grab the answers.
-        var directAnswers = matchMultipleGroups(chartContent, RegExp(`${questionID}\\s*-->\\s*(\\w+)\\['?(.+?)"?\\]`)); // answers pointed to
-        var lineAnswers = matchMultipleGroups(chartContent, RegExp(`^\\s*${questionID}\\s*-->\\s*\\|(.+?)\\|\\s*(\\w+)(\\["?.+?"?\\])?`)); // answers in the lines
+        var directAnswers = matchMultipleGroups(chartContent, RegExp(`${questionID}\\s*-?-->\\s*(\\w+)\\['?(.+?)"?\\]`)); // answers pointed to
+        var lineAnswers = matchMultipleGroups(chartContent, RegExp(`^\\s*${questionID}\\s*-?-->\\s*\\|(.+?)\\|\\s*(\\w+)(\\["?.+?"?\\])?`)); // answers in the lines
 
         // Parse into answer format
         let answers = []
@@ -91,7 +98,7 @@ function getQuestionAndAnswers(chartContent, cQuestionID, cAnswerID) {
     }
 }
 
-module.exports = { getQuestionAndAnswers, validateQuestionAnswers }
+module.exports = { getQuestionAndAnswers, validateQuestionAnswers, postProcessForDiscord }
 
 
 // const fileLoc = "Flowcharts/label.mmd"

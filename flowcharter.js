@@ -36,15 +36,19 @@ async function renderHTML(html, overrideCache=false) {
             args: ['--no-sandbox', '--disable-setuid-sandbox'],
             headless: !debug
         });
+        await new Promise(resolve => setTimeout(resolve, debug ? 100000 : 1000));
         const page = await browser.newPage();
+        await new Promise(resolve => setTimeout(resolve, debug ? 100000 : 1000));
         await page.setViewport({
             width: 1920*1,
             height: 1080*1,
             deviceScaleFactor: 4
         });
+        await new Promise(resolve => setTimeout(resolve, debug ? 100000 : 1000));
         await page.setContent(html);
         await new Promise(resolve => setTimeout(resolve, debug ? 100000 : 2000));
         await page.screenshot({path: fileLoc, fullPage: true});
+        await new Promise(resolve => setTimeout(resolve, debug ? 100000 : 500));
         await browser.close();
     }
 
@@ -63,7 +67,7 @@ async function getPathToFlowchart(chartName, mermaidOnly=false, dumpHTML=false, 
     const templatePath = `./Flowcharts/template.html`;
     const mermaidContent = fs.readFileSync(mermaidPath).toString()
     let templateContent = fs.readFileSync(templatePath).toString()
-    const templateColor = "#"+mermaidContent.match(/%% templateColor #?([a-z\d]+)/)[1]
+    const templateColor = "#"+mermaidContent.match(/%% templateColor #?([a-zA-Z\d]+)/)[1]
     templateContent = templateContent.replace("##color##", templateColor);
     templateContent = templateContent.replace("##flowchart##", mermaidContent);
 

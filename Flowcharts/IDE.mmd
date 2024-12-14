@@ -1,0 +1,46 @@
+flowchart TD
+    Title["The IDE won't work"]
+
+    %% Preamble
+    Title --> |Start| WatchedVideo["Have you watched the video at https:\/\/ide.crunchlabs.com/downloads?"]
+    WatchedVideo --> |No| GoWatchVideo["Please watch the video at https:\/\/ide.crunchlabs.com/downloads before proceeding."]                
+    WatchedVideo ~~~ OS
+    WatchedVideo ---> |Yes| OS["What Operating System do you use? (What type of computer)"]
+    GoWatchVideo --> |Proceed| WatchedVideo
+
+    OS --> Windows[Windows]
+    OS --> Mac[Mac]
+    OS --> Chromebook[Chromebook]
+    OS --> Linux[Linux]
+    OS --> Other[Other]
+
+    %% Unsupported
+    Chromebook --> TryCloud["Chromebooks are not officially supported. However, you can still use the Arduino Cloud if you are willing to figure things out yourself."]
+    Linux --> RequestHelp["Request help in #ide-help-chat of the Hack Pack discord."]
+    Other --> RequestHelp
+
+    %% Mac + Windows
+    Windows --> WinAgentRunning[If you click the up arrow near the wifi icon, do you see a white circle with the Hack Pack logo?]
+    Mac --> MacAgentRunning[Do you see a white circle with the hack pack logo on the right side of the bar at the top of your screen?]
+    
+    %% Install agent - mac is later for formatting
+    WinAgentRunning --> |No| WindowsInstallAgent["If you have already installed the create agent as in the video, you likely need to run it as administrator. Open windows search, type #quot;Crunchlabs#quot;, right-click item ***without*** the word #quot;setup#quot;, and click #quot;Run As Administrator#quot;"]
+    
+
+    %% Continue Mac+Windows debugging
+    WinAgentRunning --> |Yes| BrowserCheck["Are you using Chrome as your browser, and have you disabled any content-blocking extensions?"]
+    MacAgentRunning --> |Yes| BrowserCheck
+
+    %% Install agent - windows is earlier for formatting
+    MacAgentRunning --> |No| MacInstallAgent[Refer to the downloads video for how to install the create agent on mac. If you need additional help, ask in #ide-help-chat]
+
+    BrowserCheck --> |Yes| ProvidedCableCheck["Are you using the provided USB-C to USB-A cable?"]
+    ProvidedCableCheck --> |Yes| ArduinoPortCheck["Are you connecting the cable from your computer to the silver USB-C port on the microcontroller, ***not*** the black breadboard box?"]
+    ArduinoPortCheck --> |Yes| Restart["Disable bluetooth on your computer and restart it. Windows users, start the agent as administrator again. Does it work now?"]
+    Restart --> |No| RequestHelpSupported["Request help in #ide-help-chat of the Hack Pack discord."]
+
+    %% Node-specific styling
+    style Title white-space:nowrap
+    style Title stroke-width:3px;
+
+    %% templateColor #57899E
