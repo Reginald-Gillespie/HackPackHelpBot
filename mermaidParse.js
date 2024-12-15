@@ -1,6 +1,8 @@
-const fs = require("fs")
-
+// Helper module to manage flowchart parsing
 // If my flowcharts start using more advanced stuff, this file will need to be changed to support more.
+
+
+const fs = require("fs")
 
 function postProcessForDiscord(message) {
     message = String(message);

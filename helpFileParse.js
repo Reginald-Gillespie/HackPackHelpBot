@@ -1,3 +1,5 @@
+// Helper module to manage topic storing and parsing
+
 // 
 // This file gets the content every single time it is called.
 // If it is ever used more heavily, the file content should be cached. 

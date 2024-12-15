@@ -6,3 +6,4 @@ test*.html
 Flowcharts/cache/*
 generated.html
 commands.json
+storage*.json

@@ -1,3 +1,5 @@
+// Helper module to manage Mark RoBot sessions
+
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 const { v4: uuidv4 } = require('uuid');
 

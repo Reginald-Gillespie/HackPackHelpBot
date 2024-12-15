@@ -11,7 +11,6 @@ var client;
 const {Client, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, Partials, EmbedBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder, ComponentType } = require("discord.js");
 const fs = require("fs");
 const { get } = require('https');
-const puppeteer = require('puppeteer'); // Import is needed here to set ENVs (temp dir)
 const { getDescription, getHelpMessageTitlesArray, getHelpMessageBySubjectTitle, getFileContent, appendHelpMessage, editHelpMessage, getSubtopics } = require("./helpFileParse")
 const { getChartOptions, getPathToFlowchart } = require("./flowcharter")
 const { getQuestionAndAnswers, validateQuestionAnswers, postProcessForDiscord } = require("./mermaidParse")

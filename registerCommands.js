@@ -1,3 +1,5 @@
+// Helper file to manage discord settings and stuff
+
 process.env = require("./env.json");
 const { REST, Routes, PermissionFlagsBits, SlashCommandBuilder, ContextMenuCommandBuilder, ApplicationCommandType, ChannelType } = require('discord.js');
 const fs = require("fs");

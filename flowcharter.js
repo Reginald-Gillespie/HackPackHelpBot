@@ -1,3 +1,5 @@
+// Helper module to manage flowcharts
+
 const fs = require("fs");
 const CryptoJS = require("crypto-js");
 const puppeteer = require('puppeteer');
