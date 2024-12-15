@@ -8,15 +8,16 @@ const { getDescription, getHelpMessageTitlesArray, getFileContent } = require(".
 // Command registration stuff
 const Context_UserOnly = [2]
 const Integration_UserOnly = [1]
-const extraInfo = {
+const extraInfo = { // makes these commands useable too users who install the bot in any server
 	"lookup": { "contexts": [0,1,2], "integration_types": [0,1] },
 	"create": { "contexts": [0,1,2], "integration_types": [0,1] },
 	"edit": { "contexts": [0,1,2], "integration_types": [0,1] },
 	"mark-robot": { "contexts": [0,1,2], "integration_types": [0,1] },
+	"edit_flowchart": { "contexts": [0,1,2], "integration_types": [0,1] },
 	"flowchart": { "contexts": [0,1,2], "integration_types": [0,1] },
+	"admin": { "contexts": [0,1,2], "integration_types": [0,1] },
 	"help": { "contexts": [0,1,2], "integration_types": [0,1] },
 };
-
 
 // Gather files and metadata
 const subtopics = fs.readdirSync("./GeneralTopicStore");
@@ -38,7 +39,28 @@ subtopics.forEach(topic => {
 	)	
 })
 
+let createOption = o => ({"name":o,"value":o});
+
 // Create other commands
+var adminCommand = new SlashCommandBuilder().setName("admin").setDescription("Quick access admin options")
+	.addStringOption(option=>
+		option.setName("choice").setDescription("Admin command").addChoices(
+			createOption("Whitelist ID"),
+			createOption("Unwhitelist ID"),
+			createOption("Adminize ID"),
+			createOption("Unadminize ID"),
+			createOption("AI Pings Killswitch"),
+			createOption("Restart"),
+		).setRequired(true)
+	)
+	.addStringOption(option=>
+		option.setName("input").setDescription("Command input, if needed").setRequired(false)
+	)
+	.addBooleanOption(option=>
+		option.setName("private").setDescription("Make response ephemeral").setRequired(false)
+	)
+
+
 var createCommand = new SlashCommandBuilder().setName("create").setDescription("Create new Help Message to store in the bot")
 	.addStringOption(option=>
 		option.setName("subtopic").setDescription("The category this Help Message fits under").setAutocomplete(true).setRequired(true)
@@ -89,6 +111,7 @@ var markRobot = new SlashCommandBuilder().setName("mark-robot").setDescription("
 
 // Build commands, assign registration info, register 
 const commands = [
+	adminCommand,
 	lookupCommand,
 	createCommand,
 	editCommand,

@@ -17,20 +17,13 @@ const { getQuestionAndAnswers, validateQuestionAnswers, postProcessForDiscord } 
 const subtopics = getSubtopics();
 const Fuse = require('fuse.js');
 const path = require("path")
+const Storage = require("./storage");
 const fuseOptions = {
     includeScore: true,
     keys: ['title']
 };
 
-const AuthorizedEditors = [// TODO: port to whitelist file with /whitelist devadmin command
-    "724416180097384498",  // WKoA
-    "1233957025256570951", // AshBro
-    "1242941939662323774", // HeavyFalcon
-    "1229105394849284127", // Dan
-    "1242930479439544461", // Tom
-    "145346537004728320",  // Sean
-    "703724617583296613",  // Mark lol
-]; // userIDs of those allowed to edit bot content storage
+let storage = new Storage();
 
 const MarkRobot = require("./markRobot")
 const markRobotInstances = {}; // Technically it would be good to clean old convos every week or so
@@ -53,6 +46,9 @@ client = new Client({
 
 
 //#region functions
+function isCreator(userID) {
+    return storage?.creators.includes(userID) || storage?.admins.includes(userID)
+}
 function sortByMatch(items, text) {
     if (!text) return items;
     const fuse = new Fuse(items.map(title => ({ title })), fuseOptions);            
@@ -98,7 +94,7 @@ function findButtonOfId(actionRows, ID) {
         const button = actionRow.components.find(
           component => component.type === ComponentType.Button && component.customId === ID
         );
-        if (button) return button
+        if (button) returnCbutton
     }
     return null
 }
@@ -194,7 +190,6 @@ client.on("interactionCreate", async cmd => {
         return;
     }
 
-    
     // Autocomplete interactions are requesting what to suggest to the user to put in a command's string option
     if (cmd.isAutocomplete()) {
         const field = cmd.options.getFocused(true);
@@ -292,6 +287,43 @@ client.on("interactionCreate", async cmd => {
     // Command interactions
     else {
         switch(cmd.commandName) {
+            case "admin":
+                const ephemeral = cmd.options.getBoolean("private");
+                
+                if (cmd.user.id !== process.env.owner && !storage?.admins?.includes(cmd.user.id)) {
+                    return cmd.reply({content:"You are not authorized to run this command", ephemeral})
+                }
+
+                const adminInput = cmd.options.getString("input");
+                const adminChoice = cmd.options.getString("choice");
+
+                switch (adminChoice) {
+                    case "Adminize ID":
+                    case "Whitelist ID":
+                        var type = adminChoice == "Adminize ID" ? "admins" : "creators"
+                        if (!adminInput.match(/^\d+$/)) {
+                            return cmd.reply({content:"This command expects a discord ID of the user", ephemeral})
+                        }
+                        let newUsers = (storage?.[type] || []).concat(adminInput);
+                        newUsers = [...new Set(newUsers)] // filter duplicates
+                        storage[type] = newUsers;
+                        return cmd.reply({content:"This user has been whitelisted", ephemeral})
+                    
+                    case "Unadminize ID":
+                    case "Unwhitelist ID":
+                        var type = adminChoice == "Unadminize ID" ? "admins" : "creators"
+                        storage[type] = (storage?.[type] || []).filter(element => element !== item);
+                        return cmd.reply({content:"This user has been removed from the whitelisted", ephemeral})
+
+                    case "AI Pings Killswitch":
+                        storage.AIPings = !storage.AIPings;
+                        return cmd.reply({content:`AI ping responses have been ${storage.AIPings ? "enabled" : "disabled"}`, ephemeral})
+                    
+                    case "Restart":
+                        process.exit(0);
+                }
+                break
+
             case "help":
                 // This command only works if it is installed in the server
                 if (!cmd.guild) {
@@ -388,7 +420,7 @@ client.on("interactionCreate", async cmd => {
                 await cmd.deferReply(); // Puppeteer can take a while, this gives us much longer to respond
                 var chart = cmd.options.getString("chart");
                 const overrideCacheAttempt = cmd.options.getBoolean("override-cache")
-                const overrideCache = overrideCacheAttempt && AuthorizedEditors.includes(cmd.user.id);
+                const overrideCache = overrideCacheAttempt && isCreator(cmd.user.id);
                 const sendHTML = cmd.options.getBoolean("attach-html")
 
                 var [chartPath, error] = await getPathToFlowchart(chart, false, sendHTML, overrideCache);
@@ -416,7 +448,7 @@ client.on("interactionCreate", async cmd => {
                 break
 
             case "edit_flowchart":
-                if (!AuthorizedEditors.includes(cmd.user.id)) {
+                if (!isCreator(cmd.user.id)) {
                     return cmd.reply({ content: "You are not authorized to use this command", ephemeral: true });
                 }
                 const fileUpload = cmd.options.getAttachment("file");
@@ -457,7 +489,7 @@ client.on("interactionCreate", async cmd => {
                 const isEditing = cmd.commandName == "edit";
 
                 // Check authorization
-                if (!AuthorizedEditors.includes(cmd.member?.user?.id)) {
+                if (!isCreator(cmd.member?.user?.id)) {
                     cmd.reply({ content: `You are not authorized to ${isEditing ? "edit" : "create"} messages.`, ephemeral: true })
                     break;
                 }
