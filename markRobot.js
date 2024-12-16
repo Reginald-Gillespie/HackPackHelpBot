@@ -10,12 +10,23 @@ class MarkRobot {
         this.history = [];
         this.uuid = uuidv4();
         this.pendingQuestion = false;
-        this.socketIOClientId = "Xu4NAVPvQiEWR78ECtBu"; // I don't actually know what this is
+        this.socketIOClientId = "cPDnAXFPtm7qOoavA57E"; // I don't actually know what this is
     }
 
-    async message(content) {
+    async message(content, repliedToMessage, repliedToAuthor) {
         if (this.pendingQuestion) return "You already asked Mark Robot something, please wait";
         this.pendingQuestion = true;
+
+        // Check if the replied to message was the last message sent, in which case we don't need to append it to this message
+        if (repliedToMessage) {
+            const lastMessage = this.history.slice(-1);
+            if (lastMessage?.message != repliedToMessage) {
+                content = `In reply to this following message by ${repliedToAuthor}:\n`
+                        + `\`\`\`${repliedToMessage}\`\`\`,\n`
+                        + `\n` 
+                        + `${content}`
+            }
+        }
         
         const fetchPromise = fetch("https://askmark-d0ry.onrender.com/api/v1/prediction/1065228a-5b00-4f47-917e-0a6fb8cf4c9d", {
             "headers": {

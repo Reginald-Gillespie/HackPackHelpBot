@@ -8,7 +8,7 @@
 
 Object.assign(process.env, require('./env.json'));
 var client;
-const {Client, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, Partials, EmbedBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder, ComponentType } = require("discord.js");
+const {Client, ActionRowBuilder, GatewayIntentBits, ModalBuilder, TextInputBuilder, TextInputStyle, Partials, EmbedBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder, ComponentType } = require("discord.js");
 const fs = require("fs");
 const { get } = require('https');
 const { getDescription, getHelpMessageTitlesArray, getHelpMessageBySubjectTitle, getFileContent, appendHelpMessage, editHelpMessage, getSubtopics } = require("./helpFileParse")
@@ -26,26 +26,29 @@ const fuseOptions = {
 let storage = new Storage();
 
 const MarkRobot = require("./markRobot")
-const markRobotInstances = {}; // Technically it would be good to clean old convos every week or so
-
-
-
-//
-// If this is to be more widely used than just me and one or two other people, 
-//  it should cache files, as well as Fuse instances. 
-// If a command is then added to change the help files, clear cache / pull in new files so it is visible right away. 
-// Also include a mod command to clear cache (in case files are changed directly)
-// 
+storage.cache.markRobotInstances = {}; // Non-persistant cache for /mark-robot command
+storage.cache.markRobotPingsCache = {}; // Same, but for channel pings and replies
 
 
 // Register client
 client = new Client({
-    intents: 0,
+    intents: [ GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent ],
     partials: Object.keys(Partials).map(a=>Partials[a])
 });
 
 
 //#region functions
+function markRobotMessagePostProcess(message, guild) {
+    // Post-process message snowflakes for MarkRobot
+    message = message.replace(/<@!?(\d+)>/g, (match, userId) => {
+        if (userId === client.user.id) {
+            return "@Mark Robot";
+        }
+        const user = guild.members.cache.get(userId); // Fetch the user from the guild
+        return user ? `@${user.user.username}` : match; // Replace with username if found
+    });
+    return message;
+}
 function isCreator(userID) {
     return storage?.creators.includes(userID) || storage?.admins.includes(userID)
 }
@@ -101,7 +104,7 @@ function findButtonOfId(actionRows, ID) {
 //#endregion functions
 
 
-// The meat of the code
+// Most non-message handlers
 var lastUser = "";
 client.on("interactionCreate", async cmd => {
     const username = cmd?.member?.user?.username;
@@ -320,6 +323,7 @@ client.on("interactionCreate", async cmd => {
                         return cmd.reply({content:`AI ping responses have been ${storage.AIPings ? "enabled" : "disabled"}`, ephemeral})
                     
                     case "Restart":
+                        cmd.reply({content:"Restarting...", ephemeral})
                         process.exit(0);
                 }
                 break
@@ -562,12 +566,12 @@ client.on("interactionCreate", async cmd => {
                 const shouldClear = cmd.options.getBoolean("clear") || false;
 
                 // Create a Robot instance for this user if they don't have one already
-                if (shouldClear || !markRobotInstances[userID]) {
-                    markRobotInstances[userID] = new MarkRobot();
+                if (shouldClear || !storage.cache.markRobotInstances[userID]) {
+                    storage.cache.markRobotInstances[userID] = new MarkRobot();
                 }
 
                 // Get response from Mark Robot
-                var response = await markRobotInstances[userID].message(robotMessage);
+                var response = await storage.cache.markRobotInstances[userID].message(robotMessage);
 
                 // cmd.reply({ content: response, ephemeral: true });
                 cmd.editReply(response);
@@ -575,6 +579,49 @@ client.on("interactionCreate", async cmd => {
         }
     }
 })
+
+// Message handlers for Mark RoBot pings
+client.on('messageCreate', async (message) => {
+    if (message.author.bot) return; // Ignore bot messages
+
+    // Check if the bot was mentioned
+    if (message.mentions.has(client.user)) {
+        // Check if we've disabled RoBot
+        if (!storage.AIPings && !storage?.admins.includes(message.author.id)) return;
+
+        message.channel.sendTyping()
+
+        // If the bot said something that was replied to, make sure it is in this user's bot history 
+        //   (if they are replying to a message from someone else, we inject it into the history so that RoBot sees it)
+        let repliedToAuthor, repliedToMessage;
+        if (message.reference) {
+            const repliedMessage = await message.channel.messages.fetch(message.reference.messageId);
+            repliedToMessage = markRobotMessagePostProcess(repliedMessage.content, message.guild);
+            // post-process usernames for mark robot
+            if (repliedMessage.author.id === client.user.id) {
+                repliedToAuthor = "you"
+            } else {
+                repliedToAuthor = repliedMessage.author.username;
+            }
+        }
+
+        const messageContentForRobot = markRobotMessagePostProcess(message.content, message.guild);
+
+        // Grab / create history - history is reset every new channel you talk to him in
+        let userHistory = storage.cache.markRobotPingsCache[message.author.id] || {lastChatLoc:"", markRobot:new MarkRobot()}
+        if (message.channelId !== userHistory.lastChatLoc) userHistory = {lastChatLoc:"", markRobot:new MarkRobot()}
+
+        // Get RoBot's reply
+        const robotsReply = await userHistory.markRobot.message(messageContentForRobot, repliedToMessage, repliedToAuthor)
+
+        // Store for the cases where we lose the reference
+        storage.cache.markRobotPingsCache[message.author.id] = userHistory
+
+        // Finally, send RoBot reply
+        message.reply(robotsReply);
+    }
+
+});
 
 
 
