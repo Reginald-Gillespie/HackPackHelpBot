@@ -27,14 +27,6 @@ Title: Reflash Bootloader
 Message:
 Reflashing the bootloader can help nano's that don't allow uploading code due to "avrdude: stk500_recv()" errors, https://discord.com/channels/1229106258749948056/1304473086560829481/1304473086560829481
 ---
-Title: Coding Guide
-Message:
-WKoA's writeup: https://discord.com/channels/1229106258749948056/1255319724611600384/1255319724611600384
-
-Dan + Evan's thread: https://discord.com/channels/1229106258749948056/1235701503096782911/1235701578615361647
-
-Broosky's youtube: <https://www.youtube.com/@HackPackHackers>
----
 Title: Run As Administrator Steps Image
 Message:
 https://discord.com/channels/1229106258749948056/1245199186014634044/1309297668526309408
@@ -50,4 +42,20 @@ Message:
 7. Try *multiple* other USB-A to USB-C cables.
 8. Go to http://127.0.0.1:8991/ and send the "list" command
 9. Worst case, try the Arduino IDE.
+---
+Title: Coding Guide
+Message:
+```
+WKoA's writeup: https://discord.com/channels/1229106258749948056/1255319724611600384/1255319724611600384
+
+Dan + Evan's thread: https://discord.com/channels/1229106258749948056/1235701503096782911/1235701578615361647
+
+Broosky's youtube: <https://www.youtube.com/@HackPackHackers>
+
+Johnathan's resources: https://discord.com/channels/1229106258749948056/1245218219233382461/1321587828253261895
+```
+---
+Title: CH340 driver
+Message:
+https://discord.com/channels/1229106258749948056/1318809015924555827/1321595906612793366
 ---

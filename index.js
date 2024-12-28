@@ -626,7 +626,7 @@ client.on('messageCreate', async (message) => {
 
 
 // Other listeners
-client.once("ready",async ()=>{
+client.once("ready", async ()=>{
     console.log("Ready");
 })
 
