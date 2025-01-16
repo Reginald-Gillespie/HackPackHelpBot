@@ -39,9 +39,41 @@ function validateQuestionAnswers(data) {
     return true;
 }
 
+function getQuestionAndAnswers(chartJSON, currentQuestionID, currentAnswerID) {
+    // returns [{questionID, question}, [ answer1, answer2, ...]]
+    try {
+        let nextNodeId = null;
+
+        if (!currentQuestionID) {
+            // If no current ID was specified, find the entry point
+            nextNodeId = "Title";
+        } else {
+            // If there was an ID, find the next node along this path
+            const currentNode = chartJSON[currentQuestionID];
+            const selectedAnswer = currentNode.answers.find(answerObj => answerObj.answer === currentAnswerID);
+            nextNodeId = selectedAnswer.nextStep;
+        }
+
+        // If no question is provided, find the flowchart entrypoint
+        const entryNode = chartJSON[nextNodeId];
+
+        // Format question and answer data as needed
+        const questionData = {
+            questionID: nextNodeId, 
+            question: entryNode.question
+        }
+
+        return [questionData, entryNode.answers.filter(answerObj => answerObj.answer).map(answerObj => answerObj.answer) ]
+        
+    } catch {
+        return [ {}, [] ]
+    }
+        
+}
+
 // answerID is the ID of the answer box, otherwise the line name. 
 // Line names take president over answer box IDs
-function getQuestionAndAnswers(chartContent, cQuestionID, cAnswerID) {
+function getQuestionAndAnswersOld(chartContent, cQuestionID, cAnswerID) {
     // returns [{questionID, question}, [ {answerID, answer} ]]
 
     // TODO: error checking, return nothing

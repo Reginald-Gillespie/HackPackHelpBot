@@ -127,8 +127,9 @@ client.on("interactionCreate", async cmd => {
 
         // Follow the flowchart
         var [mermaidPath, error] = await getPathToFlowchart(context.chart, true);
-        const mermaidContent = fs.readFileSync(mermaidPath).toString()
-        const [ questionData, answerDataArray ] = getQuestionAndAnswers(mermaidContent, context.questionID, customId);
+        // const mermaidContent = fs.readFileSync(mermaidPath).toString()
+        const mermaidJSON = require(mermaidPath)
+        const [ questionData, answersArray ] = getQuestionAndAnswers(mermaidJSON, context.questionID, customId);
 
         // Fetch the embed to update
         const message = await cmd.message.fetch();
@@ -155,12 +156,12 @@ client.on("interactionCreate", async cmd => {
 
         // Pack answers into row
         const buttons = [];
-        for (let i = 0; i < answerDataArray.length; i++) {
-            const answerData = answerDataArray[i];
+        for (let i = 0; i < answersArray.length; i++) {
+            const answer = answersArray[i];
             buttons.push(
                 new ButtonBuilder()
-                    .setCustomId(""+answerData.answerID)
-                    .setLabel(""+answerData.answer)
+                    .setCustomId(""+answer)
+                    .setLabel(""+answer)
                     .setStyle(ButtonStyle.Secondary)
             );
         }
@@ -344,17 +345,19 @@ client.on("interactionCreate", async cmd => {
                 }
 
                 // Parse out the first question
-                const mermaidContent = fs.readFileSync(mermaidPath).toString();
-                const [questionData, answerDataArray] = getQuestionAndAnswers(mermaidContent)
+                // const mermaidContent = fs.readFileSync(mermaidPath).toString();
+                const mermaidJSON = require(mermaidPath);
+                const [questionData, answersArray] = getQuestionAndAnswers(mermaidJSON)
 
                 // Make sure this data seems valid
-                if (!validateQuestionAnswers([questionData, answerDataArray])) {
-                    cmd.reply({ content: "There is some unknown error with this flowchart.", ephemeral: true });
-                    break
-                }
+                // if (!validateQuestionAnswers([questionData, answerDataArray])) {
+                //     cmd.reply({ content: "There is some unknown error with this flowchart.", ephemeral: true });
+                //     break
+                // }
 
                 // Now for building the embed
-                const templateColor = parseInt(mermaidContent.match(/%% templateColor #?([a-zA-Z\d]+)/)?.[1] || "dd8836", 16)
+                // const templateColor = parseInt(mermaidContent.match(/%% templateColor #?([a-zA-Z\d]+)/)?.[1] || "dd8836", 16)
+                const templateColor = parseInt(mermaidJSON.config?.color?.replaceAll("#", "") || "dd8836", 16)
 
                 const [ flowchart, _ ] = await getPathToFlowchart(chart)
                 const flowchartAttachment = new AttachmentBuilder(flowchart, { name: 'flowchart.png' });
@@ -378,12 +381,12 @@ client.on("interactionCreate", async cmd => {
                 //                 The first button's ID will always always have "|<content>", 
                 //                 where content is a json payload of userID and questionID
                 const buttons = [];
-                for (let i = 0; i < answerDataArray.length; i++) {
-                    const answerData = answerDataArray[i];
+                for (let i = 0; i < answersArray.length; i++) {
+                    const answer = answersArray[i];
                     buttons.push(
                         new ButtonBuilder()
-                            .setCustomId(""+answerData.answerID)
-                            .setLabel(""+answerData.answer)
+                            .setCustomId(""+answer)
+                            .setLabel(""+answer)
                             .setStyle(ButtonStyle.Secondary)
                     );
                 }
@@ -472,17 +475,18 @@ client.on("interactionCreate", async cmd => {
                         ephemeral: true
                     });
                 } else {
-                    let mermaidContent = fs.readFileSync(chartPath);
+                    // let mermaidContent = fs.readFileSync(chartPath);
+                    let mermaidJSON = require(chartPath);
                     cmd.reply({
                         content: 
-                            `Here is the current \`${chart}\` flowchart` +
-                            `## Flowchart must follow these rules:` +
-                            `1. Every "Question" has either:` +
-                            `   a. Named lines as options, going to the next questions` +
-                            `   b. Unnamed lines going to the next options, which each have a single link to the next question` +
-                            `2. All nodes must have IDs`,
+                            `Here is the current \`${chart}\` flowchart`,
+                            // + `## Flowchart must follow these rules:` +
+                            // `1. Every "Question" has either:` +
+                            // `   a. Named lines as options, going to the next questions` +
+                            // `   b. Unnamed lines going to the next options, which each have a single link to the next question` +
+                            // `2. All nodes must have IDs`,
                         files: [ 
-                            new AttachmentBuilder(Buffer.from(mermaidContent), { name: `${chart}.txt` })
+                            new AttachmentBuilder(mermaidJSON, { name: `${chart}.txt` })
                         ],
                         ephemeral: true
                     });

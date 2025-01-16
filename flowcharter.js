@@ -124,7 +124,7 @@ async function getPathToFlowchart(chartName, mermaidOnly=false, dumpHTML=false, 
     }
 
     // Create HTML
-    const mermaidPath = `./Flowcharts/${chartName}.mmd`;
+    const mermaidPath = `./Flowcharts/${chartName}.json`;
     if (mermaidOnly) return [mermaidPath, null]; // for editing the template we don't need the whole thiing
     const templatePath = `./Flowcharts/template.html`;
 

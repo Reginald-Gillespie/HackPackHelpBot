@@ -1,4 +1,7 @@
 {
+    "config": {
+        "color": "#57899E"
+    },
     "Title": {
         "question": "The IDE won't work",
         "answers": [
