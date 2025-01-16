@@ -25,7 +25,8 @@ const fuseOptions = {
 
 let storage = new Storage();
 
-const MarkRobot = require("./markRobot")
+const MarkRobot = require("./markRobot");
+const { re } = require('mathjs');
 storage.cache.markRobotInstances = {}; // Non-persistant cache for /mark-robot command
 storage.cache.markRobotPingsCache = {}; // Same, but for channel pings and replies
 
@@ -324,7 +325,19 @@ client.on("interactionCreate", async cmd => {
                         return cmd.reply({content:`AI ping responses have been ${storage.AIPings ? "enabled" : "disabled"}`, ephemeral})
                     
                     case "Restart":
-                        cmd.reply({content:"Restarting...", ephemeral})
+                        if (ephemeral) {
+                            await cmd.reply({ content: "Restarting...", ephemeral: true });
+                            storage.restartData = null; // Don't try to update ephemeral messages
+                        } else {
+                            // For non-ephemeral messages, we need to send and store the message data
+                            const message = await cmd.reply({ content: "Restarting...", ephemeral: false, fetchReply: true });
+                            storage.restartData = {
+                                restartedAt: Date.now(),
+                                channelId: cmd.channel.id,
+                                messageId: message.id
+                            };
+                        }
+                        console.log("Restarting...")
                         process.exit(0);
                 }
                 break
@@ -387,9 +400,17 @@ client.on("interactionCreate", async cmd => {
                         new ButtonBuilder()
                             .setCustomId(""+answer)
                             .setLabel(""+answer)
-                            .setStyle(ButtonStyle.Secondary)
+                            .setStyle(ButtonStyle.Primary)
                     );
                 }
+
+                // Inject back button
+                buttons.unshift(
+                    new ButtonBuilder()
+                        .setCustomId("Back")
+                        .setLabel("Back")
+                        .setStyle(ButtonStyle.Secondary)
+                )
 
                 // Inject the JSON data into the first button ID
                 buttons[0].data.custom_id += "|" + JSON.stringify({
@@ -642,9 +663,47 @@ client.on('messageCreate', async (message) => {
 
 
 // Other listeners
-client.once("ready", async ()=>{
+client.once("ready", async () => {
     console.log("Ready");
-})
+    try {
+        const restartUpdateThreshold = 10000;
+        const rebootData = storage.restartData;
+        
+        if (!rebootData) return;
+        
+        const { restartedAt, channelId, messageId } = rebootData;
+        const timeSinceRebootCommand = Date.now() - restartedAt;
+        console.log(`Last restarted ${timeSinceRebootCommand/1000} seconds ago`);
+        
+        if (timeSinceRebootCommand < restartUpdateThreshold) {
+            try {
+                const channel = await client.channels.fetch(channelId);
+                if (!channel) {
+                    console.error("Channel not found");
+                    return;
+                }
+                
+                const message = await channel.messages.fetch(messageId);
+                if (!message) {
+                    console.error("Message not found");
+                    return;
+                }
+                
+                await message.edit({
+                    content: `Rebooting... done - took ${(timeSinceRebootCommand/1000).toFixed(2)} seconds`
+                });
+                
+                // Clear restart data after successful update
+                storage.restartData = null;
+            } catch (error) {
+                console.error("Error updating restart message:", error);
+            }
+        }
+    } catch (error) {
+        console.error("Error in ready event:", error);
+    }
+});
+
 
 
 // Error handling (async crashes in discord.js threads can still crash it)
