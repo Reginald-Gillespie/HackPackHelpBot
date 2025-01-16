@@ -14,8 +14,8 @@ function hash(data) {
 function getChartOptions() {
     let files = fs.readdirSync("./Flowcharts");
     files = files
-        .filter(filename => filename.endsWith(".mmd"))
-        .map(filename => filename.slice(0, -4))
+        .filter(filename => filename.toLowerCase().endsWith(".json"))
+        .map(filename => filename.slice(0, -5))
     return files
 }
 
@@ -58,7 +58,63 @@ async function renderHTML(html, overrideCache=false) {
 }
 
 async function getMermaidFromJSON(chart) {
-    
+    const chartJSON = require(chart)
+
+    // Start at the start of the chart, always labeled "Title"
+    let queue = ["Title"];
+    let done = new Set();
+    let builtChart = ""; // Start building the nodes part of the chart
+    let round = 0;
+    while (queue.length > 0) {
+        // console.log(`Round ${round++}`);
+        if (round > 100) { // Emergency crash
+            process.exit(1);
+        }
+
+        let batch = new Set();
+        queue.forEach(nodeName => {
+            const node = chartJSON[nodeName];
+            if (node) {
+                // Define node content
+                const escapedContent = node.question.replaceAll('"', "#quot;")
+                builtChart += `${nodeName}["${escapedContent}"]\n`;
+
+                // Link node to each answer
+                node.answers.forEach(answerObject => {
+                    const nextNodeName = answerObject.nextStep;
+                    const arrow = answerObject.customArrow || node.customArrow || "-->";
+                    if (answerObject.answer)
+                        builtChart += `${nodeName} ${arrow} |${answerObject.answer}| ${nextNodeName}\n`;
+                    else
+                        builtChart += `${nodeName} ${arrow} ${nextNodeName}\n`; // Dummy answer for spacing
+                    
+                    // Add next node to the queue if it hasn't been done yet
+                    if (!done.has(nextNodeName)) {
+                        done.add(nextNodeName)
+                        batch.add(nextNodeName);
+                    } else {
+                        // console.log(`Already processed node ${nodeName}`)
+                    }
+                })
+            }
+        })
+        queue = [...batch];
+    }
+
+    // Add the rest of the boilerplate
+    builtChart = builtChart.replaceAll(/^/gm, "    ").trim()
+    builtChart = builtChart.replaceAll("https://", "https:\\/\\/")
+    builtChart = builtChart.replaceAll("http://", "http:\\/\\/")
+    builtChart = 
+    `flowchart TD
+    ${builtChart}
+    %% Node-specific styling
+    style Title white-space:nowrap
+    style Title stroke-width:3px;
+
+    %% templateColor ${chartJSON?.config?.color || "#57899E"}`;
+
+    return builtChart;
 }
 
 async function getPathToFlowchart(chartName, mermaidOnly=false, dumpHTML=false, overrideCache=false) {
@@ -71,7 +127,10 @@ async function getPathToFlowchart(chartName, mermaidOnly=false, dumpHTML=false, 
     const mermaidPath = `./Flowcharts/${chartName}.mmd`;
     if (mermaidOnly) return [mermaidPath, null]; // for editing the template we don't need the whole thiing
     const templatePath = `./Flowcharts/template.html`;
-    const mermaidContent = fs.readFileSync(mermaidPath).toString()
+
+    // const mermaidContent = fs.readFileSync(mermaidPath).toString()
+    const mermaidContent = await getMermaidFromJSON(`./Flowcharts/${chartName}.json`)
+
     let templateContent = fs.readFileSync(templatePath).toString()
     const templateColor = "#"+mermaidContent.match(/%% templateColor #?([a-zA-Z\d]+)/)[1]
     templateContent = templateContent.replace("##color##", templateColor);

@@ -9,15 +9,21 @@
         ]
     },
     "WatchedVideo": {
-        "question": "Have you watched the video at https://ide.crunchlabs.com/downloads?",
+        "question": "Have you watched the video at https://ide.crunchlabs.com/downloads ?",
         "answers": [
             {
                 "answer": "No",
                 "nextStep": "GoWatchVideo"
             },
             {
+                "answer": null,
+                "nextStep": "OS",
+                "customArrow": "~~~"                
+            },
+            {
                 "answer": "Yes",
-                "nextStep": "OS"
+                "nextStep": "OS",
+                "customArrow": "--->"
             }
         ]
     },
