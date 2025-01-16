@@ -23,11 +23,6 @@ async function renderHTML(html, overrideCache=false) {
     // returns imageLoc
 
     const fileLoc = `./Flowcharts/cache/${hash(html)}.jpg`;
-
-    // Try creating the dir
-    try {
-        fs.mkdirSync('my_directory', { recursive: true });
-    } catch {}
       
     // Render with puppeteer if this HTML has not been rendered before
     if (overrideCache || !fs.existsSync(fileLoc)) {
