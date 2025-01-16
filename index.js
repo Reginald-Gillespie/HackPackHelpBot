@@ -469,14 +469,25 @@ client.on("interactionCreate", async cmd => {
 
                 // If we have the file, we use it - otherwise, send the user the current file
                 if (fileUpload) {
-                    downloadFile(fileUpload.url, chartPath)
+                    // // Error catching ideas, but might take more in depth function editing. Might be unecessary with the new processing method
+                    // cmd.deferReply({ ephemeral: true });
+                    // let hadError = false;
+                    // try {
+                    //     downloadFile(fileUpload.url, chartPath)
+                    //     var [chartPath, error] = await getPathToFlowchart(chart, false, sendHTML, overrideCache);
+                    //     if (error) hadError = true;
+                    // } catch {
+                    //     hadError = true;
+                    // }
+
+                    downloadFile(fileUpload.url, chartPath);
                     cmd.reply({
                         content: `The chart has been updated`, 
                         ephemeral: true
                     });
                 } else {
-                    // let mermaidContent = fs.readFileSync(chartPath);
-                    let mermaidJSON = require(chartPath);
+                    let mermaidJSON = fs.readFileSync(chartPath);
+                    // let mermaidJSON = require(chartPath);
                     cmd.reply({
                         content: 
                             `Here is the current \`${chart}\` flowchart`,
