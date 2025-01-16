@@ -121,6 +121,7 @@ client.on("interactionCreate", async cmd => {
         const jsonButton = currentButtons.components[0];
         const context = JSON.parse(jsonButton.customId.split("|")[1])
         const customId = cmd.customId.split("|")[0]; // do this for all buttons just because
+        const interactionId = (cmd.message.embeds[1]?.footer || cmd.message.embeds[0]?.footer).text.split(" ")[1];
 
         if (cmd.user.id !== context.id) {
             return cmd.reply({content: "This flowchart is not for you, you can run /help to start your own", ephemeral: true})
@@ -130,7 +131,30 @@ client.on("interactionCreate", async cmd => {
         var [mermaidPath, error] = await getPathToFlowchart(context.chart, true);
         // const mermaidContent = fs.readFileSync(mermaidPath).toString()
         const mermaidJSON = require(mermaidPath)
-        const [ questionData, answersArray ] = getQuestionAndAnswers(mermaidJSON, context.questionID, customId);
+
+        let questionData, answersArray;
+
+        // Check if this was the back button
+        if (customId === "Back") {
+            // Check if we have previous data
+            const history = storage.cache[context.id]?.helpHistory;
+            if (!history || !history.length > 1) return cmd.reply({content: "There is no history to go back to. Please start a new command.", ephemeral: true})
+            
+            // Make sure this history is for this interaction
+            if (history.slice(-1)[0][2] !== interactionId) return cmd.reply({content: "There is no history to go back to. Please start a new command.", ephemeral: true}) 
+
+            history.pop(); // Remove the current page
+
+            let uid;
+            [questionData, answersArray, uid] = history.slice(-1)[0];
+        }
+        else {
+            [ questionData, answersArray ] = getQuestionAndAnswers(mermaidJSON, context.questionID, customId);
+
+            // Pack new data to history cache
+            storage.cache[context.id]?.helpHistory?.push([questionData, answersArray, interactionId])
+
+        }
 
         // Fetch the embed to update
         const message = await cmd.message.fetch();
@@ -139,7 +163,6 @@ client.on("interactionCreate", async cmd => {
         let questionField = questionEmbed.fields[2];
         const question = questionField.value; //.match(/```(.+?)```/)?.[1] || "[Error parsing question]"
         let answerEmbed = hasAnswerEmbed ? message.embeds[0] : null;
-
 
         // Create answer embed template it does not exist
         if (!answerEmbed) {
@@ -151,6 +174,7 @@ client.on("interactionCreate", async cmd => {
         
         // Add the recorded answers to the answer embed
         answerEmbed.data.fields.push({ name: `Q: ${question}`, value: `> ${thisButton.data.label}` })
+        answerEmbed.data.fields = answerEmbed.data.fields.slice(-25); // Make sure we don't hit the discord limit
 
         // Pack question back into question embed
         questionField.value = postProcessForDiscord(questionData.question)
@@ -163,15 +187,25 @@ client.on("interactionCreate", async cmd => {
                 new ButtonBuilder()
                     .setCustomId(""+answer)
                     .setLabel(""+answer)
-                    .setStyle(ButtonStyle.Secondary)
+                    .setStyle(ButtonStyle.Primary)
             );
         }
+
+        // Inject back button if this isn't the starting page
+        if (questionData.questionID !== "Title") buttons.unshift(
+            new ButtonBuilder()
+                .setCustomId("Back")
+                .setLabel("Back")
+                .setStyle(ButtonStyle.Secondary)
+        )
+
         if (buttons[0]) {
             // This might not be defined if there are no more answers
             buttons[0].data.custom_id += "|" + JSON.stringify({
                 id: context.id,
                 questionID: questionData.questionID,
-                chart: context.chart
+                chart: context.chart,
+                // uid: context.uid
             })
         }
         const rows = [];
@@ -362,6 +396,11 @@ client.on("interactionCreate", async cmd => {
                 const mermaidJSON = require(mermaidPath);
                 const [questionData, answersArray] = getQuestionAndAnswers(mermaidJSON)
 
+                // Pack current data to history cache
+                storage.cache[who.id] = {}
+                storage.cache[who.id].helpHistory = []
+                storage.cache[who.id]?.helpHistory.push([questionData, answersArray, cmd.id])
+
                 // Make sure this data seems valid
                 // if (!validateQuestionAnswers([questionData, answerDataArray])) {
                 //     cmd.reply({ content: "There is some unknown error with this flowchart.", ephemeral: true });
@@ -388,7 +427,10 @@ client.on("interactionCreate", async cmd => {
                         // Question
                         { name: "Question:", value: postProcessForDiscord(questionData.question) },
                         { name: '\n', value: '\n' },
+                        { name: '\n', value: '\n' },
                     )
+                    .setFooter({ text: `Interaction ${cmd.id}`, iconURL: who.displayAvatarURL() });
+                
                 
                 // Parse buttons - Each button's ID will be the AnswerID
                 //                 The first button's ID will always always have "|<content>", 
@@ -404,20 +446,22 @@ client.on("interactionCreate", async cmd => {
                     );
                 }
 
-                // Inject back button
-                buttons.unshift(
-                    new ButtonBuilder()
-                        .setCustomId("Back")
-                        .setLabel("Back")
-                        .setStyle(ButtonStyle.Secondary)
-                )
-
                 // Inject the JSON data into the first button ID
                 buttons[0].data.custom_id += "|" + JSON.stringify({
                     id: who.id,
                     questionID: questionData.questionID,
-                    chart
+                    chart,
+                    // uid: cmd.id
                 })
+
+                // Cool concept of spreading it here but doesn't work when we hit a reply with only one button...
+                // buttons.map(buttonData => {
+                //     buttonData.custom_id += "|"
+                //     const availableSpace = 100 - buttonData.custom_id.length;
+                //     buttonData.custom_id += context.slice(0, availableSpace)
+                //     context = context.slice(availableSpace);
+                // })
+
 
                 // Split buttons into rows of 5 (discord max)
                 const rows = [];
