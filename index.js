@@ -97,7 +97,7 @@ function findButtonOfId(actionRows, ID) {
         const button = actionRow.components.find(
           component => component.type === ComponentType.Button && component.customId === ID
         );
-        if (button) returnCbutton
+        if (button) return button
     }
     return null
 }
@@ -367,7 +367,7 @@ client.on("interactionCreate", async cmd => {
                         // Storage for interaction log
                         // { name: "Answer log:", value: `Started ${chart} flowchart` },
                         // Instructions
-                        { name: "Instructions", value: `<@${cmd.user.id}> Please answer these questions:` },
+                        { name: "Instructions", value: `Please answer these questions:` },
                         { name: '\n', value: '\n' },
                         // Question
                         { name: "Question:", value: postProcessForDiscord(questionData.question) },
@@ -403,6 +403,7 @@ client.on("interactionCreate", async cmd => {
 
                 // Send
                 await cmd.reply({
+                    content: `<@${who.id}>`,
                     embeds: [embed],
                     components: rows,
                     files: [ flowchartAttachment ]

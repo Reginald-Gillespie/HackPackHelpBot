@@ -27,10 +27,6 @@ Title: Reflash Bootloader
 Message:
 Reflashing the bootloader can help nano's that don't allow uploading code due to "avrdude: stk500_recv()" errors, https://discord.com/channels/1229106258749948056/1304473086560829481/1304473086560829481
 ---
-Title: Run As Administrator Steps Image
-Message:
-https://discord.com/channels/1229106258749948056/1245199186014634044/1309297668526309408
----
 Title: IDE Errors Uploading Checklist
 Message:
 1. Use Chrome.
@@ -43,6 +39,16 @@ Message:
 8. Go to http://127.0.0.1:8991/ and send the "list" command
 9. Worst case, try the Arduino IDE.
 ---
+Title: CH340 driver
+Message:
+https://discord.com/channels/1229106258749948056/1318809015924555827/1321595906612793366
+---
+Title: Run As Administrator Steps Image
+Message:
+https://discord.com/channels/1229106258749948056/1245199186014634044/1309297668526309408
+
+https://media.discordapp.net/attachments/1245199186014634044/1322657200325267587/image.png?ex=6771ac02&is=67705a82&hm=7779a18874995221f085a10769fcc54b245425502cccae65629f7386339c84e1&=&format=webp&quality=lossless&width=698&height=700
+---
 Title: Coding Guide
 Message:
 ```
@@ -50,12 +56,8 @@ WKoA's writeup: https://discord.com/channels/1229106258749948056/125531972461160
 
 Dan + Evan's thread: https://discord.com/channels/1229106258749948056/1235701503096782911/1235701578615361647
 
-Broosky's youtube: <https://www.youtube.com/@HackPackHackers>
+Brooksy's  youtube: <https://www.youtube.com/@HackPackHackers>
 
 Johnathan's resources: https://discord.com/channels/1229106258749948056/1245218219233382461/1321587828253261895
 ```
----
-Title: CH340 driver
-Message:
-https://discord.com/channels/1229106258749948056/1318809015924555827/1321595906612793366
 ---
