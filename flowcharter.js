@@ -57,6 +57,10 @@ async function renderHTML(html, overrideCache=false) {
     return fileLoc;
 }
 
+async function getMermaidFromJSON(chart) {
+    
+}
+
 async function getPathToFlowchart(chartName, mermaidOnly=false, dumpHTML=false, overrideCache=false) {
     // returns [imagePath, errorString]
     if (!getChartOptions().includes(chartName)) {
@@ -80,6 +84,7 @@ async function getPathToFlowchart(chartName, mermaidOnly=false, dumpHTML=false, 
     const imageLoc = await renderHTML(templateContent, overrideCache);
     return [imageLoc, null];
 }
+
 
 
 
