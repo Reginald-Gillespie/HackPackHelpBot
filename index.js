@@ -206,7 +206,7 @@ client.on("interactionCreate", async cmd => {
         answerEmbed.data.fields = answerEmbed.data.fields.slice(-25); // Make sure we don't hit the discord limit
 
         // Pack question back into question embed
-        questionField.value = postProcessForDiscord(questionData?.question);
+        questionField.value = postProcessForDiscord(questionData?.question, cmd.guild);
 
         // The flowchart is already attached if we don't change the `files` param, we just need to reinsert the embed in the thumbnail
         questionEmbedBuild = EmbedBuilder.from(questionEmbed)
@@ -412,7 +412,7 @@ client.on("interactionCreate", async cmd => {
                         { name: "Instructions", value: `Please answer these questions:` },
                         { name: '\n', value: '\n' },
                         // Question
-                        { name: "Question:", value: postProcessForDiscord(questionData?.question) },
+                        { name: "Question:", value: postProcessForDiscord(questionData?.question, cmd.guild) },
                         { name: '\n', value: '\n' },
                         { name: '\n', value: '\n' },
                     )

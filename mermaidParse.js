@@ -4,10 +4,18 @@
 
 const fs = require("fs")
 
-function postProcessForDiscord(message) {
+function postProcessForDiscord(message, guild) {
     message = String(message || "This answer appears to be undefined. Please try again later.");
     message = message.replaceAll("#quot;", '"')
     message = message.replaceAll("https:\\/\\/", "https://")
+
+    // Snowflake channel mentions
+    const channelMentionRegex = /#(\w[\w-]*)/g;
+    message = message.replace(channelMentionRegex, (match, channelName) => {
+        const channel = guild.channels.cache.find(c => c.name === channelName);
+        return channel ? `<#${channel.id}>` : match;
+    });
+    
     return message;
 }
 
