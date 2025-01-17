@@ -187,7 +187,6 @@ client.on("interactionCreate", async cmd => {
                 id: context.id,
                 questionID: questionData?.questionID,
                 chart: context.chart,
-                // uid: context.uid
             })
         }
         const rows = [];
@@ -386,14 +385,12 @@ client.on("interactionCreate", async cmd => {
                 }
 
                 // Parse out the first question
-                // const mermaidContent = fs.readFileSync(mermaidPath).toString();
                 let mermaidJSON;
                 try {
                     mermaidJSON = require(mermaidPath);
                 } catch {
                     return cmd.reply({ content: "Sorry, this chart has malformed JSON.", ephemeral: true });
                 }
-
                 const [questionData, answersArray] = getQuestionAndAnswers(mermaidJSON)
 
                 // Pack current data to history cache
@@ -401,14 +398,7 @@ client.on("interactionCreate", async cmd => {
                 storage.cache[who.id].helpHistory = []
                 storage.cache[who.id]?.helpHistory.push([questionData, answersArray, cmd.id])
 
-                // Make sure this data seems valid
-                // if (!validateQuestionAnswers([questionData, answerDataArray])) {
-                //     cmd.reply({ content: "There is some unknown error with this flowchart.", ephemeral: true });
-                //     break
-                // }
-
                 // Now for building the embed
-                // const templateColor = parseInt(mermaidContent.match(/%% templateColor #?([a-zA-Z\d]+)/)?.[1] || "dd8836", 16)
                 const templateColor = parseInt(mermaidJSON.config?.color?.replaceAll("#", "") || "dd8836", 16)
 
                 const [ flowchart, _ ] = await getPathToFlowchart(chart)
@@ -419,8 +409,6 @@ client.on("interactionCreate", async cmd => {
                     .setTitle(`Flowchart Walkthrough: \`${chart}\``)
                     .setThumbnail(`attachment://flowchart.png`)
                     .addFields(
-                        // Storage for interaction log
-                        // { name: "Answer log:", value: `Started ${chart} flowchart` },
                         // Instructions
                         { name: "Instructions", value: `Please answer these questions:` },
                         { name: '\n', value: '\n' },
@@ -451,7 +439,6 @@ client.on("interactionCreate", async cmd => {
                     id: who.id,
                     questionID: questionData?.questionID,
                     chart,
-                    // uid: cmd.id
                 })
 
                 // Cool concept of spreading it here but doesn't work when we hit a reply with only one button...
@@ -461,7 +448,6 @@ client.on("interactionCreate", async cmd => {
                 //     buttonData.custom_id += context.slice(0, availableSpace)
                 //     context = context.slice(availableSpace);
                 // })
-
 
                 // Split buttons into rows of 5 (discord max)
                 const rows = [];
@@ -654,7 +640,6 @@ client.on("interactionCreate", async cmd => {
                 // Get response from Mark Robot
                 var response = await storage.cache.markRobotInstances[userID].message(robotMessage);
 
-                // cmd.reply({ content: response, ephemeral: true });
                 cmd.editReply(response);
                 break;
         }
