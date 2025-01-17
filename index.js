@@ -13,7 +13,7 @@ const fs = require("fs");
 const { get } = require('https');
 const { getDescription, getHelpMessageTitlesArray, getHelpMessageBySubjectTitle, getFileContent, appendHelpMessage, editHelpMessage, getSubtopics } = require("./helpFileParse")
 const { getChartOptions, getPathToFlowchart } = require("./flowcharter")
-const { getQuestionAndAnswers, validateQuestionAnswers, postProcessForDiscord } = require("./mermaidParse")
+const { getQuestionAndAnswers, postProcessForDiscord } = require("./mermaidParse")
 const subtopics = getSubtopics();
 const Fuse = require('fuse.js');
 const path = require("path")
@@ -153,7 +153,6 @@ client.on("interactionCreate", async cmd => {
 
             // Pack new data to history cache
             storage.cache[context.id]?.helpHistory?.push([questionData, answersArray, interactionId])
-
         }
 
         // Fetch the embed to update
@@ -176,7 +175,7 @@ client.on("interactionCreate", async cmd => {
             );
         }
         // Inject back button if this isn't the starting page
-        if (questionData.questionID !== "Title") buttons.unshift(
+        if (questionData?.questionID !== "Title") buttons.unshift(
             new ButtonBuilder()
                 .setCustomId("Back")
                 .setLabel("Back")
@@ -186,7 +185,7 @@ client.on("interactionCreate", async cmd => {
             // This might not be defined if there are no more answers
             buttons[0].data.custom_id += "|" + JSON.stringify({
                 id: context.id,
-                questionID: questionData.questionID,
+                questionID: questionData?.questionID,
                 chart: context.chart,
                 // uid: context.uid
             })
@@ -209,7 +208,7 @@ client.on("interactionCreate", async cmd => {
         answerEmbed.data.fields = answerEmbed.data.fields.slice(-25); // Make sure we don't hit the discord limit
 
         // Pack question back into question embed
-        questionField.value = postProcessForDiscord(questionData.question)
+        questionField.value = postProcessForDiscord(questionData?.question);
 
         // The flowchart is already attached if we don't change the `files` param, we just need to reinsert the embed in the thumbnail
         questionEmbedBuild = EmbedBuilder.from(questionEmbed)
@@ -388,7 +387,13 @@ client.on("interactionCreate", async cmd => {
 
                 // Parse out the first question
                 // const mermaidContent = fs.readFileSync(mermaidPath).toString();
-                const mermaidJSON = require(mermaidPath);
+                let mermaidJSON;
+                try {
+                    mermaidJSON = require(mermaidPath);
+                } catch {
+                    return cmd.reply({ content: "Sorry, this chart has malformed JSON.", ephemeral: true });
+                }
+
                 const [questionData, answersArray] = getQuestionAndAnswers(mermaidJSON)
 
                 // Pack current data to history cache
@@ -420,7 +425,7 @@ client.on("interactionCreate", async cmd => {
                         { name: "Instructions", value: `Please answer these questions:` },
                         { name: '\n', value: '\n' },
                         // Question
-                        { name: "Question:", value: postProcessForDiscord(questionData.question) },
+                        { name: "Question:", value: postProcessForDiscord(questionData?.question) },
                         { name: '\n', value: '\n' },
                         { name: '\n', value: '\n' },
                     )
@@ -442,9 +447,9 @@ client.on("interactionCreate", async cmd => {
                 }
 
                 // Inject the JSON data into the first button ID
-                buttons[0].data.custom_id += "|" + JSON.stringify({
+                if (buttons[0]) buttons[0].data.custom_id += "|" + JSON.stringify({
                     id: who.id,
-                    questionID: questionData.questionID,
+                    questionID: questionData?.questionID,
                     chart,
                     // uid: cmd.id
                 })
@@ -732,12 +737,13 @@ client.once("ready", async () => {
                     content: `Rebooting... done - took ${(timeSinceRebootCommand/1000).toFixed(2)} seconds`
                 });
                 
-                // Clear restart data after successful update
-                storage.restartData = null;
             } catch (error) {
                 console.error("Error updating restart message:", error);
             }
         }
+
+        // Clear restart data after booting
+        storage.restartData = null;
     } catch (error) {
         console.error("Error in ready event:", error);
     }

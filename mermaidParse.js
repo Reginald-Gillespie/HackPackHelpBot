@@ -5,7 +5,7 @@
 const fs = require("fs")
 
 function postProcessForDiscord(message) {
-    message = String(message);
+    message = String(message || "This answer appears to be undefined. Please try again later.");
     message = message.replaceAll("#quot;", '"')
     message = message.replaceAll("https:\\/\\/", "https://")
     return message;
@@ -23,21 +23,6 @@ function matchMultipleGroups(content, regex=/./) {
     return results;
 }
 
-function validateQuestionAnswers(data) {
-    // TODO: build a function to recursively validate all paths of a graph when submitted as validation...
-    // TODO: return exact text here?
-    if (data?.length !== 2) return false;
-    const [ questionData, answerDataArray ] = data;
-    if (Object.keys(questionData).length !== 2) return false
-    if (!Array.isArray(answerDataArray)) return false
-    answerDataArray.forEach((item, index) => {
-        if (!(typeof item === 'object' && item !== null && Object.keys(item).length === 2)) {
-            return false;
-        }
-    });
-    // NOTE: this function does NOT validate that the data keys are valid or contain content, just they exist
-    return true;
-}
 
 function getQuestionAndAnswers(chartJSON, currentQuestionID, currentAnswerID) {
     // returns [{questionID, question}, [ answer1, answer2, ...]]
@@ -50,20 +35,22 @@ function getQuestionAndAnswers(chartJSON, currentQuestionID, currentAnswerID) {
         } else {
             // If there was an ID, find the next node along this path
             const currentNode = chartJSON[currentQuestionID];
-            const selectedAnswer = currentNode.answers.find(answerObj => answerObj.answer === currentAnswerID);
-            nextNodeId = selectedAnswer.nextStep;
+            const selectedAnswer = currentNode.answers.find(answerObj => answerObj?.answer === currentAnswerID);
+            nextNodeId = selectedAnswer?.nextStep;
         }
 
         // If no question is provided, find the flowchart entrypoint
-        const entryNode = chartJSON[nextNodeId];
+        const nextNode = chartJSON[nextNodeId];
+
+        if (!nextNode) throw new Error("No entry node found");
 
         // Format question and answer data as needed
         const questionData = {
             questionID: nextNodeId, 
-            question: entryNode.question
+            question: nextNode?.question
         }
 
-        return [questionData, entryNode.answers.filter(answerObj => answerObj.answer).map(answerObj => answerObj.answer) ]
+        return [questionData, nextNode?.answers?.filter(answerObj => answerObj?.answer).map(answerObj => answerObj?.answer) ]
         
     } catch {
         return [ {}, [] ]
@@ -71,4 +58,4 @@ function getQuestionAndAnswers(chartJSON, currentQuestionID, currentAnswerID) {
         
 }
 
-module.exports = { getQuestionAndAnswers, validateQuestionAnswers, postProcessForDiscord }
+module.exports = { getQuestionAndAnswers, postProcessForDiscord }
