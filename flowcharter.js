@@ -3,6 +3,10 @@
 const fs = require("fs");
 const CryptoJS = require("crypto-js");
 const puppeteer = require('puppeteer');
+const path = require('path');
+const process = require('process');
+process.chdir(path.dirname(__filename)); // Make sure this file is always cd-ed into its dir
+
 
 // This file returns the filepath to the requested flowcharts, 
 //   rendering them if we haven't already saved the current version as an image.
@@ -119,7 +123,8 @@ async function getMermaidFromJSON(chart) {
 }
 
 async function getPathToFlowchart(chartName, mermaidOnly=false, dumpHTML=false, overrideCache=false) {
-    // returns [imagePath, errorString]
+    // returns [imagePath, errorString], if mermaidOnly is false
+    // returns [mermaidPath, errorString], if mermaidOnly is true
     if (!getChartOptions().includes(chartName)) {
         return [null, "That chart could not be found, check the spelling and try using the autocompletes options."]
     }

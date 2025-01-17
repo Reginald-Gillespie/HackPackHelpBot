@@ -129,7 +129,6 @@ client.on("interactionCreate", async cmd => {
 
         // Follow the flowchart
         var [mermaidPath, error] = await getPathToFlowchart(context.chart, true);
-        // const mermaidContent = fs.readFileSync(mermaidPath).toString()
         const mermaidJSON = require(mermaidPath)
 
         let questionData, answersArray;
