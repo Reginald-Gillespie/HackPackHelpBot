@@ -10,6 +10,8 @@ Add IDE steps image and discord links to flowchart
 Lots of caching
 
 Flowcharts
+- If it isn't cached, don't include it 
+- If it is actively being cached, wait for that to finish and return it's URL
 - Error catching 
   - Length of answer history - splice embed answers to not crash on flowchart loops.
   - Flowchart validation

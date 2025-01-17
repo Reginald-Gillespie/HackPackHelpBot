@@ -164,22 +164,7 @@ client.on("interactionCreate", async cmd => {
         const question = questionField.value; //.match(/```(.+?)```/)?.[1] || "[Error parsing question]"
         let answerEmbed = hasAnswerEmbed ? message.embeds[0] : null;
 
-        // Create answer embed template it does not exist
-        if (!answerEmbed) {
-            answerEmbed = new EmbedBuilder()
-                .setColor(0)
-                .setTitle(`Recorded answers`)
-                .setFields([])
-        }
-        
-        // Add the recorded answers to the answer embed
-        answerEmbed.data.fields.push({ name: `Q: ${question}`, value: `> ${thisButton.data.label}` })
-        answerEmbed.data.fields = answerEmbed.data.fields.slice(-25); // Make sure we don't hit the discord limit
-
-        // Pack question back into question embed
-        questionField.value = postProcessForDiscord(questionData.question)
-
-        // Pack answers into row
+        // Buttons - pack answers into row
         const buttons = [];
         for (let i = 0; i < answersArray.length; i++) {
             const answer = answersArray[i];
@@ -190,7 +175,6 @@ client.on("interactionCreate", async cmd => {
                     .setStyle(ButtonStyle.Primary)
             );
         }
-
         // Inject back button if this isn't the starting page
         if (questionData.questionID !== "Title") buttons.unshift(
             new ButtonBuilder()
@@ -198,7 +182,6 @@ client.on("interactionCreate", async cmd => {
                 .setLabel("Back")
                 .setStyle(ButtonStyle.Secondary)
         )
-
         if (buttons[0]) {
             // This might not be defined if there are no more answers
             buttons[0].data.custom_id += "|" + JSON.stringify({
@@ -213,12 +196,24 @@ client.on("interactionCreate", async cmd => {
             rows.push(new ActionRowBuilder().addComponents(buttons.slice(i, i + 5)));
         }
 
-        // Reattach flowchart
+        // Create answer embed template if it does not exist
+        if (!answerEmbed) {
+            answerEmbed = new EmbedBuilder()
+                .setColor(0)
+                .setTitle(`Recorded answers`)
+                .setFields([])
+        }
+        
+        // Add the recorded answers to the answer embed
+        answerEmbed.data.fields.push({ name: `Q: ${question}`, value: `> ${thisButton.data.label}` })
+        answerEmbed.data.fields = answerEmbed.data.fields.slice(-25); // Make sure we don't hit the discord limit
+
+        // Pack question back into question embed
+        questionField.value = postProcessForDiscord(questionData.question)
+
+        // The flowchart is already attached if we don't change the `files` param, we just need to reinsert the embed in the thumbnail
         questionEmbedBuild = EmbedBuilder.from(questionEmbed)
         questionEmbedBuild.setThumbnail("attachment://flowchart.png");
-        // const [ flowchart, _ ] = await getPathToFlowchart(context.chart)
-        // const flowchartAttachment = new AttachmentBuilder(flowchart, { name: 'flowchart.png' });
-
 
         await message.edit({ 
             embeds: [ answerEmbed, questionEmbedBuild ],
