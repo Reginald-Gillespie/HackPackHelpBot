@@ -29,7 +29,8 @@ const MarkRobot = require("./markRobot");
 const { re } = require('mathjs');
 storage.cache.markRobotInstances = {}; // Non-persistant cache for /mark-robot command
 storage.cache.markRobotPingsCache = {}; // Same, but for channel pings and replies
-storage.cache.repeatQuestions = {} // {id: {message: <hash>, channelID, repeats: 1}}
+storage.cache.repeatQuestions = {} // {id: [{message: <hash>, channelID, repeats: 1}, ...]}
+let repeatQuestions = storage.cache.repeatQuestions; // shorter reference to the above 
 
 
 // Register client
@@ -396,6 +397,11 @@ client.on("interactionCreate", async cmd => {
                         storage.AIPings = !storage.AIPings;
                         return cmd.reply({content:`AI ping responses have been ${storage.AIPings ? "enabled" : "disabled"}`, ephemeral})
                     
+                    case "Dup Notif Killswitch":
+                        storage.dupeNotifs = !storage.dupeNotifs;
+                        return cmd.reply({content:`Duplicate question notifs have been ${storage.dupeNotifs ? "enabled" : "disabled"}`, ephemeral})
+                    
+                            
                     case "Restart":
                         if (ephemeral) {
                             await cmd.reply({ content: "Restarting...", ephemeral: true });
@@ -732,10 +738,62 @@ client.on('messageCreate', async (message) => {
         message.reply(robotsReply);
     }
 
-    // Repeat messages
+    // Repeat messages stuff
     const messageHash = md5(message.content);
-    storage.cache.repeatQuestions[message.author.id]
+    const authorID = message.author.id;
+    repeatQuestions[authorID] = repeatQuestions[authorID] || [] //{message: "", channelID: 0, repeats: 0}
 
+    // Find/create message
+    let existingQuestion = repeatQuestions[authorID].find(q => q.message === messageHash);
+    if (existingQuestion) {
+        if (existingQuestion.channelID !== message.channel.id) {
+            // If this is a different channel, increment it
+            existingQuestion.repeats += 1;
+        }
+        existingQuestion.channelID = message.channel.id
+    } else {
+        existingQuestion = { message: messageHash, channelID: message.channelId, repeats: 1, originalLink: `https://discord.com/channels/${message.guild.id}/${message.channel.id}/${message.id}` }
+        repeatQuestions[authorID].push(existingQuestion);
+    }
+
+    // Only keep the latest 3 message hashes from each user
+    if (repeatQuestions[authorID].length > 3) {
+        repeatQuestions[authorID].shift();
+    }
+
+    // Now, if this message meets specific conditions, we'll reference the original one.
+    const normalizedContent = message.content.toLowerCase().replace("'", "");
+    if (
+        storage.dupeNotifs && 
+        existingQuestion.repeats > 1 &&
+        normalizedContent.length > 30 && // Required flags
+        ( // Must contain one of these:
+            /\?/.test(normalizedContent) ||
+            /anyone know/.test(normalizedContent) ||
+            /\bhow\b/.test(normalizedContent) ||
+            /\bwhy\b/.test(normalizedContent) ||
+            /problem/.test(normalizedContent) ||
+            /will not/.test(normalizedContent) ||
+            /wont/.test(normalizedContent) ||
+            /isnt/.test(normalizedContent) ||
+            /is not/.test(normalizedContent) ||
+            /it was/.test(normalizedContent)
+        )
+    ) {
+        try {
+            // Make sure the original wasn't deleted before commenting
+            const originalChannelId = existingQuestion.originalLink.split('/')[5];
+            const originalChannel = await client.channels.fetch(originalChannelId);
+            const originalMessage = await originalChannel.messages.fetch(existingQuestion.originalLink.split('/').pop());
+            if (originalMessage) {
+                message.reply(`-#  <:info:1330047959806771210> This appears to be a duplicate question. You already asked here ${existingQuestion.originalLink}`);
+            }
+        } catch (error) {
+            // If the original message was deleted, set this message as the original
+            existingQuestion.repeats = 1;
+            existingQuestion.originalLink = `https://discord.com/channels/${message.guild.id}/${message.channel.id}/${message.id}`;
+        }
+    }
 
 });
 

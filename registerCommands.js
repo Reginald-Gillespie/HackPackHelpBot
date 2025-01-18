@@ -50,6 +50,7 @@ var adminCommand = new SlashCommandBuilder().setName("admin").setDescription("Qu
 			createOption("Adminize ID"),
 			createOption("Unadminize ID"),
 			createOption("AI Pings Killswitch"),
+			createOption("Dup Notif Killswitch"),
 			createOption("Restart"),
 		).setRequired(true)
 	)
