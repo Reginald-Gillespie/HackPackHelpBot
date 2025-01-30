@@ -28,8 +28,8 @@ class Storage {
                 } else {
                     // Write to the data object for all other keys
                     target.data[prop] = value;
-                    target.save(); // Save changes automatically
                 }
+                target.save(); // Save changes automatically
                 return true;
             }
         });

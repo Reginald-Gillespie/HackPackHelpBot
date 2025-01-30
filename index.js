@@ -746,13 +746,20 @@ client.on('messageCreate', async (message) => {
     // Find/create message
     let existingQuestion = repeatQuestions[authorID].find(q => q.message === messageHash);
     if (existingQuestion) {
-        if (existingQuestion.channelID !== message.channel.id) {
+        if (existingQuestion.channelID !== message.channel.id && existingQuestion.guildId == message.guildId) {
             // If this is a different channel, increment it
             existingQuestion.repeats += 1;
         }
         existingQuestion.channelID = message.channel.id
+        existingQuestion.guildId = message.guildId
     } else {
-        existingQuestion = { message: messageHash, channelID: message.channelId, repeats: 1, originalLink: `https://discord.com/channels/${message.guild.id}/${message.channel.id}/${message.id}` }
+        existingQuestion = { 
+            guildId: existingQuestion.guildId,
+            message: messageHash, 
+            channelID: message.channelId, 
+            repeats: 1,
+            originalLink: `https://discord.com/channels/${message.guild.id}/${message.channel.id}/${message.id}` 
+        }
         repeatQuestions[authorID].push(existingQuestion);
     }
 
@@ -764,7 +771,8 @@ client.on('messageCreate', async (message) => {
     // Now, if this message meets specific conditions, we'll reference the original one.
     const normalizedContent = message.content.toLowerCase().replace("'", "");
     if (
-        storage.dupeNotifs && 
+        storage.dupeNotifs &&
+        existingQuestion.guildId == message.guildId &&
         existingQuestion.repeats > 1 &&
         normalizedContent.length > 30 && // Required flags
         ( // Must contain one of these:
@@ -777,7 +785,8 @@ client.on('messageCreate', async (message) => {
             /wont/.test(normalizedContent) ||
             /isnt/.test(normalizedContent) ||
             /is not/.test(normalizedContent) ||
-            /it was/.test(normalizedContent)
+            /it was/.test(normalizedContent) ||
+            /help/.test(normalizedContent)
         )
     ) {
         try {
