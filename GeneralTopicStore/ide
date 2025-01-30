@@ -61,3 +61,11 @@ Brooksy's  youtube: <https://www.youtube.com/@HackPackHackers>
 Johnathan's resources: https://discord.com/channels/1229106258749948056/1245218219233382461/1321587828253261895
 ```
 ---
+Title: Code  WellManaged Serial Communication
+Message:
+https://discord.com/channels/1229106258749948056/1246611327494127746/1320615923375149126
+---
+Title: Device Manager
+Message:
+open "Device Manager" and check if you have an "Unknown Device" or "Serial USB" or "CH340..." or such under "Other Devices", "USB...", or "Ports and Coms" categories
+---
