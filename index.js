@@ -765,7 +765,7 @@ client.on('messageCreate', async (message) => {
         existingQuestion.guildId = message.guildId
     } else {
         existingQuestion = { 
-            guildId: existingQuestion.guildId,
+            guildId: message.guildId,
             message: message.content, 
             channelID: message.channelId, 
             repeats: 1,
