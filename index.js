@@ -785,7 +785,7 @@ client.on('messageCreate', async (message) => {
         storage.dupeNotifs &&
         existingQuestion.guildId == message.guildId &&
         existingQuestion.repeats > 1 &&
-        normalizedContent.length > 30 && // Required flags
+        normalizedContent.length > 23 && // Required flags
         ( // Must contain one of these:
             /\?/.test(normalizedContent) ||
             /anyone know/.test(normalizedContent) ||
