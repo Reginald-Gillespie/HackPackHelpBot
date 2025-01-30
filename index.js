@@ -18,6 +18,7 @@ const subtopics = getSubtopics();
 const Fuse = require('fuse.js');
 const path = require("path")
 const Storage = require("./storage");
+const { distance: levenshtein } = require('fastest-levenshtein')
 const fuseOptions = {
     includeScore: true,
     keys: ['title']
@@ -41,6 +42,17 @@ client = new Client({
 
 
 //#region functions
+function areTheSame(msg1, msg2) {
+    const threshold = 0.85;
+    
+    msg1 = msg1.slice(0, 1000);
+    msg2 = msg2.slice(0, 1000);
+
+    const edits = levenshtein(msg1, msg2)
+    const similarity = 1 - edits/Math.max(msg1.length + msg2.length)
+    
+    return similarity > threshold
+}
 function markRobotMessagePostProcess(message, guild) {
     // Post-process message snowflakes for MarkRobot
     message = message.replace(/<@!?(\d+)>/g, (match, userId) => {
@@ -739,12 +751,11 @@ client.on('messageCreate', async (message) => {
     }
 
     // Repeat messages stuff
-    const messageHash = md5(message.content);
     const authorID = message.author.id;
     repeatQuestions[authorID] = repeatQuestions[authorID] || [] //{message: "", channelID: 0, repeats: 0}
 
     // Find/create message
-    let existingQuestion = repeatQuestions[authorID].find(q => q.message === messageHash);
+    let existingQuestion = repeatQuestions[authorID].find(q => areTheSame(message.content, q.message));
     if (existingQuestion) {
         if (existingQuestion.channelID !== message.channel.id && existingQuestion.guildId == message.guildId) {
             // If this is a different channel, increment it
@@ -755,7 +766,7 @@ client.on('messageCreate', async (message) => {
     } else {
         existingQuestion = { 
             guildId: existingQuestion.guildId,
-            message: messageHash, 
+            message: message.content, 
             channelID: message.channelId, 
             repeats: 1,
             originalLink: `https://discord.com/channels/${message.guild.id}/${message.channel.id}/${message.id}` 
