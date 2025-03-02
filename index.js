@@ -737,8 +737,16 @@ client.on('messageCreate', async (message) => {
         const messageContentForRobot = markRobotMessagePostProcess(message.content, message.guild);
 
         // Grab / create history - history is reset every new channel you talk to him in
-        let userHistory = storage.cache.markRobotPingsCache[message.author.id] || {lastChatLoc:"", markRobot:new MarkRobot()}
-        if (message.channelId !== userHistory.lastChatLoc) userHistory = {lastChatLoc:"", markRobot:new MarkRobot()}
+        let userHistory = storage.cache.markRobotPingsCache[message.author.id] || { 
+            lastChatLoc: "", 
+            markRobot: new MarkRobot({useDevVersion:1}) 
+        };
+
+        if (message.channelId !== userHistory.lastChatLoc)
+            userHistory = { 
+                lastChatLoc: "", 
+                markRobot: new MarkRobot({useDevVersion:1}) 
+            };
 
         // Get RoBot's reply
         const robotsReply = await userHistory.markRobot.message(messageContentForRobot, repliedToMessage, repliedToAuthor)
