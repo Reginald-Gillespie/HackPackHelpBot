@@ -10,8 +10,7 @@ class MarkRobot {
         this.history = [];
         this.uuid = uuidv4();
         this.pendingQuestion = false;
-        this.socketIOClientId = "hBA6-xHQI-Z5x49KCf8H"; // I don't actually know what this is
-
+        
         // 1065228a-5b00-4f47-917e-0a6fb8cf4c9d - Production as of 3/1/25, refuses almost every question
         // 85222c0d-aa7e-42bb-88e6-029ffd91d8ce - Dev, as of 3/1/25, much smarter.
         this.version = useDevVersion
@@ -59,7 +58,8 @@ class MarkRobot {
                         "code": ""
                     }
                 },
-                "socketIOClientId": this.socketIOClientId
+                // Sockets for streamed responses seem optional
+                // "socketIOClientId": this.socketIOClientId
             }),
             "method": "POST",
             "mode": "cors",
