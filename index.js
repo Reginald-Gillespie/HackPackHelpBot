@@ -797,6 +797,7 @@ client.on('messageCreate', async (message) => {
             /isnt/.test(normalizedContent) ||
             /is not/.test(normalizedContent) ||
             /it was/.test(normalizedContent) ||
+            /does/.test(normalizedContent) ||
             /help/.test(normalizedContent)
         )
     ) {

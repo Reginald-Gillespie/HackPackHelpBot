@@ -12,3 +12,15 @@ Title: All Known Boxes
 Message:
 https://discord.com/channels/1229106258749948056/1245218219233382461/1312093917289779272
 ---
+Title: How to Be Successful at Learning Microcontrollers
+Message:
+https://discord.com/channels/1229106258749948056/1245432404647350342/1338467560718336144
+---
+Title: Bad Bootloader Batch
+Message:
+```
+Yeah, use the turret arduino for now, it seems that a batch of arduinos had their bootloaders corrupted. If you have the wires, you could do this https://discord.com/channels/1229106258749948056/1304473086560829481/1304473086560829481
+
+Otherwise if you don't have the hardware for that you could DM Tom for a replacement arduino
+```
+---

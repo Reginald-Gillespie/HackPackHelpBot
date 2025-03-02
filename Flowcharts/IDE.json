@@ -103,7 +103,7 @@
         ]
     },
     "WindowsInstallAgent": {
-        "question": "If you have already installed the create agent as in the video, you likely need to run it as administrator. Open windows search, type \"Crunchlabs\", right-click item ***without*** the word \"setup\", and click \"Run As Administrator\"",
+        "question": "If you have already installed the create agent as in the video, you likely need to run it as administrator. Open windows search, type \"Crunchlabs\", right-click the item ***without*** the word \"setup\", and click \"Run As Administrator\"",
         "answers": []
     },
     "MacInstallAgent": {
