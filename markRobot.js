@@ -6,14 +6,15 @@ const { v4: uuidv4 } = require('uuid');
 
 // Each MarkRobot instance is intended for one person, history and all is managed by this class
 class MarkRobot {
-    constructor(options) {
+    constructor({ useDevVersion }={}) {
         this.history = [];
         this.uuid = uuidv4();
         this.pendingQuestion = false;
-        this.socketIOClientId = "cPDnAXFPtm7qOoavA57E"; // I don't actually know what this is
+        this.socketIOClientId = "hBA6-xHQI-Z5x49KCf8H"; // I don't actually know what this is
+
         // 1065228a-5b00-4f47-917e-0a6fb8cf4c9d - Production as of 3/1/25, refuses almost every question
         // 85222c0d-aa7e-42bb-88e6-029ffd91d8ce - Dev, as of 3/1/25, much smarter.
-        this.version = options.useDevVersion
+        this.version = useDevVersion
             ? "85222c0d-aa7e-42bb-88e6-029ffd91d8ce"
             : "1065228a-5b00-4f47-917e-0a6fb8cf4c9d"
     }
@@ -32,7 +33,7 @@ class MarkRobot {
                         + `${content}`
             }
         }
-        
+
         const fetchPromise = fetch(`https://askmark-d0ry.onrender.com/api/v1/prediction/${this.version}`, {
             "headers": {
                     "accept": "*/*",
@@ -64,6 +65,14 @@ class MarkRobot {
             "mode": "cors",
             "credentials": "omit"
         });
+
+        // console.log(
+        //     "=====",
+        //     "\nQuery: ",
+        //     content,
+        //     "\nVersion: ",
+        //     this.version
+        // )
 
         // Add user's message to history
         this.history.push({

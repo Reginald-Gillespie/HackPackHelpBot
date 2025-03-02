@@ -57,11 +57,16 @@ function markRobotMessagePostProcess(message, guild) {
     // Post-process message snowflakes for MarkRobot
     message = message.replace(/<@!?(\d+)>/g, (match, userId) => {
         if (userId === client.user.id) {
-            return "@Mark Robot";
+            // return "@Mark-Robot";
+            // Due to what seems to be an idiotic whitelist process, best to keep messages as uniform as possible
+            // *cough* *cough* which entirely defeates the purpose of using an LLM in the first place.
+            // You might as well query an FAQ database or even better if you want to be high tech, use a CSV-FAQ-Matching ML algorithm. 
+            return "";
         }
         const user = guild.members.cache.get(userId); // Fetch the user from the guild
         return user ? `@${user.user.username}` : match; // Replace with username if found
     });
+    message = message.trim()
     return message;
 }
 function isCreator(userID) {
@@ -697,7 +702,7 @@ client.on("interactionCreate", async cmd => {
 
                 // Create a Robot instance for this user if they don't have one already
                 if (shouldClear || !storage.cache.markRobotInstances[userID]) {
-                    storage.cache.markRobotInstances[userID] = new MarkRobot();
+                    storage.cache.markRobotInstances[userID] = new MarkRobot({"useDevVersion":true});
                 }
 
                 // Get response from Mark Robot
@@ -739,13 +744,13 @@ client.on('messageCreate', async (message) => {
         // Grab / create history - history is reset every new channel you talk to him in
         let userHistory = storage.cache.markRobotPingsCache[message.author.id] || { 
             lastChatLoc: "", 
-            markRobot: new MarkRobot({useDevVersion:1}) 
+            markRobot: new MarkRobot({"useDevVersion":true}) 
         };
 
         if (message.channelId !== userHistory.lastChatLoc)
             userHistory = { 
                 lastChatLoc: "", 
-                markRobot: new MarkRobot({useDevVersion:1}) 
+                markRobot: new MarkRobot({"useDevVersion":true}) 
             };
 
         // Get RoBot's reply
