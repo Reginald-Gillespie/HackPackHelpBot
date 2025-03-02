@@ -773,7 +773,7 @@ client.on('messageCreate', async (message) => {
         existingQuestion.guildId = message.guildId
     } else {
         existingQuestion = { 
-            guildId: existingQuestion.guildId,
+            guildId: message.guildId,
             message: message.content, 
             channelID: message.channelId, 
             repeats: 1,
@@ -793,7 +793,7 @@ client.on('messageCreate', async (message) => {
         storage.dupeNotifs &&
         existingQuestion.guildId == message.guildId &&
         existingQuestion.repeats > 1 &&
-        normalizedContent.length > 23 && // Required flags
+        normalizedContent.length > 30 && // Required flags
         ( // Must contain one of these:
             /\?/.test(normalizedContent) ||
             /anyone know/.test(normalizedContent) ||
@@ -805,8 +805,7 @@ client.on('messageCreate', async (message) => {
             /isnt/.test(normalizedContent) ||
             /is not/.test(normalizedContent) ||
             /it was/.test(normalizedContent) ||
-            /help/.test(normalizedContent) ||
-            /what/.test(normalizedContent)
+            /help/.test(normalizedContent)
         )
     ) {
         try {
