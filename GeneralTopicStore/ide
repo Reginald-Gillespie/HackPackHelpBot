@@ -65,3 +65,7 @@ Title: Device Manager
 Message:
 open "Device Manager" and check if you have an "Unknown Device" or "Serial USB" or "CH340..." or such under "Other Devices", "USB...", or "Ports and Coms" categories
 ---
+Title: Mac Permission Issues
+Message:
+https://discord.com/channels/1229106258749948056/1347285216107954257/1347316769974648842
+---

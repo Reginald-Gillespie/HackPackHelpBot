@@ -258,27 +258,6 @@ const addAutoAIDisclaimer = text => {
 }
 
 // Tool calling
-const autoAITools = [
-    {
-        name: "runFAQ",
-        description: "Respond to the user when there is a relevant message.",
-        parameters: {
-            type: "OBJECT",
-            description: "Respond to user with relevant FAQ message",
-            properties: {
-                num: {
-                    type: "INTEGER",
-                    description: "The FAQ number to respond with.",
-                },
-            },
-            required: ["num"],
-        },
-    },
-    {
-        name: "unsure",
-        description: "Respond with this when there is no good answer.",
-    },
-];
 const autoAIFunctions = {
     runFAQ: async ({ num }, msg) => {
         if (num <= 1) return;
@@ -533,6 +512,9 @@ client.on("interactionCreate", async cmd => {
                 else appendHelpMessage(subtopic, title, message);
 
                 cmd.reply({ content: `${isEditing ? "This" : "Your"} Help Message has been ${isEditing ? "edited" : "added"}, thanks!`, ephemeral: true })
+                
+                // Rebuild the AI using this message
+                rebuildHelpTools()
                 break;
         }
     }
@@ -573,8 +555,8 @@ client.on("interactionCreate", async cmd => {
                         return cmd.reply({content:`AI ping responses have been ${storage.AIPings ? "enabled" : "disabled"}`, ephemeral})
 
                     case "AI AutoHelp Killswitch":
-                        storage.AIAutoHelp = !storage.AIAutoHelp;
-                        return cmd.reply({content:`AI AutoHelp has been ${storage.AIAutoHelp ? "enabled" : "disabled"}`, ephemeral})
+                        storage.AIAutoHelp = adminInput ? adminInput : false;
+                        return cmd.reply({content:`AI AutoHelp has been ${adminInput ? `set to guild ${adminInput}` : `disabled`}`, ephemeral})
 
                     case "Dup Notif Killswitch":
                         storage.dupeNotifs = !storage.dupeNotifs;
@@ -925,7 +907,7 @@ client.on('messageCreate', async (message) => {
     }
 
     ////// AutoReply AI for auto FAQ lookups
-    if (storage.AIAutoHelp && isHelpRequest(message.content)) {
+    if (storage.AIAutoHelp && storage.AIAutoHelp == message.guildId && isHelpRequest(message.content)) {
         try {
             console.log("Running AutoAI")
             const geminiSession = geminiModel.startChat();

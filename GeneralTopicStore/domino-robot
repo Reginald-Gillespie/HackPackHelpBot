@@ -3,11 +3,6 @@
 Title: Domino crunchlabs page
 Message:
 <https://www.crunchlabs.com/products/domino-robot>
----
-Title: Buy More Dominos
-Message:
-bulkdominos.com
----
 Title: Domino IR Control
 Message:
 https://discord.com/channels/1229106258749948056/1257938635295031366/1257938635295031366
@@ -20,7 +15,7 @@ Title: Limit Switch not triggering
 Message:
 People have found these help:
 
-1. Spreading a small drop of dish soap accross the
+1. Spreading a small drop of dish soap across the
 metal bar to reduce friction.
 
 2. Tying a knot in the badge reel so the knot hits the limit switch just before the red square gets stuck on the wall.
@@ -28,4 +23,8 @@ metal bar to reduce friction.
 3. Filing down the corner
 
 4. Using a thin rubber band to pull on the red square with more force
+---
+Title: Buy More Dominos
+Message:
+You can buy them at https://bulkdominoes.com/ or you can 3d print them: https://www.printables.com/model/1057620-hack-pack-domino
 ---
