@@ -13,7 +13,6 @@ const Storage = require("./storage");
 const { distance: levenshtein } = require('fastest-levenshtein');
 
 let storage = new Storage();
-
 client = new Client({
     intents: [ GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent ],
     partials: Object.keys(Partials).map(a=>Partials[a])
