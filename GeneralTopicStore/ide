@@ -23,18 +23,6 @@ Title: Reflash Bootloader
 Message:
 Reflashing the bootloader can help nano's that don't allow uploading code due to "avrdude: stk500_recv()" errors, https://discord.com/channels/1229106258749948056/1304473086560829481/1304473086560829481
 ---
-Title: IDE Errors Checklist
-Message:
-1. Use Chrome.
-2. Use provided USB cable.
-3. Connecting cable to silver USB-C on arduino, not black breadboard box.
-4. Reload webpage.
-5. Try in incognito mode
-6. Turn off bluetooth + restart computer.
-7. Try *multiple* other USB-A to USB-C cables.
-8. Go to http://127.0.0.1:8991/ and send the "list" command
-9. Worst case, try the Arduino IDE.
----
 Title: CH340 driver
 Message:
 https://discord.com/channels/1229106258749948056/1318809015924555827/1321595906612793366
@@ -68,4 +56,17 @@ open "Device Manager" and check if you have an "Unknown Device" or "Serial USB" 
 Title: Mac Permission Issues
 Message:
 https://discord.com/channels/1229106258749948056/1347285216107954257/1347316769974648842
+---
+Title: IDE Errors Checklist
+Message:
+1. Watch https://ide.crunchlabs.com/downloads
+2. Use Chrome.
+3. Use provided USB cable.
+4. Connecting cable to silver USB-C on arduino, not black breadboard box.
+5. Reload webpage.
+6. Try in incognito mode
+7. Turn off bluetooth then restart your computer.
+8. Try *multiple* other USB-A to USB-C cables.
+9. Go to http://127.0.0.1:8991/ and try the "list" command
+10. Worst case, try the Arduino IDE.
 ---

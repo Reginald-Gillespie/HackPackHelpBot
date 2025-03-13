@@ -61,7 +61,8 @@ function isHelpRequest(message) {
         /\bisnt/iu.test(message) ||
         /is not/iu.test(message) ||
         /it was/iu.test(message) ||
-        /does/iu.test(message) ||
+        // /does/iu.test(message) ||
+        /^does/iu.test(message) ||
         /\bhelp\b/iu.test(message)
     )
 }
@@ -221,10 +222,11 @@ const autoAIResponseSchema = {
 }
 const systemPrompt = 
 `- You are an advanced AI assistant designed to tie user queries to matching predefined "help messages" (FAQs) when applicable.
+- If no FAQ matches, either stop output altogether or provide 0 as the response number.
+- If you are not at least 95% sure that an FAQ would be helpful, it does not match.
 - If you are sure that a given FAQ title matches the provided question, use the relevant tool to activate that FAQ using it's number.
 - If there is a relevant walkthrough, use these instead of the FAQ, however there are more FAQs and FAQs are often more targeted to the issue at hand. 
 - Many users are young and will not correctly phrase their queries. Keep this in mind, and try to extrapolate their intended meaning.
-- If no FAQ matches, either stop output altogether or provide 0 as the response number.
 
 For context, you are helping answer questions about Arduino subscription box projects, including:
 - IR Turret. This box uses an IR remote to control a 3 axis turret that shoots foam darts.
