@@ -1,10 +1,6 @@
 ### Helps for general Hack Pack and engineering stuff
 ---
-Title: Advent of Code invite
-Message:
-https://discord.com/channels/1229106258749948056/1313188305017241651/1313188477655060560
----
-Title: Bot Install Link
+Title: This Bot Install Link
 Message:
 https://discord.com/oauth2/authorize?client_id=1261392544152027206
 ---
@@ -16,7 +12,7 @@ Title: How to Be Successful at Learning Microcontrollers
 Message:
 https://discord.com/channels/1229106258749948056/1245432404647350342/1338467560718336144
 ---
-Title: Bad Bootloader Batch
+Title: Domino Bad Bootloader Batch
 Message:
 ```
 Yeah, use the turret arduino for now, it seems that a batch of arduinos had their bootloaders corrupted. If you have the wires, you could do this https://discord.com/channels/1229106258749948056/1304473086560829481/1304473086560829481

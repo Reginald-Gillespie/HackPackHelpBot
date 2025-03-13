@@ -7,8 +7,10 @@
 // 
 
 Object.assign(process.env, require('./env.json'));
-var client;
+const beta = process.env.beta == "true";
+
 const {Client, ActionRowBuilder, GatewayIntentBits, ModalBuilder, TextInputBuilder, TextInputStyle, Partials, EmbedBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder, ComponentType } = require("discord.js");
+const { GoogleGenerativeAI, FunctionCallingMode, SchemaType } = require("@google/generative-ai");
 const fs = require("fs");
 const { get } = require('https');
 const { getDescription, getHelpMessageTitlesArray, getHelpMessageBySubjectTitle, getFileContent, appendHelpMessage, editHelpMessage, getSubtopics } = require("./helpFileParse")
@@ -27,21 +29,42 @@ const fuseOptions = {
 let storage = new Storage();
 
 const MarkRobot = require("./markRobot");
-const { re } = require('mathjs');
-storage.cache.markRobotInstances = {}; // Non-persistant cache for /mark-robot command
+storage.cache.markRobotInstances = {}; // Non-persistent cache for /mark-robot command
 storage.cache.markRobotPingsCache = {}; // Same, but for channel pings and replies
 storage.cache.repeatQuestions = {} // {id: [{message: <hash>, channelID, repeats: 1}, ...]}
 let repeatQuestions = storage.cache.repeatQuestions; // shorter reference to the above 
 
 
 // Register client
-client = new Client({
+const client = new Client({
     intents: [ GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent ],
     partials: Object.keys(Partials).map(a=>Partials[a])
 });
 
 
 //#region functions
+function isHelpRequest(message) {
+    // Identify if a message is a request for help using rough criteria.
+    message = message.toLowerCase().replace("'", "");
+    return (
+        // Required flags
+        message.length >= 20
+    ) && (
+        // Must contain one of these:
+        /\?/iu.test(message) ||
+        /anyone know/iu.test(message) ||
+        /\bhow\b/iu.test(message) ||
+        /\bwhy\b/iu.test(message) ||
+        /problem/iu.test(message) ||
+        /will not/iu.test(message) ||
+        /\bwont/iu.test(message) ||
+        /\bisnt/iu.test(message) ||
+        /is not/iu.test(message) ||
+        /it was/iu.test(message) ||
+        /does/iu.test(message) ||
+        /\bhelp\b/iu.test(message)
+    )
+}
 function areTheSame(msg1, msg2) {
     const threshold = 0.85;
     
@@ -168,15 +191,150 @@ function md5(inputString) {
 
 //#endregion functions
 
+//#region AutoAI
 
-// Most non-message handlers
-var lastUser = "";
-client.on("interactionCreate", async cmd => {
-    const username = cmd?.member?.user?.username;
-    if (username !== lastUser) {
-        lastUser = username;
+// Configure Gemini Flash
+const genAI = new GoogleGenerativeAI(process.env.GeminiKey);
+let helpMessageList = [];
+let geminiModel;
+const autoAIResponseSchema = {
+    type: SchemaType.OBJECT,
+    properties: {
+        "thoughts": {
+            description: "Think about which response is the best, or if there is even a best response.",
+            type: SchemaType.STRING,
+            nullable: false,
+        },
+        "chosen_response": {
+            description: "After thinking, write down your final answer.",
+            type: SchemaType.INTEGER,
+        }
+    },
+    required: [
+        "thoughts",
+        "chosen_response"
+    ],
+    propertyOrdering: [
+        "thoughts",
+        "chosen_response"
+    ]
+}
+const systemPrompt = 
+`- You are an advanced AI assistant designed to tie user queries to matching predefined "help messages" (FAQs) when applicable.
+- If you are sure that a given FAQ title matches the provided question, use the relevant tool to activate that FAQ using it's number.
+- If there is a relevant walkthrough, use these instead of the FAQ, however there are more FAQs and FAQs are often more targeted to the issue at hand. 
+- Many users are young and will not correctly phrase their queries. Keep this in mind, and try to extrapolate their intended meaning.
+- If no FAQ matches, either stop output altogether or provide 0 as the response number.
+
+For context, you are helping answer questions about Arduino subscription box projects, including:
+- IR Turret. This box uses an IR remote to control a 3 axis turret that shoots foam darts.
+- Domino Robot. This box is a simple line-following robot that lays down dominos.
+- Label Maker. This box moves a pen up and down on a Y motor, and rolls take with the X motor to draw letters.
+- Sandy Garden. This box is a small zen sand garden using two stepper motors to move arms moving a magnetic ball in patterns.
+- IR Laser Tag. This box has two IR laser tag guns, each connected to a pair of goggles with receivers that dim when you are shot.
+- Balance Bot. This is a classic bot that balances on two wheels.
+
+Other categories:
+- IDE. These boxes use ae custom branded online IDE to code them. Some people prefer other IDEs like the Arduino IDE, but these take more setup work.
+- General. A category for anything that doesn't fit elsewhere.
+
+
+Here is a list of each FAQ you can select from:
+1. No response is a confident match.
+{FAQs}`;
+// TODO: add walkthrough trigger support, with metadata for channel to activate in
+`Here is a list of interactive walkthroughs you can start for the user:
+{Walkthroughs}`
+const addAutoAIDisclaimer = text => {
+    return (
+        'I have attempted to automatically answer your question:\n' +
+        '\n' +
+        // '```\n' +
+        text.replaceAll("```", "\\`\\`\\`") +
+        '\n' +
+        // '```\n' +
+        `\n-# ⚠️ This response was selected by AI and may be incorrect.`
+    )
+}
+
+// Tool calling
+const autoAITools = [
+    {
+        name: "runFAQ",
+        description: "Respond to the user when there is a relevant message.",
+        parameters: {
+            type: "OBJECT",
+            description: "Respond to user with relevant FAQ message",
+            properties: {
+                num: {
+                    type: "INTEGER",
+                    description: "The FAQ number to respond with.",
+                },
+            },
+            required: ["num"],
+        },
+    },
+    {
+        name: "unsure",
+        description: "Respond with this when there is no good answer.",
+    },
+];
+const autoAIFunctions = {
+    runFAQ: async ({ num }, msg) => {
+        if (num <= 1) return;
+        console.log("Running FAQ number " + num);
+
+        const selectedHelpMessageTitle = helpMessageList[num];
+        if (!selectedHelpMessageTitle) return;
+
+        const helpMessage = getHelpMessageBySubjectTitle(selectedHelpMessageTitle.subtopic, selectedHelpMessageTitle.title);
+        if (!helpMessage) return;
+        
+        await msg.reply(addAutoAIDisclaimer(helpMessage));
     }
+};
 
+function rebuildHelpTools() {
+    let compiledSystemPrompt = systemPrompt;
+    // Build FAQs into the prompt
+    const faqs = [];
+    let index = 2; // 1 is no response
+    for (const subtopic of subtopics) {
+        const helpFile = getFileContent(subtopic);
+        const helpMessagesTitles = getHelpMessageTitlesArray(helpFile);
+        helpMessagesTitles.forEach((title) => {
+            helpMessageList[index] = {title, subtopic};
+            faqs.push(`${index}. ${title} | (${subtopic})`);
+            index++;
+        });
+    }
+    compiledSystemPrompt = compiledSystemPrompt.replace("{FAQs}", faqs.join("\n"))
+
+    geminiModel = genAI.getGenerativeModel({
+        model: "gemini-2.0-flash",
+        systemInstruction: compiledSystemPrompt,
+        // tools: {
+        //     functionDeclarations: autoAITools,
+        // },
+        generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema: autoAIResponseSchema,
+        },
+        toolConfig: {
+            functionCallingConfig: {
+                // Only allow function responses
+                mode: FunctionCallingMode.ANY
+            }
+        }
+    });
+}
+rebuildHelpTools() // Initialize
+
+//#endregion AutoAI
+
+//#region Handlers
+// Most non-message handlers
+client.on("interactionCreate", async cmd => {
     // Buttons for flowchart walkthrough
     if (cmd.isButton()) {
         // Extract JSON from first button in the row
@@ -413,12 +571,15 @@ client.on("interactionCreate", async cmd => {
                     case "AI Pings Killswitch":
                         storage.AIPings = !storage.AIPings;
                         return cmd.reply({content:`AI ping responses have been ${storage.AIPings ? "enabled" : "disabled"}`, ephemeral})
-                    
+
+                    case "AI AutoHelp Killswitch":
+                        storage.AIAutoHelp = !storage.AIAutoHelp;
+                        return cmd.reply({content:`AI AutoHelp has been ${storage.AIAutoHelp ? "enabled" : "disabled"}`, ephemeral})
+
                     case "Dup Notif Killswitch":
                         storage.dupeNotifs = !storage.dupeNotifs;
                         return cmd.reply({content:`Duplicate question notifs have been ${storage.dupeNotifs ? "enabled" : "disabled"}`, ephemeral})
-                    
-                            
+
                     case "Restart":
                         if (ephemeral) {
                             await cmd.reply({ content: "Restarting...", ephemeral: true });
@@ -714,11 +875,11 @@ client.on("interactionCreate", async cmd => {
     }
 })
 
-// Message handlers for Mark RoBot pings
+// Message handlers for Mark RoBot pings + auto AI
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return; // Ignore bot messages
 
-    // AI stuff
+    ////// Mark Robot pings
     if (message.mentions.has(client.user)) {
         // Check if we've disabled RoBot
         if (!storage.AIPings && !storage?.admins.includes(message.author.id)) return;
@@ -763,7 +924,37 @@ client.on('messageCreate', async (message) => {
         message.reply(robotsReply);
     }
 
-    // Repeat messages stuff
+    ////// AutoReply AI for auto FAQ lookups
+    if (storage.AIAutoHelp && isHelpRequest(message.content)) {
+        try {
+            console.log("Running AutoAI")
+            const geminiSession = geminiModel.startChat();
+            const messageGeminiPostProcess = `The user's message is as follows:\n${message.content}\n\nIf you believe one of the FAQs directly answers it, send it, otherwise don't respond.`
+            const result = await geminiSession.sendMessage(messageGeminiPostProcess);
+            
+            const responseText = result.response.text()
+            console.log(responseText);
+            const responseJSON = JSON.parse(responseText);
+            console.log(responseJSON.thoughts);
+            const responseNumber = +responseJSON.chosen_response;
+            if (!isNaN(responseNumber) && responseNumber !== 0)
+                autoAIFunctions.runFAQ({ num: +responseJSON.chosen_response }, message)
+
+            // const requestedTool = result.response.functionCalls()[0]; // Only grab the first call, consider making this clear to gemini.
+            // const requestedFunction = autoAIFunctions[requestedTool.name];
+            // if (requestedFunction) {
+            //     // Execute the function, which will take care of replies by itself. No need to reprompt gemini
+            //     // TODO: if gemini behaves poorly, consider reprompt loop to ask it if the FAQ answers the question 
+            //     await requestedFunction(requestedTool.args, message);
+            // } else {
+            //     console.log("Requested tool doesn't exist:", requestedTool)
+            // }
+        } catch (error) {
+            console.log("AI error:", error)
+        }
+    }
+
+    ////// Repeat messages notices
     const authorID = message.author.id;
     repeatQuestions[authorID] = repeatQuestions[authorID] || [] //{message: "", channelID: 0, repeats: 0}
 
@@ -786,8 +977,8 @@ client.on('messageCreate', async (message) => {
         }
         repeatQuestions[authorID].push(existingQuestion);
     }
-
-    // Only keep the latest 3 message hashes from each user
+    
+    // Only keep the latest 3 messages from each user to check if duplicated
     if (repeatQuestions[authorID].length > 3) {
         repeatQuestions[authorID].shift();
     }
@@ -798,21 +989,8 @@ client.on('messageCreate', async (message) => {
         storage.dupeNotifs &&
         existingQuestion.guildId == message.guildId &&
         existingQuestion.repeats > 1 &&
-        normalizedContent.length > 30 && // Required flags
-        ( // Must contain one of these:
-            /\?/.test(normalizedContent) ||
-            /anyone know/.test(normalizedContent) ||
-            /\bhow\b/.test(normalizedContent) ||
-            /\bwhy\b/.test(normalizedContent) ||
-            /problem/.test(normalizedContent) ||
-            /will not/.test(normalizedContent) ||
-            /wont/.test(normalizedContent) ||
-            /isnt/.test(normalizedContent) ||
-            /is not/.test(normalizedContent) ||
-            /it was/.test(normalizedContent) ||
-            /does/.test(normalizedContent) ||
-            /help/.test(normalizedContent)
-        )
+        message.length >= 30 &&
+        isHelpRequest(normalizedContent)
     ) {
         try {
             // Make sure the original wasn't deleted before commenting
@@ -820,7 +998,7 @@ client.on('messageCreate', async (message) => {
             const originalChannel = await client.channels.fetch(originalChannelId);
             const originalMessage = await originalChannel.messages.fetch(existingQuestion.originalLink.split('/').pop());
             if (originalMessage) {
-                message.reply(`-#  <:info:1330047959806771210> This appears to be a duplicate question. You already asked here ${existingQuestion.originalLink}`);
+                message.reply(`-#  <:info:1330047959806771210> This appears to be a duplicate question. The original question was asked here ${existingQuestion.originalLink}`);
             }
         } catch (error) {
             // If the original message was deleted, set this message as the original
@@ -828,14 +1006,12 @@ client.on('messageCreate', async (message) => {
             existingQuestion.originalLink = `https://discord.com/channels/${message.guild.id}/${message.channel.id}/${message.id}`;
         }
     }
-
 });
-
-
 
 // Other listeners
 client.once("ready", async () => {
-    console.log("Ready");
+    console.log(`Logged in as ${client.user.tag}`);
+
     try {
         const restartUpdateThreshold = 10000;
         const rebootData = storage.restartData;
@@ -875,15 +1051,12 @@ client.once("ready", async () => {
         console.error("Error in ready event:", error);
     }
 });
-
-
+//#endregion Handlers
 
 // Error handling (async crashes in discord.js threads can still crash it)
-function handleException(e) {
-    console.log(e); // TODO: notify myself through webhooks
-}
+const handleException = (e) => console.log(e); // TODO: notify myself through webhooks
 process.on('unhandledRejection', handleException);
 process.on('unhandledException', handleException);
 
 // Start
-client.login(process.env.token);
+client.login(beta ? process.env.betaToken : process.env.token);

@@ -2,7 +2,7 @@
 ---
 Title: Turret crunchlabs page
 Message:
-https://www.crunchlabs.com/products/ir-turret
+<https://www.crunchlabs.com/products/ir-turret>
 ---
 Title: Turret with different remote
 Message:
@@ -11,10 +11,6 @@ https://discord.com/channels/1229106258749948056/1296827364021370900/12968273640
 Title: D9 Breadboard Bypass
 Message:
 Try this: Pull the multicolored wires out of the breadboard and hold the tips of the purple wire directly against pin D9, we want to see if the green light turns off
----
-Title: Turret Remove Guide Card
-Message:
-First, take the arduino out of the breadboard, then take out the guide card below it. Then push the arduino firmly into the breadboard without the guide card, and make sure to put the purple wire back in pin D9
 ---
 Title: Pitch Easing Code
 Message:

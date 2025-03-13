@@ -2,15 +2,15 @@
 ---
 Title: Label crunchlabs page
 Message:
-https://www.crunchlabs.com/products/label
+<https://www.crunchlabs.com/products/label>
 ---
-Title: Label Light Driver
+Title: Label Light Driver Mode
 Message:
 https://discord.com/channels/1229106258749948056/1245875544419995649/1287872297927053392
 ---
-Title: X Axis Stepper Will Not Move
+Title: Stepper Axis Will Not Move
 Message:
-Push Arduino into breadboard, it will likely click into place. if that doesn't work, try swapping which motor is plugged into which driver. You might have to unscrew the driver from the wall. See if the issue swaps to the other motor or if the x axis stepper still won't move.
+Push Arduino into breadboard, it will likely click into place. If that doesn't work, try swapping which motor is plugged into which driver. (You might have to unscrew the driver from the wall). See if the issue swaps to the other motor (which means the driver is the issue) or if the same axis stepper still won't move (which means the motor is the issue).
 ---
 Title: Running Extremely Slow
 Message:
