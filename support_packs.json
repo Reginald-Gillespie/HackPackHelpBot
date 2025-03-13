@@ -1,0 +1,102 @@
+{
+    "Domino": [
+        {
+            "title": "Calibration Issue",
+            "message": "Try resetting the sensor alignment and ensure the domino track is clear.",
+            "tag": "Calibrate",
+            "color": "Green"
+        },
+        {
+            "title": "Motor Malfunction",
+            "message": "Check the wiring and battery connection. Replace motor if needed.",
+            "tag": "Replace",
+            "color": "Red"
+        },
+        {
+            "title": "Bluetooth Not Connecting",
+            "message": "Restart the device and ensure it's in pairing mode.",
+            "tag": "Connectivity",
+            "color": "Blue"
+        }
+    ],
+    "IR TURRET": [
+        {
+            "title": "Not Detecting Targets",
+            "message": "Ensure the IR sensor is clean and properly aligned.",
+            "tag": "Sensor",
+            "color": "Yellow"
+        },
+        {
+            "title": "Slow Movement",
+            "message": "Check motor power and adjust sensitivity settings.",
+            "tag": "Speed",
+            "color": "Purple"
+        },
+        {
+            "title": "Connection Issues",
+            "message": "Reconnect to the control software and verify settings.",
+            "tag": "Connectivity",
+            "color": "Blue"
+        }
+    ],
+    "Label Maker": [
+        {
+            "title": "Paper Jamming",
+            "message": "Open the label slot and clear any stuck paper.",
+            "tag": "Fix",
+            "color": "Orange"
+        },
+        {
+            "title": "Printing Faint",
+            "message": "Replace or clean the thermal head.",
+            "tag": "Maintenance",
+            "color": "Brown"
+        },
+        {
+            "title": "Not Powering On",
+            "message": "Ensure battery or power cable is properly connected.",
+            "tag": "Power",
+            "color": "Black"
+        }
+    ],
+    "Laser Tag": [
+        {
+            "title": "Gun Not Firing",
+            "message": "Check battery levels and reload the game software.",
+            "tag": "Battery",
+            "color": "Red"
+        },
+        {
+            "title": "Vest Not Registering Hits",
+            "message": "Ensure the IR sensor is not obstructed.",
+            "tag": "Sensor",
+            "color": "Yellow"
+        },
+        {
+            "title": "Pairing Issues",
+            "message": "Reset both gun and vest, then re-pair.",
+            "tag": "Connectivity",
+            "color": "Blue"
+        }
+    ],
+    "Self Balance": [
+        {
+            "title": "Not Staying Upright",
+            "message": "Recalibrate the gyroscope and ensure a level surface.",
+            "tag": "Calibration",
+            "color": "Green"
+        },
+        {
+            "title": "Wheel Misalignment",
+            "message": "Check for loose bolts and tighten if necessary.",
+            "tag": "Alignment",
+            "color": "Purple"
+        },
+        {
+            "title": "Bluetooth Not Connecting",
+            "message": "Restart the device and ensure the app is up-to-date.",
+            "tag": "Connectivity",
+            "color": "Blue"
+        }
+    ]
+}

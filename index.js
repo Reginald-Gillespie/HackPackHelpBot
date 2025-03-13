@@ -831,7 +831,120 @@ client.on('messageCreate', async (message) => {
 
 });
 
+const client = new Client({
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
+});
 
+// Function to load support packs from JSON file
+const loadSupportPacks = () => {
+    const filePath = path.join(__dirname, "support_packs.json");
+    if (fs.existsSync(filePath)) {
+        return JSON.parse(fs.readFileSync(filePath, "utf-8"));
+    } else {
+        console.error("❌ support_packs.json not found!");
+        return {};
+    }
+};
+
+// Function to save support logs
+const saveSupportLog = (boxType, issue, solution) => {
+    const filePath = path.join(__dirname, "support_logs.json");
+    let logs = [];
+
+    if (fs.existsSync(filePath)) {
+        logs = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+    }
+
+    logs.push({ boxType, issue, solution, timestamp: new Date().toISOString() });
+
+    fs.writeFileSync(filePath, JSON.stringify(logs, null, 2), "utf-8");
+};
+
+// Load support data from JSON file
+let SUPPORT_PACKS = loadSupportPacks();
+
+// Support Command
+client.commands = new Map();
+client.commands.set("support", {
+    data: new SlashCommandBuilder()
+        .setName("support")
+        .setDescription("Get troubleshooting help for common issues")
+        .addStringOption(option =>
+            option.setName("box")
+                .setDescription("Select the affected device")
+                .setRequired(true)
+                .addChoices(
+                    { name: "Domino", value: "Domino" },
+                    { name: "IR TURRET", value: "IR TURRET" },
+                    { name: "Label Maker", value: "Label Maker" },
+                    { name: "Laser Tag", value: "Laser Tag" },
+                    { name: "Self Balance", value: "Self Balance" }
+                )
+        ),
+    async execute(interaction) {
+        // Reload support packs in case the JSON file was updated
+        SUPPORT_PACKS = loadSupportPacks();
+
+        const selectedBox = interaction.options.getString("box");
+        const issues = SUPPORT_PACKS[selectedBox];
+
+        if (!issues) {
+            return interaction.reply({ content: "No troubleshooting information found for this device.", ephemeral: true });
+        }
+
+        const options = issues.map(issue =>
+            new StringSelectMenuOptionBuilder()
+                .setLabel(issue.title)
+                .setDescription(issue.tag)
+                .setValue(issue.title)
+        );
+
+        const selectMenu = new StringSelectMenuBuilder()
+            .setCustomId("support_issue_select")
+            .setPlaceholder("Choose an issue")
+            .addOptions(options);
+
+        const row = new ActionRowBuilder().addComponents(selectMenu);
+
+        const embed = new EmbedBuilder()
+            .setTitle(`Support for ${selectedBox}`)
+            .setDescription("Select an issue from the dropdown below to get troubleshooting help.")
+            .setColor("Green");
+
+        await interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
+
+        client.on("interactionCreate", async (menuInteraction) => {
+            if (!menuInteraction.isStringSelectMenu() || menuInteraction.customId !== "support_issue_select") return;
+
+            const selectedIssue = menuInteraction.values[0];
+            const issueData = issues.find(issue => issue.title === selectedIssue);
+
+            const responseEmbed = new EmbedBuilder()
+                .setTitle(issueData.title)
+                .setDescription(issueData.message)
+                .setColor(issueData.color || "Blue")
+                .setFooter({ text: `Tag: ${issueData.tag}` });
+
+            await menuInteraction.reply({ embeds: [responseEmbed], ephemeral: true });
+
+            // Log the support request
+            saveSupportLog(selectedBox, issueData.title, issueData.message);
+        });
+    }
+});
+
+// Event Listeners
+client.on("interactionCreate", async interaction => {
+    if (!interaction.isCommand()) return;
+    const command = client.commands.get(interaction.commandName);
+    if (!command) return;
+    try {
+        await command.execute(interaction);
+    } catch (error) {
+        console.error(error);
+        await interaction.reply({ content: "There was an error executing that command!", ephemeral: true });
+    }
+});
 
 // Other listeners
 client.once("ready", async () => {
