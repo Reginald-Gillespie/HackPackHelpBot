@@ -7,3 +7,4 @@ Flowcharts/cache/*
 generated.html
 commands.json
 storage*.json
+logs/
