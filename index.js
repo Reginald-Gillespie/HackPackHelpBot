@@ -1,991 +1,889 @@
+// TODO:
+// Cache fs.readFileSync calls
+// Check for message under current name before adding / moving
+// If I want to add per-user storage, storage create messages from users if they are failed and insert them as starting point when they run create again.
+// Lots of other limiting char counts
+// Command to upload photos from photo database of different parts of each box?
+// 
 
-// File: bot.js
-const { Client, Collection, GatewayIntentBits, Partials } = require("discord.js");
-const config = require('../config.js');
-const Database = require('../utils/Database.js');
-const { Slash, Events, Button, Modal }  = require('../handlers/handle.js');
-
-
-module.exports = {
-    Sigma: class Sigma extends Client {
-        constructor() {
-            super({
-                allowedMentions: {
-                    parse: ["roles", "users", "everyone"],
-                    repliedUser: false
-                },
-                shards: 'auto',
-                intents: [
-                    GatewayIntentBits.Guilds, 
-                    GatewayIntentBits.GuildMembers, 
-                    GatewayIntentBits.GuildIntegrations, 
-                    GatewayIntentBits.GuildVoiceStates, 
-                    GatewayIntentBits.GuildMessages, 
-                    GatewayIntentBits.GuildMessageReactions, 
-                    GatewayIntentBits.GuildMessageTyping, 
-                    GatewayIntentBits.DirectMessages, 
-                    GatewayIntentBits.DirectMessageReactions, 
-                    GatewayIntentBits.MessageContent
-                ],
-            });
-            
-            this.commands = new Collection()
-            this.slashCommands = new Collection()
-            this.commandaliases = new Collection()
-            this.config = config;
-            this.db = new Database();
-            this.modLog = require('../utils/modLog.js').modLog;
-            this.translate = require('../utils/translate.js').trsl;
-
-            process.on("unhandledRejection", e => {
-                console.log(e)
-            })
-            process.on("uncaughtException", e => {
-                console.log(e)
-            })
-            process.on("uncaughtExceptionMonitor", e => {
-                console.log(e)
-            })
- 
- 
-        }
-        connect() {
-            if(this.config.status === 'GLOBAL'){
-                super.login(this.config.token).then(() => {
-                    Slash(this, this.id);
-                    Events(this);
-                    Button(this);
-                    Modal(this);
-                    this.db.connect();
-                })
-            } else {
-                super.login(this.config.betatoken).then(() => {
-                    Slash(this)
-                    Events(this)
-                    Button(this);
-                    Modal(this);
-                    this.db.connect();
-                })
-            }
-        }
-    }
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/**
- * 
- * This template is made by sigmaxii
- * Sigma Bot aka https://sigmaxii.com is running with this template
- * Free to use without credits
- * Just add sigma bot in your server and we're cool 
- * 
- */
-
-// File: index.js
-const { Sigma } = require('./src/structures/bot.js');
-const client = new Sigma();
-
-client.connect();
-module.exports = client;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/**
- * 
- * This template is made by sigmaxii
- * Sigma Bot aka https://sigmaxii.com is running with this template
- * Free to use without credits
- * Just add sigma bot in your server and we're cool 
- * 
- */
-
-// File: messageCreate.js
-const { Events, ChannelType} = require("discord.js")
-
-module.exports = {
-	name: Events.MessageCreate,
-	execute: async(message) => {
-
-    if (message.channel.type === ChannelType.DM ) return;
-
-/**
- * Leaving this here in case you want to make prefix commands
- */
- }
+Object.assign(process.env, require('./env.json'));
+var client;
+const {Client, ActionRowBuilder, GatewayIntentBits, ModalBuilder, TextInputBuilder, TextInputStyle, Partials, EmbedBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder, ComponentType } = require("discord.js");
+const fs = require("fs");
+const { get } = require('https');
+const { getDescription, getHelpMessageTitlesArray, getHelpMessageBySubjectTitle, getFileContent, appendHelpMessage, editHelpMessage, getSubtopics } = require("./helpFileParse")
+const { getChartOptions, getPathToFlowchart } = require("./flowcharter")
+const { getQuestionAndAnswers, postProcessForDiscord } = require("./mermaidParse")
+const subtopics = getSubtopics();
+const Fuse = require('fuse.js');
+const path = require("path")
+const Storage = require("./storage");
+const { distance: levenshtein } = require('fastest-levenshtein')
+const fuseOptions = {
+    includeScore: true,
+    keys: ['title']
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/**
- * 
- * This template is made by sigmaxii
- * Sigma Bot aka https://sigmaxii.com is running with this template
- * Free to use without credits
- * Just add sigma bot in your server and we're cool 
- * 
- */
-
-// File: interactionCreate.js
- module.exports = {
-	name: 'interactionCreate',
-	execute: async(interaction, client) => {
-		if (!interaction.isChatInputCommand()) return;
-		const command = client.commands.get(interaction.commandName)
-		
-		 if (!command) {
-			console.log(`No command matching ${interaction.commandName} was found.`);
-			return null;
-		}
-        await command.execute(interaction, client)
-		 },
-  }
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/**
- * 
- * This template is made by sigmaxii
- * Sigma Bot aka https://sigmaxii.com is running with this template
- * Free to use without credits
- * Just add sigma bot in your server and we're cool 
- * 
- */
-
-// File: translate.js
-const googleTranslate  = require("google-translate")("AIzaSyBA0uDqjAIXv_-bYrfvVwS-JjiVeKC3lz4")
-const iso6391 = require('iso-639-1');
-const { EmbedBuilder } = require('discord.js');
-module.exports = {
-    trsl: async function(interaction, embedColor, text, targetLanguage) {
-        let languageCode;
-        if (targetLanguage.length > 3 ){
-             languageCode = iso6391.getCode(targetLanguage);
-            } else {
-                languageCode = targetLanguage;
-            }
-    
-  try {
-     await googleTranslate.translate(text, languageCode, function(err, translation) {
-       const embed =  new EmbedBuilder()
-        .setTitle("Translation Result")
-        .setDescription(`**Original Text:**\n> ${text}\n\n**Translated Text:** \n> ${translation.translatedText}`)
-        .setFooter({ text: `Target Language: (${targetLanguage})`})
-        .setColor(embedColor);
-        interaction.reply({embeds: [embed]})
-    });
-  } catch (error) {
-    console.error('Translation error:', error);
-    return null;
-  }
-}
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/**
- * 
- * This template is made by sigmaxii
- * Sigma Bot aka https://sigmaxii.com is running with this template
- * Free to use without credits
- * Just add sigma bot in your server and we're cool 
- * 
- */
-
-// File: ping.js
-const { SlashCommandBuilder } = require("discord.js");
-module.exports = {
-  data: new SlashCommandBuilder()
-    .setName("ping")
-    .setDescription("Pong!")
-    ,
-    async execute(interaction, client) {
-
-     interaction.reply({content: `Pong 🏓`,  ephemeral: true})
-await client.modLog(
-  interaction,
-  `Command executed by ${interaction.user} \n Reason: No reason at all its just ping to show you how mod logs will work.`,
-);
-    }
- };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/**
- * 
- * This template is made by sigmaxii
- * Sigma Bot aka https://sigmaxii.com is running with this template
- * Free to use without credits
- * Just add sigma bot in your server and we're cool 
- * 
- */
-
-// File: ban.js
-const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require("discord.js");
-
-module.exports = {
-  data: new SlashCommandBuilder()
-    .setName('ban')
-    .setDescription('ban a user from the guild')
-    .addUserOption(option =>
-        option
-        .setName('user')
-        .setDescription('Mention a user')
-        .setRequired(true)
-    )
-    .addStringOption(option =>
-        option
-        .setName('reason')
-        .setDescription('Provide a reason')
-        .setRequired(false)
-    )
-    ,
-    async execute(interaction, client) {
-        let colorb = await client.db.get(`embedcolor_${interaction.guild.id}`)
-        let embedColor = colorb;
-        if (!colorb) embedColor = 0x00ffff;
-        const member = interaction.options.getMember('user');
-        let reason = interaction.options.getString('reason');
-        if (!reason) {
-            reason = 'No reason was provided';
-        };
-
-        if (!interaction.guild.members.me.permissions.has([PermissionFlagsBits.BanMembers])) {
-            return interaction.reply({
-                embeds: [
-                    new EmbedBuilder()
-                    .setTitle("***You don't have the permission to do that!***")
-                    .setColor(0xcc0000)
-                ]
-            });
-        }
-
-        if (!interaction.member.permissions.has([PermissionFlagsBits.BanMembers]))
-            return interaction.reply({
-                embeds: [
-                    new EmbedBuilder()
-                    .setColor(0xcc0000)
-                    .setTitle("***You don't have the permission to do that!***")
-                ]
-            });
-
-
-        if (interaction.user.id === member) {
-            return interaction.reply({
-                embeds: [
-                    new EmbedBuilder()
-                    .setDescription(`***Hey ${interaction.author.username} you can't ban yourself!***`)
-                    .setColor(embedColor)
-                ]
-            });
-        }
-        try {
-
-            await member.ban({ reason: `${reason}` });
-            await interaction.reply({
-                embeds: [
-                    new EmbedBuilder()
-                    .setDescription(`***${member} has been banned permamently.***`)
-                    .setColor(embedColor)
-                ]
-            })
-
-
-            if (!reason) reason = 'No reason was provided';
-            return client.modLog(
-                interaction, `<@${interaction.user.id}> banned ${member.id} | ${member.user.username}. \n Reason: ${reason}`);
-
-        } catch (e) {
-            return interaction.reply({
-                embeds: [
-                    new EmbedBuilder()
-                    .setTitle("***I can't find this user or I cant ban this user.***")
-                    .setColor(0xfff700)
-                ]
-            })
-        }
-      }
- };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/**
- * 
- * This template is made by sigmaxii
- * Sigma Bot aka https://sigmaxii.com is running with this template
- * Free to use without credits
- * Just add sigma bot in your server and we're cool 
- * 
- */
-
-// File: modLog.js
-const Database = require('./Database.js');
-const { EmbedBuilder } = require('discord.js');
-const database = new Database();
-module.exports = {
-    modLog: async function(i, text) {
-        if (i, text) {
-          try {
-
-            /**
-             * Define the mod log channel
-             */
-            let channel = await database.get(`modlog_${i.guild.id}`);
-            const modChannel = i.guild.channels.cache.get(channel);
-            if (!modChannel) return null;
-
-            /**
-             * Custom guild embed color
-             */
-            let colorb = await database.get(`embedcolor_${i.guild.id}`)
-            let embedColor = colorb;
-            if (!colorb) embedColor = 0x00ffff;
-            
-            /** 
-             * Send Mod Log
-            */
-            if (channel) {
-              var embed = new EmbedBuilder();
-              embed.setTitle("Moderation Logs");
-              embed.setDescription(`${text} \n <t:${(Date.now() / 1000) | 0}:R>`);
-              embed.setColor(embedColor);
-              await modChannel.send({ embeds: [embed] })
-              .catch((e) => {
-                 console.error(e)
-                 });
-            }
-          } catch (e) {
-            console.error(e);
-          }
-        }
-          },
-};
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/**
- * 
- * This template is made by sigmaxii
- * Sigma Bot aka https://sigmaxii.com is running with this template
- * Free to use without credits
- * Just add sigma bot in your server and we're cool 
- * 
- */
-
-// File: Database.js
-const mongoose = require('mongoose');
-const mongoUrl = require('../config.js').mongourl;
-const { ChalkAdvanced } = require('chalk-advanced');
-
-const dataSchema = new mongoose.Schema({
-  key: String,
-  value: mongoose.Schema.Types.Mixed
+let storage = new Storage();
+
+const MarkRobot = require("./markRobot");
+const { re } = require('mathjs');
+storage.cache.markRobotInstances = {}; // Non-persistant cache for /mark-robot command
+storage.cache.markRobotPingsCache = {}; // Same, but for channel pings and replies
+storage.cache.repeatQuestions = {} // {id: [{message: <hash>, channelID, repeats: 1}, ...]}
+let repeatQuestions = storage.cache.repeatQuestions; // shorter reference to the above 
+
+
+// Register client
+client = new Client({
+    intents: [ GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent ],
+    partials: Object.keys(Partials).map(a=>Partials[a])
 });
 
-const Data = mongoose.model('Data', dataSchema);
 
-class Database {
-  constructor() {
-    this.db = mongoose.connection;
-    this.db.on('error', console.error.bind(console, 'MongoDB connection error:'));
-  }
-  
+//#region functions
+function areTheSame(msg1, msg2) {
+    const threshold = 0.85;
+    
+    msg1 = msg1.slice(0, 1000);
+    msg2 = msg2.slice(0, 1000);
 
-  async connect() {
-    if (mongoose.connection.readyState === 0) {
-      try {
-        console.log(`${ChalkAdvanced.blue('Database: ')} ${ChalkAdvanced.gray('>')} ${ChalkAdvanced.yellow('connecting...')}`);
-        await mongoose.connect(mongoUrl, {
-          useNewUrlParser: true,
-          useUnifiedTopology: true
+    const edits = levenshtein(msg1, msg2)
+    const similarity = 1 - edits/Math.max(msg1.length + msg2.length)
+    
+    return similarity > threshold
+}
+function markRobotMessagePostProcess(message, guild) {
+    // Post-process message snowflakes for MarkRobot
+    message = message.replace(/<@!?(\d+)>/g, (match, userId) => {
+        if (userId === client.user.id) {
+            // return "@Mark-Robot";
+            // Due to what seems to be an idiotic whitelist process, best to keep messages as uniform as possible
+            // *cough* *cough* which entirely defeates the purpose of using an LLM in the first place.
+            // You might as well query an FAQ database or even better if you want to be high tech, use a CSV-FAQ-Matching ML algorithm. 
+            return "";
+        }
+        const user = guild.members.cache.get(userId); // Fetch the user from the guild
+        return user ? `@${user.user.username}` : match; // Replace with username if found
+    });
+    message = message.trim()
+    return message;
+}
+function isCreator(userID) {
+    return storage?.creators.includes(userID) || storage?.admins.includes(userID)
+}
+function sortByMatch(items, text) {
+    if (!text) return items;
+    const fuse = new Fuse(items.map(title => ({ title })), fuseOptions);            
+    const scoredResults = fuse.search(text)
+        .filter(result => result.score <= 2) // Roughly similar-ish
+        .sort((a, b) => a.score - b.score);
+    return scoredResults.map(entry => entry.item.title);
+}
+function arrayToAutocorrect(array) {
+    const choices = array.map(choice => {
+        return {
+            "name": choice,
+            "value": choice
+        }
+    });
+    return choices.slice(0, 25); // Discord limit is 25 responses
+}
+async function downloadFile(fileUrl, downloadPath) {
+    return new Promise((resolve, reject) => {
+        // Ensure the download path exists
+        const fullPath = path.resolve(downloadPath);
+
+        // Create a write stream
+        const file = fs.createWriteStream(fullPath);
+
+        // Download the file
+        get(fileUrl, (response) => {
+            response.pipe(file);
+
+            file.on('finish', () => {
+                file.close();
+                resolve(fullPath);
+            });
+        }).on('error', (err) => {
+            file.close();
+            reject(err);
         });
-        console.log(`${ChalkAdvanced.blue('Database: ')} ${ChalkAdvanced.gray('>')} ${ChalkAdvanced.green('Successfully connected')}`);
-      } catch (err) {
-        console.error(err);
-      }
-    } else {
-      console.log('Already connected to database.');
+    });
+}
+function findButtonOfId(actionRows, ID) {
+    for (const actionRow of actionRows) {
+        // Find a button within the components of the action row
+        const button = actionRow.components.find(
+          component => component.type === ComponentType.Button && component.customId === ID
+        );
+        if (button) return button
     }
-  }
-
-  async disconnect() {
-    if (mongoose.connection.readyState !== 0) {
-      try {
-        await mongoose.disconnect();
-        console.log(`${ChalkAdvanced.blue('Database: ')} ${ChalkAdvanced.gray('>')} ${ChalkAdvanced.red('has been disconnected')}`);
-      } catch (err) {
-        console.error(err);
-      }
-    } else {
-      console.log('Already disconnected from database.');
+    return null
+}
+function md5(inputString) {
+    // I absolutely love this implimentation
+    // https://stackoverflow.com/questions/1655769/fastest-md5-implementation-in-javascript
+    var hc="0123456789abcdef";
+    function rh(n) {var j,s="";for(j=0;j<=3;j++) s+=hc.charAt((n>>(j*8+4))&0x0F)+hc.charAt((n>>(j*8))&0x0F);return s;}
+    function ad(x,y) {var l=(x&0xFFFF)+(y&0xFFFF);var m=(x>>16)+(y>>16)+(l>>16);return (m<<16)|(l&0xFFFF);}
+    function rl(n,c)            {return (n<<c)|(n>>>(32-c));}
+    function cm(q,a,b,x,s,t)    {return ad(rl(ad(ad(a,q),ad(x,t)),s),b);}
+    function ff(a,b,c,d,x,s,t)  {return cm((b&c)|((~b)&d),a,b,x,s,t);}
+    function gg(a,b,c,d,x,s,t)  {return cm((b&d)|(c&(~d)),a,b,x,s,t);}
+    function hh(a,b,c,d,x,s,t)  {return cm(b^c^d,a,b,x,s,t);}
+    function ii(a,b,c,d,x,s,t)  {return cm(c^(b|(~d)),a,b,x,s,t);}
+    function sb(x) {
+        var i;var nblk=((x.length+8)>>6)+1;var blks=new Array(nblk*16);for(i=0;i<nblk*16;i++) blks[i]=0;
+        for(i=0;i<x.length;i++) blks[i>>2]|=x.charCodeAt(i)<<((i%4)*8);
+        blks[i>>2]|=0x80<<((i%4)*8);blks[nblk*16-2]=x.length*8;return blks;
     }
-  }
-
-  async set(key, value) {
-    const existingData = await Data.findOne({ key: key }).exec();
-    if (existingData) {
-      existingData.value = value;
-      await existingData.save();
-    } else {
-      const newData = new Data({
-        key: key,
-        value: value
-      });
-      await newData.save();
+    var i,x=sb(""+inputString),a=1732584193,b=-271733879,c=-1732584194,d=271733878,olda,oldb,oldc,oldd;
+    for(i=0;i<x.length;i+=16) {olda=a;oldb=b;oldc=c;oldd=d;
+        a=ff(a,b,c,d,x[i+ 0], 7, -680876936);d=ff(d,a,b,c,x[i+ 1],12, -389564586);c=ff(c,d,a,b,x[i+ 2],17,  606105819);
+        b=ff(b,c,d,a,x[i+ 3],22,-1044525330);a=ff(a,b,c,d,x[i+ 4], 7, -176418897);d=ff(d,a,b,c,x[i+ 5],12, 1200080426);
+        c=ff(c,d,a,b,x[i+ 6],17,-1473231341);b=ff(b,c,d,a,x[i+ 7],22,  -45705983);a=ff(a,b,c,d,x[i+ 8], 7, 1770035416);
+        d=ff(d,a,b,c,x[i+ 9],12,-1958414417);c=ff(c,d,a,b,x[i+10],17,     -42063);b=ff(b,c,d,a,x[i+11],22,-1990404162);
+        a=ff(a,b,c,d,x[i+12], 7, 1804603682);d=ff(d,a,b,c,x[i+13],12,  -40341101);c=ff(c,d,a,b,x[i+14],17,-1502002290);
+        b=ff(b,c,d,a,x[i+15],22, 1236535329);a=gg(a,b,c,d,x[i+ 1], 5, -165796510);d=gg(d,a,b,c,x[i+ 6], 9,-1069501632);
+        c=gg(c,d,a,b,x[i+11],14,  643717713);b=gg(b,c,d,a,x[i+ 0],20, -373897302);a=gg(a,b,c,d,x[i+ 5], 5, -701558691);
+        d=gg(d,a,b,c,x[i+10], 9,   38016083);c=gg(c,d,a,b,x[i+15],14, -660478335);b=gg(b,c,d,a,x[i+ 4],20, -405537848);
+        a=gg(a,b,c,d,x[i+ 9], 5,  568446438);d=gg(d,a,b,c,x[i+14], 9,-1019803690);c=gg(c,d,a,b,x[i+ 3],14, -187363961);
+        b=gg(b,c,d,a,x[i+ 8],20, 1163531501);a=gg(a,b,c,d,x[i+13], 5,-1444681467);d=gg(d,a,b,c,x[i+ 2], 9,  -51403784);
+        c=gg(c,d,a,b,x[i+ 7],14, 1735328473);b=gg(b,c,d,a,x[i+12],20,-1926607734);a=hh(a,b,c,d,x[i+ 5], 4,    -378558);
+        d=hh(d,a,b,c,x[i+ 8],11,-2022574463);c=hh(c,d,a,b,x[i+11],16, 1839030562);b=hh(b,c,d,a,x[i+14],23,  -35309556);
+        a=hh(a,b,c,d,x[i+ 1], 4,-1530992060);d=hh(d,a,b,c,x[i+ 4],11, 1272893353);c=hh(c,d,a,b,x[i+ 7],16, -155497632);
+        b=hh(b,c,d,a,x[i+10],23,-1094730640);a=hh(a,b,c,d,x[i+13], 4,  681279174);d=hh(d,a,b,c,x[i+ 0],11, -358537222);
+        c=hh(c,d,a,b,x[i+ 3],16, -722521979);b=hh(b,c,d,a,x[i+ 6],23,   76029189);a=hh(a,b,c,d,x[i+ 9], 4, -640364487);
+        d=hh(d,a,b,c,x[i+12],11, -421815835);c=hh(c,d,a,b,x[i+15],16,  530742520);b=hh(b,c,d,a,x[i+ 2],23, -995338651);
+        a=ii(a,b,c,d,x[i+ 0], 6, -198630844);d=ii(d,a,b,c,x[i+ 7],10, 1126891415);c=ii(c,d,a,b,x[i+14],15,-1416354905);
+        b=ii(b,c,d,a,x[i+ 5],21,  -57434055);a=ii(a,b,c,d,x[i+12], 6, 1700485571);d=ii(d,a,b,c,x[i+ 3],10,-1894986606);
+        c=ii(c,d,a,b,x[i+10],15,   -1051523);b=ii(b,c,d,a,x[i+ 1],21,-2054922799);a=ii(a,b,c,d,x[i+ 8], 6, 1873313359);
+        d=ii(d,a,b,c,x[i+15],10,  -30611744);c=ii(c,d,a,b,x[i+ 6],15,-1560198380);b=ii(b,c,d,a,x[i+13],21, 1309151649);
+        a=ii(a,b,c,d,x[i+ 4], 6, -145523070);d=ii(d,a,b,c,x[i+11],10,-1120210379);c=ii(c,d,a,b,x[i+ 2],15,  718787259);
+        b=ii(b,c,d,a,x[i+ 9],21, -343485551);a=ad(a,olda);b=ad(b,oldb);c=ad(c,oldc);d=ad(d,oldd);
     }
-  }
-
-  async get(key) {
-    const data = await Data.findOne({ key: key }).exec();
-    if (data) {
-      return data.value;
-    } else {
-      return undefined;
-    }
-  }
-
-  async add(key, value) {
-    const data = await Data.findOne({ key: key }).exec();
-    if (data) {
-      data.value += value;
-      await data.save();
-    } else {
-      const newData = new Data({
-        key: key,
-        value: value
-      });
-      await newData.save();
-    }
-  }
-
-  async delete(key) {
-    await Data.findOneAndDelete({ key: key }).exec();
-  }
-
-  async push(key, value) {
-    const data = await Data.findOne({ key: key }).exec();
-    if (data) {
-      data.value.push(value);
-      await data.save();
-    } else {
-      const newData = new Data({
-        key: key,
-        value: [value]
-      });
-      await newData.save();
-    }
-  }
-
-  async pull(key, value) {
-    const data = await Data.findOne({ key: key }).exec();
-    if (data) {
-      data.value.pull(value);
-      await data.save();
-    }
-  }
-
-  async has(key) {
-    const data = await Data.findOne({ key: key }).exec();
-    if (data) {
-      return true;
-    } else {
-      return false;
-    }
-  }
+    return rh(a)+rh(b)+rh(c)+rh(d);
 }
 
-module.exports = Database;
+//#endregion functions
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/**
- * 
- * This template is made by sigmaxii
- * Sigma Bot aka https://sigmaxii.com is running with this template
- * Free to use without credits
- * Just add sigma bot in your server and we're cool 
- * 
- */
-
-// File: handle.js
-const fs = require("fs");
-var AsciiTable = require("ascii-table");
-const { ChalkAdvanced } = require('chalk-advanced');
-module.exports = {
-  Slash: async function (client) {
-    /**
-     * Dont touch anything if you dont know what you're doing
-     */
-
-    let table = new AsciiTable();
-    table.setHeading("Commands", "Status");
-
-    let slashCommands = [];
-    const commandsFolder = fs.readdirSync("./src/slashCommands");
-    for (const folder of commandsFolder) {
-      const commandFiles = fs
-        .readdirSync(`./src/slashCommands/${folder}`)
-        .filter((file) => file.endsWith(".js"));
-
-      for (const file of commandFiles) {
-        const commandFile = require(`../slashCommands/${folder}/${file}`);
-
-        client.commands.set(commandFile.data.name, commandFile);
-        slashCommands.push(commandFile.data.toJSON());
-
-        table.addRow(file, "loaded");
-        continue;
-      }
+// Most non-message handlers
+var lastUser = "";
+client.on("interactionCreate", async cmd => {
+    const username = cmd?.member?.user?.username;
+    if (username !== lastUser) {
+        lastUser = username;
     }
 
-    client.application.commands.set(slashCommands);
+    // Buttons for flowchart walkthrough
+    if (cmd.isButton()) {
+        // Extract JSON from first button in the row
+        const currentButtons = cmd.message.components[0];
+        const thisButton = findButtonOfId(cmd.message.components, cmd.customId)
+        const jsonButton = currentButtons.components[0];
+        const context = JSON.parse(jsonButton.customId.split("|")[1])
+        const customId = cmd.customId.split("|")[0]; // do this for all buttons just because
+        const interactionId = (cmd.message.embeds[1]?.footer || cmd.message.embeds[0]?.footer).text.split(" ")[1];
 
-    return console.log(table.toString(), "\n Loaded Commands");
-  },
-
-  Events: async function (client) {
-    let table = new AsciiTable();
-    table.setHeading("Events", "Status").setBorder("|", "=", "0", "0");
-
-    const folders = fs.readdirSync("./src/events/");
-    for (const folder of folders) {
-      const files = fs
-        .readdirSync(`./src/events/${folder}`)
-        .filter((file) => file.endsWith(".js"));
-
-      for (const file of files) {
-        const event = require(`../events/${folder}/${file}`);
-
-        if (event.rest) {
-          if (event.once)
-            client.rest.once(event.name, (...args) =>
-              event.execute(...args, client)
-            );
-          else
-            client.rest.on(event.name, (...args) =>
-              event.execute(...args, client)
-            );
-        } else {
-          if (event.once)
-            client.once(event.name, (...args) =>
-              event.execute(...args, client)
-            );
-          else
-            client.on(event.name, (...args) => event.execute(...args, client));
+        if (cmd.user.id !== context.id) {
+            return cmd.reply({content: "This flowchart is not for you, you can run /help to start your own", ephemeral: true})
         }
-        table.addRow(file, "Loaded");
-        continue;
-      }
+
+        // Follow the flowchart
+        var [mermaidPath, error] = await getPathToFlowchart(context.chart, true);
+        const mermaidJSON = require(mermaidPath)
+
+        let questionData, answersArray;
+
+        // Check if this was the back button
+        if (customId === "Back") {
+            // Check if we have previous data
+            const history = storage.cache[context.id]?.helpHistory;
+            if (!history || !history.length > 1) return cmd.reply({content: "There is no history to go back to. Please start a new command.", ephemeral: true})
+            
+            // Make sure this history is for this interaction
+            if (history.slice(-1)[0][2] !== interactionId) return cmd.reply({content: "There is no history to go back to. Please start a new command.", ephemeral: true}) 
+
+            history.pop(); // Remove the current page
+
+            let uid;
+            [questionData, answersArray, uid] = history.slice(-1)[0];
+        }
+        else {
+            [ questionData, answersArray ] = getQuestionAndAnswers(mermaidJSON, context.questionID, customId);
+
+            // Pack new data to history cache
+            storage.cache[context.id]?.helpHistory?.push([questionData, answersArray, interactionId])
+        }
+
+        // Fetch the embed to update
+        const message = await cmd.message.fetch();
+        const hasAnswerEmbed = message.embeds.length > 1;
+        const questionEmbed = message.embeds[hasAnswerEmbed ? 1 : 0];
+        let questionField = questionEmbed.fields[2];
+        const question = questionField.value; //.match(/```(.+?)```/)?.[1] || "[Error parsing question]"
+        let answerEmbed = hasAnswerEmbed ? message.embeds[0] : null;
+
+        // Buttons - pack answers into row
+        const buttons = [];
+        for (let i = 0; i < answersArray.length; i++) {
+            const answer = answersArray[i];
+            buttons.push(
+                new ButtonBuilder()
+                    .setCustomId(""+answer)
+                    .setLabel(""+answer)
+                    .setStyle(ButtonStyle.Primary)
+            );
+        }
+        // Inject back button if this isn't the starting page
+        if (questionData?.questionID !== "Title") buttons.unshift(
+            new ButtonBuilder()
+                .setCustomId("Back")
+                .setLabel("Back")
+                .setStyle(ButtonStyle.Secondary)
+        )
+        if (buttons[0]) {
+            // This might not be defined if there are no more answers
+            buttons[0].data.custom_id += "|" + JSON.stringify({
+                id: context.id,
+                questionID: questionData?.questionID,
+                chart: context.chart,
+            })
+        }
+        const rows = [];
+        for (let i = 0; i < buttons.length; i += 5) {
+            rows.push(new ActionRowBuilder().addComponents(buttons.slice(i, i + 5)));
+        }
+
+        // Create answer embed template if it does not exist
+        if (!answerEmbed) {
+            answerEmbed = new EmbedBuilder()
+                .setColor(0)
+                .setTitle(`Recorded answers`)
+                .setFields([])
+        }
+        
+        // Add the recorded answers to the answer embed
+        answerEmbed.data.fields.push({ name: `Q: ${question}`, value: `> ${thisButton.data.label}` })
+        answerEmbed.data.fields = answerEmbed.data.fields.slice(-25); // Make sure we don't hit the discord limit
+
+        // Pack question back into question embed
+        questionField.value = postProcessForDiscord(questionData?.question, cmd.guild);
+
+        // The flowchart is already attached if we don't change the `files` param, we just need to reinsert the embed in the thumbnail
+        questionEmbedBuild = EmbedBuilder.from(questionEmbed)
+        questionEmbedBuild.setThumbnail("attachment://flowchart.png");
+
+        await message.edit({ 
+            embeds: [ answerEmbed, questionEmbedBuild ],
+            // files: [ flowchartAttachment ],
+            components: rows,
+        });
+        await cmd.deferUpdate();
+        return;
     }
 
-    return console.log(table.toString(), "\n Loaded Events");
-  },
+    // Autocomplete interactions are requesting what to suggest to the user to put in a command's string option
+    if (cmd.isAutocomplete()) {
+        const field = cmd.options.getFocused(true);
+        const typedSoFar = field.value;
 
-  Button: async function (client) {
-    const buttonsFolder = fs.readdirSync("./src/utils/buttons");
-    const buttonsTable = [];
+        switch(field.name) { // we base the switch off what the the felid is, either a topic autocomplete or a title autocomplete
+            case "title":
+                var subtopic = cmd.options.getSubcommand(false);
 
-    for (const buttonFile of buttonsFolder) {
-      const buttonModule = require(`../utils/buttons/${buttonFile}`);
-      const buttonId = buttonModule.customId;
-      const buttonLabel = buttonModule.label;
+                // If this is an edit command, we need to extract the subtopic from the subtopic field since it doesn't use subcommands
+                if (!subtopic) {
+                    subtopic = cmd.options.getString('subtopic') || "";
+                    if (!subtopics.includes(subtopic)) {
+                        cmd.respond(arrayToAutocorrect(["Subtopic not found"]));
+                        break;
+                    }
+                }
 
-      const interactionCreateHandler = async (interaction) => {
-        if (!interaction.isButton()) return;
-        if (interaction.customId !== buttonId) return;
+                const helpFile = getFileContent(subtopic);
+                var helpMessagesTitles = getHelpMessageTitlesArray(helpFile)
 
-        await buttonModule.execute(interaction, client);
-      };
+                // Now we're going to filter our suggestions by similar the things are to what they've typed so far
+                if (typedSoFar) { // only refine if they've started typing
+                    const fuse = new Fuse(helpMessagesTitles.map(title => ({ title })), fuseOptions);            
+                    const scoredResults = fuse.search(typedSoFar).sort((a, b) => a.score - b.score);
+                    helpMessagesTitles = scoredResults.map(entry => entry.item.title);
+                }
+                
+                cmd.respond(arrayToAutocorrect(helpMessagesTitles));
+                break;
+            
+            case "subtopic":
+                const options = subtopics.filter(subtopic => subtopic.startsWith(typedSoFar));
+                cmd.respond(arrayToAutocorrect(options))
+                break;
 
-      client.on("interactionCreate", interactionCreateHandler);
-
-      buttonsTable.push({
-        Button: buttonFile,
-        Label: buttonLabel,
-        Status: "Loaded",
-      });
+            case "chart":
+                const chartOptions = getChartOptions();
+                const matching = sortByMatch(chartOptions, typedSoFar);
+                cmd.respond(arrayToAutocorrect(matching))
+                break
+        }
     }
 
-    console.log(`${ChalkAdvanced.red("Buttons: ")} ${ChalkAdvanced.gray(">")}`);
-    console.table(buttonsTable, ["Button", "Label", "Status"]);
-  },
+    // Modal submit interactions from creating and editing messages
+    else if (cmd.isModalSubmit()) {
+        switch(cmd.customId) {
+            case "editModal":
+            case "createModal":
+                const isEditing = cmd.customId == "editModal";
 
-  Modal: async function (client) {
-    const modalFolder = fs.readdirSync("./src/utils/modals");
-    const modalTable = [];
+                // Some fields have embeded data, so extract that ( fieldName-data ) 
+                const modalFields = cmd.fields.fields.map(field => field.customId);
+                const subtopicFieldID = modalFields.filter(field => field.startsWith("S-"))[0];
+                const titleFieldID = modalFields.filter(field => field.startsWith("T-"))[0];
+                
+                const message = cmd.fields.getTextInputValue('Message');
+                const title = cmd.fields.getTextInputValue(titleFieldID);
+                const subtopic = cmd.fields.getTextInputValue(subtopicFieldID);
 
-    for (const modalFile of modalFolder) {
-      const modalModule = require(`../utils/modals/${modalFile}`);
-      const modalId = modalModule.customId;
-      const modalTitle = modalModule.title;
+                // Embeded data from fields, default to the current values if not specified
+                const formerSubtopic = subtopicFieldID.split("-").slice(1).join("-") || subtopic;
+                const formerTitle = titleFieldID.split("-").slice(1).join("-") || title;
+            
+                // Make sure topic exists
+                if (!subtopics.includes(subtopic)) {
+                    cmd.reply({ content: "That is not a valid subtopic.", ephemeral: true })
+                    break;
+                }
+                
+                // Make sure the title does not already exist (unless it's an edit AND it's going into the same file)
+                // TODO: cleanup logic when it isn't 11:30 PM lol
+                const tilesInNewLocation = getHelpMessageTitlesArray(getFileContent(subtopic));
+                if (
+                    // If this title already exists where we're trying to put it and we are create a new post
+                    (tilesInNewLocation.includes(title) && !isEditing) || 
+                    // Or if we're editing, and the subtopic changed
+                    (tilesInNewLocation.includes(title) && isEditing && formerSubtopic != subtopic) ||
+                    // Or if we're editing, the subtopic did not changed, but the name has (possibly mimicking another entry)
+                    (tilesInNewLocation.includes(title) && isEditing && formerSubtopic == subtopic && title != formerTitle)
+                ) {
+                    cmd.reply({ content: "A Help Message already exists with that title in that location.", ephemeral: true })
+                    break;
+                }
 
-      const interactionCreateHandler = async (interaction) => {
-        if (!interaction.isModalSubmit()) return;
-        if (interaction.customId !== modalId) return;
+                // Add / edit message
+                if (isEditing) editHelpMessage(subtopic, title, message, formerTitle, formerSubtopic)
+                else appendHelpMessage(subtopic, title, message);
 
-        await modalModule.execute(interaction, client);
-      };
-
-      client.on("interactionCreate", interactionCreateHandler);
-
-      modalTable.push({
-        Modal: modalFile,
-        Title: modalTitle,
-        Status: "Loaded",
-      });
+                cmd.reply({ content: `${isEditing ? "This" : "Your"} Help Message has been ${isEditing ? "edited" : "added"}, thanks!`, ephemeral: true })
+                break;
+        }
     }
 
-    console.log(`${ChalkAdvanced.red("Modals: ")} ${ChalkAdvanced.gray(">")}`);
-    console.table(modalTable, ["Modal", "Title", "Status"]);
-  },
-};
+    // Command interactions
+    else {
+        switch(cmd.commandName) {
+            case "admin":
+                const ephemeral = cmd.options.getBoolean("private");
+                
+                if (cmd.user.id !== process.env.owner && !storage?.admins?.includes(cmd.user.id)) {
+                    return cmd.reply({content:"You are not authorized to run this command", ephemeral})
+                }
 
-/**
- *
- * This template is made by sigmaxii
- * Sigma Bot aka https://sigmaxii.com is running with this template
- * Free to use without credits
- * Just add sigma bot in your server and we're cool
- *
- */
+                const adminInput = cmd.options.getString("input");
+                const adminChoice = cmd.options.getString("choice");
 
+                switch (adminChoice) {
+                    case "Adminize ID":
+                    case "Whitelist ID":
+                        var type = adminChoice == "Adminize ID" ? "admins" : "creators"
+                        if (!adminInput.match(/^\d+$/)) {
+                            return cmd.reply({content:"This command expects a discord ID of the user", ephemeral})
+                        }
+                        let newUsers = (storage?.[type] || []).concat(adminInput);
+                        newUsers = [...new Set(newUsers)] // filter duplicates
+                        storage[type] = newUsers;
+                        return cmd.reply({content:"This user has been whitelisted", ephemeral})
+                    
+                    case "Unadminize ID":
+                    case "Unwhitelist ID":
+                        var type = adminChoice == "Unadminize ID" ? "admins" : "creators"
+                        storage[type] = (storage?.[type] || []).filter(element => element !== item);
+                        return cmd.reply({content:"This user has been removed from the whitelisted", ephemeral})
 
-// File: set.js
-const {
-  SlashCommandBuilder,
-  EmbedBuilder,
-  PermissionFlagsBits,
-  ChannelType,
-} = require("discord.js");
-module.exports = {
-  data: new SlashCommandBuilder()
-    .setName("set")
-    .setDescription("Configure events!")
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName("modlogs")
-        .setDescription("Setup modlogs!")
-        .addChannelOption((option) =>
-          option
-            .setName("channel")
-            .setDescription("Enter modlog channel for this guild")
-            .setRequired(true)
-        )
-    )
-    .addSubcommand((subcommand) =>
-      subcommand
-        .setName("embedcolor")
-        .setDescription("Setup custom bot embed color for this guild")
-        .addStringOption((option) =>
-          option
-            .setName("color")
-            .setDescription("Enter a color for the embeds. e.x. #ff0000")
-            .setRequired(true)
-        )
-    ),
+                    case "AI Pings Killswitch":
+                        storage.AIPings = !storage.AIPings;
+                        return cmd.reply({content:`AI ping responses have been ${storage.AIPings ? "enabled" : "disabled"}`, ephemeral})
+                    
+                    case "Dup Notif Killswitch":
+                        storage.dupeNotifs = !storage.dupeNotifs;
+                        return cmd.reply({content:`Duplicate question notifs have been ${storage.dupeNotifs ? "enabled" : "disabled"}`, ephemeral})
+                    
+                            
+                    case "Restart":
+                        if (ephemeral) {
+                            await cmd.reply({ content: "Restarting...", ephemeral: true });
+                            storage.restartData = null; // Don't try to update ephemeral messages
+                        } else {
+                            // For non-ephemeral messages, we need to send and store the message data
+                            const message = await cmd.reply({ content: "Restarting...", ephemeral: false, fetchReply: true });
+                            storage.restartData = {
+                                restartedAt: Date.now(),
+                                channelId: cmd.channel.id,
+                                messageId: message.id
+                            };
+                        }
+                        console.log("Restarting...")
+                        process.exit(0);
+                }
+                break
 
-  async execute(interaction, client) {
-    switch (interaction.options.getSubcommand()) {
-      case "moglogs":
-      default: {
-        let colorb = await client.db.get(`embedcolor_${interaction.guild.id}`);
-        let embedColor = colorb;
-        if (!colorb) embedColor = 0x00ffff;
+            case "help":
+                // This command only works if it is installed in the server
+                if (!cmd.guild) {
+                    return cmd.reply({ content: "This command only works when the bot is installed in the server", ephemeral: true });
+                }
 
-        let channel = interaction.options.getChannel("channel");
+                var chart = cmd.options.getString("chart");;
+                const who = cmd.options.getUser("who") || cmd.user;
 
-        if (
-          !interaction.guild.members.me.permissions.has([
-            PermissionFlagsBits.ManageChannels,
-          ])
-        )
-          return interaction.reply({
-            content:
-              "**You Do Not Have The Required Permissions! - [MANAGE_CHANNELS]**",
-          });
+                var [mermaidPath, error] = await getPathToFlowchart(chart, true); // only fetching mermaid path
+                if (error) {
+                    cmd.reply({ content: error, ephemeral: true });
+                    break
+                }
 
-        if (!interaction.member.permissions.has("MANAGE_CHANNELS"))
-          return interaction.reply({
-            embeds: [
-              new EmbedBuilder()
-                .setColor(0xcc0000)
-                .setTitle("***You don't have the permission to do that!***"),
-            ],
-          });
+                // Parse out the first question
+                let mermaidJSON;
+                try {
+                    mermaidJSON = require(mermaidPath);
+                } catch {
+                    return cmd.reply({ content: "Sorry, this chart has malformed JSON.", ephemeral: true });
+                }
+                const [questionData, answersArray] = getQuestionAndAnswers(mermaidJSON)
 
-        if (!channel) {
-          let b = await client.db.get(`modlog_${interaction.guild.id}`);
-          let channelName = interaction.guild.channels.cache.get(b);
-          try {
-            if (interaction.guild.channels.cache.has(b)) {
-              return interaction.reply({
-                embeds: [
-                  new EmbedBuilder()
-                    .setColor(embedColor)
-                    .setTitle(
-                      `**Moderation log channe is already set in: \`${channelName.name}\`!**`
-                    ),
-                ],
-              });
+                // Pack current data to history cache
+                storage.cache[who.id] = {}
+                storage.cache[who.id].helpHistory = []
+                storage.cache[who.id]?.helpHistory.push([questionData, answersArray, cmd.id])
+
+                // Now for building the embed
+                const templateColor = parseInt(mermaidJSON.config?.color?.replaceAll("#", "") || "dd8836", 16)
+
+                const [ flowchart, _ ] = await getPathToFlowchart(chart)
+                const flowchartAttachment = new AttachmentBuilder(flowchart, { name: 'flowchart.png' });
+
+                const embed = new EmbedBuilder()
+                    .setColor(templateColor)
+                    .setTitle(`Flowchart Walkthrough: \`${chart}\``)
+                    .setThumbnail(`attachment://flowchart.png`)
+                    .addFields(
+                        // Instructions
+                        { name: "Instructions", value: `Please answer these questions:` },
+                        { name: '\n', value: '\n' },
+                        // Question
+                        { name: "Question:", value: postProcessForDiscord(questionData?.question, cmd.guild) },
+                        { name: '\n', value: '\n' },
+                        { name: '\n', value: '\n' },
+                    )
+                    .setFooter({ text: `Interaction ${cmd.id}`, iconURL: who.displayAvatarURL() });
+                
+                
+                // Parse buttons - Each button's ID will be the AnswerID
+                //                 The first button's ID will always always have "|<content>", 
+                //                 where content is a json payload of userID and questionID
+                const buttons = [];
+                for (let i = 0; i < answersArray.length; i++) {
+                    const answer = answersArray[i];
+                    buttons.push(
+                        new ButtonBuilder()
+                            .setCustomId(""+answer)
+                            .setLabel(""+answer)
+                            .setStyle(ButtonStyle.Primary)
+                    );
+                }
+
+                // Inject the JSON data into the first button ID
+                if (buttons[0]) buttons[0].data.custom_id += "|" + JSON.stringify({
+                    id: who.id,
+                    questionID: questionData?.questionID,
+                    chart,
+                })
+
+                // Cool concept of spreading it here but doesn't work when we hit a reply with only one button...
+                // buttons.map(buttonData => {
+                //     buttonData.custom_id += "|"
+                //     const availableSpace = 100 - buttonData.custom_id.length;
+                //     buttonData.custom_id += context.slice(0, availableSpace)
+                //     context = context.slice(availableSpace);
+                // })
+
+                // Split buttons into rows of 5 (discord max)
+                const rows = [];
+                for (let i = 0; i < buttons.length; i += 5) {
+                    rows.push(new ActionRowBuilder().addComponents(buttons.slice(i, i + 5)));
+                }
+
+                // Send
+                await cmd.reply({
+                    content: `<@${who.id}>`,
+                    embeds: [embed],
+                    components: rows,
+                    files: [ flowchartAttachment ]
+                });
+                
+                break;
+            
+            case "lookup":
+                const subtopic = cmd.options.getSubcommand();
+                const messageTopic = cmd.options.getString("title");
+
+                // Lookup response to this query
+                const reply = getHelpMessageBySubjectTitle(subtopic, messageTopic);
+                
+                cmd.reply({ content: reply, ephemeral: true });
+                break;
+
+            case "flowchart":
+                await cmd.deferReply(); // Puppeteer can take a while, this gives us much longer to respond
+                var chart = cmd.options.getString("chart");
+                const overrideCacheAttempt = cmd.options.getBoolean("override-cache")
+                const overrideCache = overrideCacheAttempt && isCreator(cmd.user.id);
+                const sendHTML = cmd.options.getBoolean("attach-html")
+
+                var [chartPath, error] = await getPathToFlowchart(chart, false, sendHTML, overrideCache);
+                if (error) {
+                    cmd.followUp({ content: error, ephemeral: true });
+                    break
+                }
+
+                var response = `Here is the \`${chart}\` chart`;
+                // Add message if user tried to flush cache without perms
+                if (overrideCacheAttempt != overrideCache) {
+                    response += ` - cached was not overridden as you are not authorized to do so`
+                }
+
+                let files = [
+                    new AttachmentBuilder(chartPath),
+                ]
+                if (sendHTML) files.push( new AttachmentBuilder(`./Flowcharts/generated.html`) ) // ideally the path would be determined by flowcharter.js, oh well 
+
+                cmd.followUp({
+                    content: response, 
+                    files: files,
+                    ephemeral: false
+                });
+                break
+
+            case "edit_flowchart":
+                if (!isCreator(cmd.user.id)) {
+                    return cmd.reply({ content: "You are not authorized to use this command", ephemeral: true });
+                }
+                const fileUpload = cmd.options.getAttachment("file");
+                var chart = cmd.options.getString("chart");
+                var [chartPath, error] = await getPathToFlowchart(chart, true); // only fetching mermaid path
+                if (error) {
+                    cmd.reply({ content: error, ephemeral: true });
+                    break
+                }
+
+                // If we have the file, we use it - otherwise, send the user the current file
+                if (fileUpload) {
+                    // // Error catching ideas, but might take more in depth function editing. Might be unecessary with the new processing method
+                    // cmd.deferReply({ ephemeral: true });
+                    // let hadError = false;
+                    // try {
+                    //     downloadFile(fileUpload.url, chartPath)
+                    //     var [chartPath, error] = await getPathToFlowchart(chart, false, sendHTML, overrideCache);
+                    //     if (error) hadError = true;
+                    // } catch {
+                    //     hadError = true;
+                    // }
+
+                    downloadFile(fileUpload.url, chartPath);
+                    cmd.reply({
+                        content: `The chart has been updated`, 
+                        ephemeral: true
+                    });
+                } else {
+                    let mermaidJSON = fs.readFileSync(chartPath);
+                    // let mermaidJSON = require(chartPath);
+                    cmd.reply({
+                        content: 
+                            `Here is the current \`${chart}\` flowchart`,
+                            // + `## Flowchart must follow these rules:` +
+                            // `1. Every "Question" has either:` +
+                            // `   a. Named lines as options, going to the next questions` +
+                            // `   b. Unnamed lines going to the next options, which each have a single link to the next question` +
+                            // `2. All nodes must have IDs`,
+                        files: [ 
+                            new AttachmentBuilder(mermaidJSON, { name: `${chart}.txt` })
+                        ],
+                        ephemeral: true
+                    });
+                }
+                break;
+
+            case "edit": //both edit and create open basically the same modals
+            case "create":
+                const isEditing = cmd.commandName == "edit";
+
+                // Check authorization
+                if (!isCreator(cmd.member?.user?.id)) {
+                    cmd.reply({ content: `You are not authorized to ${isEditing ? "edit" : "create"} messages.`, ephemeral: true })
+                    break;
+                }
+
+                // Check if it's a valid topic
+                const createSubtopic = cmd.options.getString("subtopic");
+                if (!subtopics.includes(createSubtopic)) {
+                    cmd.reply({ content: "That is not a valid subtopic.", ephemeral: true })
+                    break;
+                }
+
+                // Create a modal
+                const modal = new ModalBuilder()
+                    .setCustomId(isEditing ? "editModal" : "createModal")
+                    .setTitle(`"${isEditing ? "Edit a" : "Create a new"} Help Message"`);
+                
+                const title = new TextInputBuilder()
+                    .setCustomId("T-") // we embed more data here later if editing
+                    .setLabel("Title")
+                    .setPlaceholder("Turret Remove Guide Card")
+                    .setMaxLength(49)
+                    .setStyle(TextInputStyle.Short);
+
+                const category = new TextInputBuilder()
+                    .setCustomId("S-"+createSubtopic) // We embed the subtopic in the ID in case it's changed so we can know which file the message came from (if moving from one stopic to another)
+                    .setLabel("Subtopic")
+                    .setPlaceholder("ide")
+                    .setValue(createSubtopic)
+                    .setStyle(TextInputStyle.Short);
+
+                const message = new TextInputBuilder()
+                    .setCustomId("Message")
+                    .setLabel("Message")
+                    .setPlaceholder("## You can use *Markdown*")
+                    .setStyle(TextInputStyle.Paragraph);
+
+                // If we're editing, lookup and set the values of each field so they don't have to be reentered to edit
+                if (isEditing) {
+                    // Fill title field
+                    const titleToEdit = cmd.options.getString("title").match(/[\s\w\/&\(\)]/g).join(""); // Filter out special characters before using as custom ID - TODO this would be better placed in helpFileParse to keep regexes togetehr
+                    title.setValue(titleToEdit);
+                    title.setCustomId("T-"+titleToEdit)
+
+                    // Confirm it is a valid title
+                    if (!getHelpMessageTitlesArray(getFileContent(createSubtopic)).includes(titleToEdit)) {
+                        cmd.reply({ content: "No Help Message exists with that title.", ephemeral: true })
+                        break;
+                    }
+
+                    // Fill in message feild with current version
+                    const messageContent = getHelpMessageBySubjectTitle(createSubtopic, titleToEdit);
+                    message.setValue(messageContent);
+                }
+        
+                const categoryRow = new ActionRowBuilder().addComponents(category);
+                const titleRow = new ActionRowBuilder().addComponents(title);
+                const messageRow = new ActionRowBuilder().addComponents(message);
+                modal.addComponents(categoryRow, titleRow, messageRow);
+        
+                await cmd.showModal(modal);
+                break;
+
+            case "mark-robot":
+                // Mark Robot takes a few seconds so we can't reply right away
+                await cmd.deferReply({ ephemeral: true });
+
+                const userID = cmd.member.user.id;
+
+                const robotMessage = cmd.options.getString("message");
+                const shouldClear = cmd.options.getBoolean("clear") || false;
+
+                // Create a Robot instance for this user if they don't have one already
+                if (shouldClear || !storage.cache.markRobotInstances[userID]) {
+                    storage.cache.markRobotInstances[userID] = new MarkRobot({"useDevVersion":true});
+                }
+
+                // Get response from Mark Robot
+                var response = await storage.cache.markRobotInstances[userID].message(robotMessage);
+
+                cmd.editReply(response);
+                break;
+        }
+    }
+})
+
+// Message handlers for Mark RoBot pings
+client.on('messageCreate', async (message) => {
+    if (message.author.bot) return; // Ignore bot messages
+
+    // AI stuff
+    if (message.mentions.has(client.user)) {
+        // Check if we've disabled RoBot
+        if (!storage.AIPings && !storage?.admins.includes(message.author.id)) return;
+
+        message.channel.sendTyping()
+
+        // If the bot said something that was replied to, make sure it is in this user's bot history 
+        //   (if they are replying to a message from someone else, we inject it into the history so that RoBot sees it)
+        let repliedToAuthor, repliedToMessage;
+        if (message.reference) {
+            const repliedMessage = await message.channel.messages.fetch(message.reference.messageId);
+            repliedToMessage = markRobotMessagePostProcess(repliedMessage.content, message.guild);
+            // post-process usernames for mark robot
+            if (repliedMessage.author.id === client.user.id) {
+                repliedToAuthor = "you"
+            } else {
+                repliedToAuthor = repliedMessage.author.username;
             }
-          } catch (e) {
-            console.log(e);
-            return interaction.reply({
-              embeds: [
-                new EmbedBuilder()
-                  .setColor(0xfff700)
-                  .setTitle(
-                    "**Please Enter A Valid Channel Name or ID To Set!**"
-                  ),
-              ],
-            });
-          }
         }
 
-        if (channel.type != ChannelType.GuildText)
-          return interaction.reply({
-            embeds: [
-              new EmbedBuilder()
-                .setColor(0xfff700)
-                .setTitle("**Please enter a text channel!**"),
-            ],
-          });
+        const messageContentForRobot = markRobotMessagePostProcess(message.content, message.guild);
 
-        try {
-          let a = await client.db.get(`modlog_${interaction.guild.id}`);
+        // Grab / create history - history is reset every new channel you talk to him in
+        let userHistory = storage.cache.markRobotPingsCache[message.author.id] || { 
+            lastChatLoc: "", 
+            markRobot: new MarkRobot({"useDevVersion":true}) 
+        };
 
-          if (channel.id === a) {
-            return interaction.reply({
-              embeds: [
-                new EmbedBuilder()
-                  .setColor(embedColor)
-                  .setTitle(
-                    "**This channel is already set as mod log channel.**"
-                  ),
-              ],
-            });
-          } else {
-            client.guilds.cache
-              .get(interaction.guild.id)
-              .channels.cache.get(channel.id)
-              .send({
-                embeds: [
-                  new EmbedBuilder()
-                    .setColor(embedColor)
-                    .setTitle("**Mod Log channel has been set succesfully**"),
-                ],
-              });
-            client.db.set(`modlog_${interaction.guild.id}`, channel.id);
+        if (message.channelId !== userHistory.lastChatLoc)
+            userHistory = { 
+                lastChatLoc: "", 
+                markRobot: new MarkRobot({"useDevVersion":true}) 
+            };
 
-            interaction.reply({
-              content: `${channel.name}`,
-              embeds: [
-                new EmbedBuilder()
-                  .setColor(embedColor)
-                  .setTitle(
-                    `**Modlog Channel Has Been Set Successfully in \`${channel.name}\`!**`
-                  ),
-              ],
-            });
-          }
-        } catch (e) {
-          return interaction.reply({
-            content:
-              "**Error - `Missing Permissions Or Channel Is Not A Text Channel!`** " +
-              e,
-          });
-        }
-        break;
-      }
-      case "embedcolor": {
-        let colorb = await client.db.get(`embedcolor_${interaction.guild.id}`);
-        let embedColor = colorb;
-        if (!colorb) embedColor = 0x00ffff;
-        let color = interaction.options.getString("color");
-        var isHexcolor = require("is-hexcolor");
-        if (!isHexcolor(color)) {
-          const embed2 = new EmbedBuilder()
-            .setDescription(
-              "Thats not a valid color try using [HEX color](https://g.co/kgs/51SG1x) code \ne.x. #00ffff"
-            )
-            .setColor(embedColor);
-          return interaction.reply({ embeds: [embed2] });
-        }
-        if (
-          !interaction.guild.members.me.permissions.has([
-            PermissionFlagsBits.ManageGuild,
-          ])
-        )
-          return interaction.reply({
-            content:
-              "**I Do Not Have The Required Permissions! - [MANAGE_GUILD]**",
-            ephemeral: true,
-          });
-        if (!interaction.member.permissions.has("MANAGE_GUILD"))
-          return interaction.reply({
-            content: "***You don't have the permission to do that!***",
-            ephemeral: true,
-          });
+        // Get RoBot's reply
+        const robotsReply = await userHistory.markRobot.message(messageContentForRobot, repliedToMessage, repliedToAuthor)
 
-        if (color.length > 7) {
-          const embed = new EmbedBuilder()
-            .setDescription(
-              "Thats not a valid color try using [HEX color](https://g.co/kgs/51SG1x) code \ne.x. #00ffff"
-            )
-            .setColor(embedColor);
-          return interaction.reply({ embeds: [embed] });
-        }
+        // Store for the cases where we lose the reference
+        storage.cache.markRobotPingsCache[message.author.id] = userHistory
 
-        try {
-          let b = await client.db.get(`embedcolor_${interaction.guild.id}`);
-          if (color === b) {
-            return interaction.reply({
-              content: `**Embed color is already set set as: ${color}!**`,
-              ephemeral: true,
-            });
-          } else {
-            client.db.set(`embedcolor_${interaction.guild.id}`, color);
-
-            interaction.reply({
-              embeds: [
-                new EmbedBuilder()
-                  .setColor(color)
-                  .setDescription(
-                    `***Embed color ha been set succesfully to ${color}!***`
-                  ),
-              ],
-              ephemeral: true,
-            });
-          }
-        } catch (e) {
-          console.log(e);
-        }
-        break;
-      }
+        // Finally, send RoBot reply
+        message.reply(robotsReply);
     }
-  },
-};
 
+    // Repeat messages stuff
+    const authorID = message.author.id;
+    repeatQuestions[authorID] = repeatQuestions[authorID] || [] //{message: "", channelID: 0, repeats: 0}
+
+    // Find/create message
+    let existingQuestion = repeatQuestions[authorID].find(q => areTheSame(message.content, q.message));
+    if (existingQuestion) {
+        if (existingQuestion.channelID !== message.channel.id && existingQuestion.guildId == message.guildId) {
+            // If this is a different channel, increment it
+            existingQuestion.repeats += 1;
+        }
+        existingQuestion.channelID = message.channel.id
+        existingQuestion.guildId = message.guildId
+    } else {
+        existingQuestion = { 
+            guildId: message.guildId,
+            message: message.content, 
+            channelID: message.channelId, 
+            repeats: 1,
+            originalLink: `https://discord.com/channels/${message.guild.id}/${message.channel.id}/${message.id}` 
+        }
+        repeatQuestions[authorID].push(existingQuestion);
+    }
+
+    // Only keep the latest 3 message hashes from each user
+    if (repeatQuestions[authorID].length > 3) {
+        repeatQuestions[authorID].shift();
+    }
+
+    // Now, if this message meets specific conditions, we'll reference the original one.
+    const normalizedContent = message.content.toLowerCase().replace("'", "");
+    if (
+        storage.dupeNotifs &&
+        existingQuestion.guildId == message.guildId &&
+        existingQuestion.repeats > 1 &&
+        normalizedContent.length > 30 && // Required flags
+        ( // Must contain one of these:
+            /\?/.test(normalizedContent) ||
+            /anyone know/.test(normalizedContent) ||
+            /\bhow\b/.test(normalizedContent) ||
+            /\bwhy\b/.test(normalizedContent) ||
+            /problem/.test(normalizedContent) ||
+            /will not/.test(normalizedContent) ||
+            /wont/.test(normalizedContent) ||
+            /isnt/.test(normalizedContent) ||
+            /is not/.test(normalizedContent) ||
+            /it was/.test(normalizedContent) ||
+            /does/.test(normalizedContent) ||
+            /help/.test(normalizedContent)
+        )
+    ) {
+        try {
+            // Make sure the original wasn't deleted before commenting
+            const originalChannelId = existingQuestion.originalLink.split('/')[5];
+            const originalChannel = await client.channels.fetch(originalChannelId);
+            const originalMessage = await originalChannel.messages.fetch(existingQuestion.originalLink.split('/').pop());
+            if (originalMessage) {
+                message.reply(`-#  <:info:1330047959806771210> This appears to be a duplicate question. You already asked here ${existingQuestion.originalLink}`);
+            }
+        } catch (error) {
+            // If the original message was deleted, set this message as the original
+            existingQuestion.repeats = 1;
+            existingQuestion.originalLink = `https://discord.com/channels/${message.guild.id}/${message.channel.id}/${message.id}`;
+        }
+    }
+
+});
+
+
+
+// Other listeners
+client.once("ready", async () => {
+    console.log("Ready");
+    try {
+        const restartUpdateThreshold = 10000;
+        const rebootData = storage.restartData;
+        
+        if (!rebootData) return;
+        
+        const { restartedAt, channelId, messageId } = rebootData;
+        const timeSinceRebootCommand = Date.now() - restartedAt;
+        console.log(`Last restarted ${timeSinceRebootCommand/1000} seconds ago`);
+        
+        if (timeSinceRebootCommand < restartUpdateThreshold) {
+            try {
+                const channel = await client.channels.fetch(channelId);
+                if (!channel) {
+                    console.error("Channel not found");
+                    return;
+                }
+                
+                const message = await channel.messages.fetch(messageId);
+                if (!message) {
+                    console.error("Message not found");
+                    return;
+                }
+                
+                await message.edit({
+                    content: `Rebooting... done - took ${(timeSinceRebootCommand/1000).toFixed(2)} seconds`
+                });
+                
+            } catch (error) {
+                console.error("Error updating restart message:", error);
+            }
+        }
+
+        // Clear restart data after booting
+        storage.restartData = null;
+    } catch (error) {
+        console.error("Error in ready event:", error);
+    }
+});
+
+
+
+// Error handling (async crashes in discord.js threads can still crash it)
+function handleException(e) {
+    console.log(e); // TODO: notify myself through webhooks
+}
+process.on('unhandledRejection', handleException);
+process.on('unhandledException', handleException);
+
+// Start
+client.login(process.env.token);
