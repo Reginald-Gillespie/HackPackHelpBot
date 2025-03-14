@@ -9,6 +9,7 @@
 Object.assign(process.env, require('./env.json'));
 const beta = process.env.beta == "true";
 
+const NodeCache = require( "node-cache" );
 const {Client, ActionRowBuilder, GatewayIntentBits, ModalBuilder, TextInputBuilder, TextInputStyle, Partials, EmbedBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder, ComponentType } = require("discord.js");
 const { GoogleGenerativeAI, FunctionCallingMode, SchemaType } = require("@google/generative-ai");
 const fs = require("fs");
@@ -193,7 +194,7 @@ function md5(inputString) {
 //#endregion functions
 
 //#region AutoAI
-
+const autoAICache = new NodeCache( { stdTTL: 3600, checkperiod: 600 } );
 // Configure Gemini Flash
 const genAI = new GoogleGenerativeAI(process.env.GeminiKey);
 let helpMessageList = [];
@@ -909,7 +910,23 @@ client.on('messageCreate', async (message) => {
     }
 
     ////// AutoReply AI for auto FAQ lookups
-    if (storage.AIAutoHelp && storage.AIAutoHelp == message.guildId && isHelpRequest(message.content)) {
+    const aiForceTrigger = "!ai "
+    if (
+        storage.AIAutoHelp && 
+        storage.AIAutoHelp == message.guildId && 
+        (
+            (
+                !autoAICache.has(`${message.author?.id}-${message.channelId}`) &&
+                isHelpRequest(message.content)
+            ) || 
+            (
+                message.content.startsWith(aiForceTrigger)
+            )
+        )
+    ) {
+        // Don't reply to this user in this channel after triggering for an hour
+        autoAICache.set(`${message.author?.id}-${message.channelId}`, true)
+
         try {
             console.log("Running AutoAI")
             const geminiSession = geminiModel.startChat();
@@ -1035,6 +1052,37 @@ client.once("ready", async () => {
         console.error("Error in ready event:", error);
     }
 });
+
+// Handle message reactions for help message creators/admins
+client.on('messageReactionAdd', async (reaction, user) => {
+    // Fetch partial reactions
+    if (reaction.partial) {
+        try {
+            await reaction.fetch();
+        } catch (error) {
+            console.error('Error fetching reaction:', error);
+            return;
+        }
+    }
+
+    if (['❌', '👎'].includes(reaction.emoji.name)) {
+        // Check if message is from the bot
+        if (reaction.message.author.id !== client.user.id) return;
+
+        // Check if reactor is creator/admin
+        if (!isCreator(user.id) && !storage?.admins?.includes(user.id)) return;
+
+        // If those conditions are met, delete the message.
+        try {
+            await reaction.message.delete();
+        } catch (error) {
+            console.error('Error deleting message:', error);
+        }
+    };
+
+});
+
+
 //#endregion Handlers
 
 // Error handling (async crashes in discord.js threads can still crash it)
