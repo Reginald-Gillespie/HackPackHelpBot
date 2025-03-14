@@ -916,21 +916,37 @@ client.on('messageCreate', async (message) => {
 
     ////// AutoReply AI for auto FAQ lookups
     const aiForceTrigger = "!ai "
+    const aiNoCacheTrigger = "!nocache "
+    const messageHasForceTrigger = message.content.toLowerCase().startsWith(aiForceTrigger);
+    const messageHasNoCacheTrigger = message.content.toLowerCase().startsWith(aiNoCacheTrigger);
+    const aiDontRepeatCacheKey = `${message.author?.id}-${message.channelId}`;
     if (
         storage.AIAutoHelp && 
         storage.AIAutoHelp == message.guildId && 
         (
             (
-                !autoAICache.has(`${message.author?.id}-${message.channelId}`) &&
+                (
+                    !autoAICache.has(aiDontRepeatCacheKey) || 
+                    messageHasNoCacheTrigger
+                ) &&
                 isHelpRequest(message.content)
             ) || 
             (
-                message.content.toLowerCase().startsWith(aiForceTrigger)
+                messageHasForceTrigger
             )
         )
     ) {
         // Don't reply to this user in this channel after triggering for an hour
-        autoAICache.set(`${message.author?.id}-${message.channelId}`, true)
+        if(messageHasForceTrigger) {
+            autoAICache.del(aiDontRepeatCacheKey)
+            message.content = message.content.substring(aiForceTrigger.length)
+        }
+        else {
+            autoAICache.set(aiDontRepeatCacheKey, true)
+        } 
+
+        // Ignore the cache spam prevension for developing
+        if (messageHasNoCacheTrigger) message.content = message.content.substring(messageHasNoCacheTrigger.length)
 
         try {
             console.log("Running AutoAI")
