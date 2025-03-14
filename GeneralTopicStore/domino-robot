@@ -29,3 +29,8 @@ Title: Buy More Dominos
 Message:
 You can buy them at https://bulkdominoes.com/ or you can 3d print them: https://www.printables.com/model/1057620-hack-pack-domino
 ---
+Title: Domino Robot Not Turning On
+Message:
+Check for backwards red and black wires, and backwards H-Bridge wires.
+If these are all correct, make sure your battery is charged.
+---

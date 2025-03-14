@@ -228,13 +228,13 @@ const autoAIResponseSchema = {
 }
 const systemPrompt = 
 `- You are an advanced AI assistant designed to tie user queries to matching predefined "help messages" (FAQs) when applicable.
-- Queries are posted in a large message board, not every query is related to you. If it is not something you have an answer for, ignore it.
-- If no FAQ matches, either stop output and respond with 0.
-- If you are not at least 95% confident that an FAQ would be helpful and relevent, respond with 0. Better to miss a vague question than answer something unrelated.
+- Queries are posted in a large discord server, not every query is related to you. If it does not seem to be related to the FAQs, respond with 0.
 - If you are sure that a given FAQ title matches the provided question, use the relevant tool to activate that FAQ using it's number.
-- If there is a relevant walkthrough, use these instead of the FAQ, however there are more FAQs and FAQs are often more targeted to the issue at hand. 
+- If no FAQ matches, respond with 0.
+- If you are not 100% confident that an FAQ would be helpful and relevent, respond with 0. 
+- Do not extrapolate meaning too far, better to miss a vague question than answer something unrelated.
 
-For context, you are helping answer questions about Arduino subscription box projects, including:
+For more context, you are helping answer questions about Arduino subscription box projects, including:
 - IR Turret. This box uses an IR remote to control a 3 axis turret that shoots foam darts.
 - Domino Robot. This box is a simple line-following robot that lays down dominos.
 - Label Maker. This box moves a pen up and down on a Y motor, and rolls take with the X motor to draw letters.
@@ -946,7 +946,7 @@ client.on('messageCreate', async (message) => {
         } 
 
         // Ignore the cache spam prevension for developing
-        if (messageHasNoCacheTrigger) message.content = message.content.substring(messageHasNoCacheTrigger.length)
+        if (messageHasNoCacheTrigger) message.content = message.content.substring(aiNoCacheTrigger.length)
 
         try {
             console.log("Running AutoAI")
@@ -962,6 +962,7 @@ client.on('messageCreate', async (message) => {
             if (!isNaN(responseNumber) && responseNumber !== 0)
                 autoAIFunctions.runFAQ({ num: +responseJSON.chosen_response }, message)
 
+            //// Tool code. I think it preforms better when explaining it's thought process, and it makes it easier to update.
             // const requestedTool = result.response.functionCalls()[0]; // Only grab the first call, consider making this clear to gemini.
             // const requestedFunction = autoAIFunctions[requestedTool.name];
             // if (requestedFunction) {
