@@ -10,7 +10,7 @@ Object.assign(process.env, require('./env.json'));
 const beta = process.env.beta == "true";
 
 const NodeCache = require( "node-cache" );
-const {Client, ActionRowBuilder, GatewayIntentBits, ModalBuilder, TextInputBuilder, TextInputStyle, Partials, EmbedBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder, ComponentType } = require("discord.js");
+const {Client, Events, ActionRowBuilder, GatewayIntentBits, ModalBuilder, TextInputBuilder, TextInputStyle, Partials, EmbedBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder, ComponentType } = require("discord.js");
 const { GoogleGenerativeAI, FunctionCallingMode, SchemaType } = require("@google/generative-ai");
 const fs = require("fs");
 const { get } = require('https');
@@ -38,7 +38,12 @@ let repeatQuestions = storage.cache.repeatQuestions; // shorter reference to the
 
 // Register client
 const client = new Client({
-    intents: [ GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent ],
+    intents: [ 
+        GatewayIntentBits.Guilds, 
+        GatewayIntentBits.GuildMessages, 
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMessageReactions
+    ],
     partials: Object.keys(Partials).map(a=>Partials[a])
 });
 
@@ -223,11 +228,11 @@ const autoAIResponseSchema = {
 }
 const systemPrompt = 
 `- You are an advanced AI assistant designed to tie user queries to matching predefined "help messages" (FAQs) when applicable.
-- If no FAQ matches, either stop output altogether or provide 0 as the response number.
-- If you are not at least 95% sure that an FAQ would be helpful, it does not match.
+- Queries are posted in a large message board, not every query is related to you. If it is not something you have an answer for, ignore it.
+- If no FAQ matches, either stop output and respond with 0.
+- If you are not at least 95% confident that an FAQ would be helpful and relevent, respond with 0. Better to miss a vague question than answer something unrelated.
 - If you are sure that a given FAQ title matches the provided question, use the relevant tool to activate that FAQ using it's number.
 - If there is a relevant walkthrough, use these instead of the FAQ, however there are more FAQs and FAQs are often more targeted to the issue at hand. 
-- Many users are young and will not correctly phrase their queries. Keep this in mind, and try to extrapolate their intended meaning.
 
 For context, you are helping answer questions about Arduino subscription box projects, including:
 - IR Turret. This box uses an IR remote to control a 3 axis turret that shoots foam darts.
@@ -243,7 +248,7 @@ Other categories:
 
 
 Here is a list of each FAQ you can select from:
-1. No response is a confident match.
+0. No response is a confident match.
 {FAQs}`;
 // TODO: add walkthrough trigger support, with metadata for channel to activate in
 `Here is a list of interactive walkthroughs you can start for the user:
@@ -280,7 +285,7 @@ function rebuildHelpTools() {
     let compiledSystemPrompt = systemPrompt;
     // Build FAQs into the prompt
     const faqs = [];
-    let index = 2; // 1 is no response
+    let index = 1;
     for (const subtopic of subtopics) {
         const helpFile = getFileContent(subtopic);
         const helpMessagesTitles = getHelpMessageTitlesArray(helpFile);
@@ -571,7 +576,7 @@ client.on("interactionCreate", async cmd => {
                             storage.restartData = null; // Don't try to update ephemeral messages
                         } else {
                             // For non-ephemeral messages, we need to send and store the message data
-                            const message = await cmd.reply({ content: "Restarting...", ephemeral: false, fetchReply: true });
+                            const message = await cmd.reply({ content: "Restarting...", ephemeral: false, withResponse: true });
                             storage.restartData = {
                                 restartedAt: Date.now(),
                                 channelId: cmd.channel.id,
@@ -920,7 +925,7 @@ client.on('messageCreate', async (message) => {
                 isHelpRequest(message.content)
             ) || 
             (
-                message.content.startsWith(aiForceTrigger)
+                message.content.toLowerCase().startsWith(aiForceTrigger)
             )
         )
     ) {
@@ -1054,7 +1059,7 @@ client.once("ready", async () => {
 });
 
 // Handle message reactions for help message creators/admins
-client.on('messageReactionAdd', async (reaction, user) => {
+client.on(Events.MessageReactionAdd, async (reaction, user) => {
     // Fetch partial reactions
     if (reaction.partial) {
         try {
@@ -1065,7 +1070,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
         }
     }
 
-    if (['❌', '👎'].includes(reaction.emoji.name)) {
+    if (['❌', '👎', ":x:", ":thumbsdown:"].includes(reaction.emoji.name)) {
         // Check if message is from the bot
         if (reaction.message.author.id !== client.user.id) return;
 
@@ -1078,7 +1083,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
         } catch (error) {
             console.error('Error deleting message:', error);
         }
-    };
+    } else { console.log(reaction.emoji.name)};
 
 });
 
