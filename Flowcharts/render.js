@@ -15,7 +15,7 @@ process.chdir(path.dirname(__filename));
     const usedCache = []; // Keep track of unused cached and remove it to keep things clean
     for (chart of allCharts) {
         console.log(`\n${"=".repeat(50)}\nRendering ${chart}`);
-        const [imagePath, error] = await getPathToFlowchart(chart, false);;
+        const [imagePath, error] = await getPathToFlowchart(chart, false, true);
         if (error) {
             console.error(`\x1b[31m${error}\x1b[0m`);
             continue;
