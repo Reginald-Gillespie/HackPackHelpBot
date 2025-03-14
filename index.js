@@ -66,7 +66,7 @@ function isHelpRequest(message) {
         /\bwont/iu.test(message) ||
         /\bisnt/iu.test(message) ||
         /is not/iu.test(message) ||
-        /it was/iu.test(message) ||
+        // /it was/iu.test(message) ||
         // /does/iu.test(message) ||
         /^does/iu.test(message) ||
         /\bhelp\b/iu.test(message)
@@ -955,13 +955,14 @@ client.on('messageCreate', async (message) => {
             const result = await geminiSession.sendMessage(messageGeminiPostProcess);
             
             const responseText = result.response.text()
-            console.log(responseText);
             const responseJSON = JSON.parse(responseText);
-            console.log(responseJSON.thoughts);
             const responseNumber = +responseJSON.chosen_response;
+            console.log(`AI Question by ${message.author.username}: ${message.content}`);
+            console.log(responseJSON);
             if (!isNaN(responseNumber) && responseNumber !== 0)
                 autoAIFunctions.runFAQ({ num: +responseJSON.chosen_response }, message)
 
+            //// Old method - it does better when "thinking" first
             // const requestedTool = result.response.functionCalls()[0]; // Only grab the first call, consider making this clear to gemini.
             // const requestedFunction = autoAIFunctions[requestedTool.name];
             // if (requestedFunction) {
