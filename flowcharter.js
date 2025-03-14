@@ -76,8 +76,10 @@ async function getMermaidFromJSON(chart) {
                 const node = chartJSON[nodeName];
                 if (node) {
                     // Define node content
-                    let escapedContent = node.question.replaceAll('"', "#quot;")
-                    escapedContent = node.question.replaceAll('@', "\\@")
+                    let escapedContent = node.question
+                    escapedContent = escapedContent.replaceAll('"', "#quot;")
+                    escapedContent = escapedContent.replaceAll('@', "\\@")
+
                     builtChart += `${nodeName}["${escapedContent}"]\n`;
 
                     // Link node to each answer
@@ -145,6 +147,7 @@ async function getPathToFlowchart(chartName, mermaidOnly=false, dumpHTML=false, 
 
     if (dumpHTML) {
         fs.writeFileSync(`./Flowcharts/generated.html`, templateContent)
+        fs.writeFileSync(`./Flowcharts/mermaid.md`, mermaidContent)
     }
 
     const imageLoc = await renderHTML(templateContent, overrideCache);
