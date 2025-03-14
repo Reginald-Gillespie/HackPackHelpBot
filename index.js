@@ -35,6 +35,7 @@ storage.cache.markRobotPingsCache = {}; // Same, but for channel pings and repli
 storage.cache.repeatQuestions = {} // {id: [{message: <hash>, channelID, repeats: 1}, ...]}
 let repeatQuestions = storage.cache.repeatQuestions; // shorter reference to the above 
 
+const tripleBacktick = '```'
 
 // Register client
 const client = new Client({
@@ -232,6 +233,7 @@ const systemPrompt =
 - If you are sure that a given FAQ title matches the provided question, use the relevant tool to activate that FAQ using it's number.
 - If no FAQ matches, respond with 0.
 - If you are not 100% confident that an FAQ would be helpful and relevent, respond with 0. 
+- Sometimes some users are helping other users. If one user answers another user's question already, there is no point sending an FAQ so respond with 0.
 - Do not extrapolate meaning too far, better to miss a vague question than answer something unrelated.
 
 For more context, you are helping answer questions about Arduino subscription box projects, including:
@@ -869,6 +871,10 @@ client.on("interactionCreate", async cmd => {
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return; // Ignore bot messages
 
+    // Fetch replied to message, since we use it for a few things
+    let repliedMessage;
+    if (message.reference) repliedMessage = await message.channel.messages.fetch(message.reference.messageId)
+
     ////// Mark Robot pings
     if (message.mentions.has(client.user)) {
         // Check if we've disabled RoBot
@@ -880,7 +886,6 @@ client.on('messageCreate', async (message) => {
         //   (if they are replying to a message from someone else, we inject it into the history so that RoBot sees it)
         let repliedToAuthor, repliedToMessage;
         if (message.reference) {
-            const repliedMessage = await message.channel.messages.fetch(message.reference.messageId);
             repliedToMessage = markRobotMessagePostProcess(repliedMessage.content, message.guild);
             // post-process usernames for mark robot
             if (repliedMessage.author.id === client.user.id) {
@@ -921,22 +926,24 @@ client.on('messageCreate', async (message) => {
     const messageHasNoCacheTrigger = message.content.toLowerCase().startsWith(aiNoCacheTrigger);
     const aiDontRepeatCacheKey = `${message.author?.id}-${message.channelId}`;
     if (
-        storage.AIAutoHelp && 
-        storage.AIAutoHelp == message.guildId && 
+        (
+            (storage.AIAutoHelp && storage.AIAutoHelp == message.guildId) ||
+            messageHasForceTrigger
+        ) &&
         (
             (
                 (
-                    !autoAICache.has(aiDontRepeatCacheKey) || 
+                    !autoAICache.has(aiDontRepeatCacheKey) ||
                     messageHasNoCacheTrigger
                 ) &&
                 isHelpRequest(message.content)
-            ) || 
+            ) ||
             (
                 messageHasForceTrigger
             )
         )
     ) {
-        // Don't reply to this user in this channel after triggering for an hour
+    // Don't reply to this user in this channel after triggering for an hour
         if(messageHasForceTrigger) {
             autoAICache.del(aiDontRepeatCacheKey)
             message.content = message.content.substring(aiForceTrigger.length)
@@ -951,13 +958,38 @@ client.on('messageCreate', async (message) => {
         try {
             console.log("Running AutoAI")
             const geminiSession = geminiModel.startChat();
-            const messageGeminiPostProcess = `The user's message is as follows:\n${message.content}\n\nIf you believe one of the FAQs directly answers it, send it, otherwise don't respond.`
+
+            let messageGeminiPostProcess = 
+                `The user's message is as follows:\n`+
+                `${tripleBacktick}\n` + 
+                `${message.content}\n` +
+                `${tripleBacktick}\n` + 
+                `\n`
+
+            if (repliedMessage) {
+                let byADiffUser = repliedMessage.author.id !== message.author.id ? " by a different user" : "";
+                messageGeminiPostProcess +=
+                    `The user was replying this message${byADiffUser}:\n`+
+                    `${tripleBacktick}\n` + 
+                    `${repliedMessage.content}\n` +
+                    `${tripleBacktick}\n` + 
+                    `\n`
+            }
+            
+            messageGeminiPostProcess +=
+                `If you believe one of the FAQs directly answers the 1st user's question, send it, otherwise don't respond.`
+
             const result = await geminiSession.sendMessage(messageGeminiPostProcess);
             
             const responseText = result.response.text()
             const responseJSON = JSON.parse(responseText);
             const responseNumber = +responseJSON.chosen_response;
-            console.log(`AI Question by ${message.author.username}: ${message.content}`);
+            console.log(
+                `=`.repeat(50) +
+                `\n` +
+                `AI triggered question by ${message.author.displayName || message.author.username}:\n` +
+                `${messageGeminiPostProcess}`
+            );
             console.log(responseJSON);
             if (!isNaN(responseNumber) && responseNumber !== 0)
                 autoAIFunctions.runFAQ({ num: +responseJSON.chosen_response }, message)
@@ -1100,8 +1132,7 @@ client.on(Events.MessageReactionAdd, async (reaction, user) => {
         } catch (error) {
             console.error('Error deleting message:', error);
         }
-    } else { console.log(reaction.emoji.name)};
-
+    }
 });
 
 

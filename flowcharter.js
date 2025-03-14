@@ -76,11 +76,12 @@ async function getMermaidFromJSON(chart) {
                 const node = chartJSON[nodeName];
                 if (node) {
                     // Define node content
-                    const escapedContent = node.question.replaceAll('"', "#quot;")
+                    let escapedContent = node.question.replaceAll('"', "#quot;")
+                    escapedContent = node.question.replaceAll('@', "\\@")
                     builtChart += `${nodeName}["${escapedContent}"]\n`;
 
                     // Link node to each answer
-                    node.answers.forEach(answerObject => {
+                    node.answers?.forEach(answerObject => {
                         const nextNodeName = answerObject.nextStep;
                         const arrow = answerObject.customArrow || node.customArrow || "-->";
                         if (answerObject.answer)
