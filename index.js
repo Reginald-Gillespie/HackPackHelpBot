@@ -216,6 +216,10 @@ const autoAIResponseSchema = {
         "chosen_response": {
             description: "After thinking, write down your final answer.",
             type: SchemaType.INTEGER,
+        },
+        "confidence": {
+            description: "How confident you are that your answer is relevant, from 1 (fairly confident) to 5 (very confident).",
+            type: SchemaType.INTEGER,
         }
     },
     required: [
@@ -925,8 +929,10 @@ client.on('messageCreate', async (message) => {
     const aiNoCacheTrigger = "!nocache "
     const messageHasForceTrigger = message.content.toLowerCase().startsWith(aiForceTrigger);
     const messageHasNoCacheTrigger = message.content.toLowerCase().startsWith(aiNoCacheTrigger);
-    const aiDontRepeatCacheKey = `${message.author?.id}-${message.channelId}`;
+    // const aiDontRepeatCacheKey = `${message.author?.id}-${message.channelId}`;
+    const aiDontRepeatCacheKey = `${message.author?.id}`;
     if (
+        !repliedMessage && // Don't run if it was a reply to smth
         (
             (storage.AIAutoHelp && storage.AIAutoHelp == message.guildId) ||
             messageHasForceTrigger
@@ -967,15 +973,15 @@ client.on('messageCreate', async (message) => {
                 `${tripleBacktick}\n` + 
                 `\n`
 
-            if (repliedMessage) {
-                let byADiffUser = repliedMessage.author.id !== message.author.id ? " by a different user" : "";
-                messageGeminiPostProcess +=
-                    `The user was replying this message${byADiffUser}:\n`+
-                    `${tripleBacktick}\n` + 
-                    `${repliedMessage.content}\n` +
-                    `${tripleBacktick}\n` + 
-                    `\n`
-            }
+            // if (repliedMessage) {
+            //     let byADiffUser = repliedMessage.author.id !== message.author.id ? " by a different user" : "";
+            //     messageGeminiPostProcess +=
+            //         `The user was replying this message${byADiffUser}:\n`+
+            //         `${tripleBacktick}\n` + 
+            //         `${repliedMessage.content}\n` +
+            //         `${tripleBacktick}\n` + 
+            //         `\n`
+            // }
             
             messageGeminiPostProcess +=
                 `If you believe one of the FAQs directly answers the 1st user's question, send it, otherwise don't respond.`
