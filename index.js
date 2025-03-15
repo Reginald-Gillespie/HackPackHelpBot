@@ -1054,7 +1054,7 @@ client.on('messageCreate', async (message) => {
         storage.dupeNotifs &&
         existingQuestion.guildId == message.guildId &&
         existingQuestion.repeats > 1 &&
-        message.length >= 30 &&
+        message.content.length >= 30 &&
         isHelpRequest(normalizedContent)
     ) {
         try {
