@@ -260,7 +260,8 @@ const addAutoAIDisclaimer = text => {
         'I have attempted to automatically answer your question:\n' +
         '\n' +
         // '```\n' +
-        text.replaceAll("```", "\\`\\`\\`") +
+        // text.replaceAll("```", "\\`\\`\\`") +
+        text +
         '\n' +
         // '```\n' +
         `\n-# ⚠️ This response was selected by AI and may be incorrect.`

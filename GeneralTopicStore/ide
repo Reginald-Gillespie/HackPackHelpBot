@@ -33,18 +33,6 @@ https://discord.com/channels/1229106258749948056/1245199186014634044/13092976685
 
 https://media.discordapp.net/attachments/1245199186014634044/1322657200325267587/image.png?ex=6771ac02&is=67705a82&hm=7779a18874995221f085a10769fcc54b245425502cccae65629f7386339c84e1&=&format=webp&quality=lossless&width=698&height=700
 ---
-Title: Coding Guide
-Message:
-```
-WKoA's writeup: https://discord.com/channels/1229106258749948056/1255319724611600384/1255319724611600384
-
-Dan + Evan's thread: https://discord.com/channels/1229106258749948056/1235701503096782911/1235701578615361647
-
-Brooksy's  youtube: <https://www.youtube.com/@HackPackHackers>
-
-Johnathan's resources: https://discord.com/channels/1229106258749948056/1245218219233382461/1321587828253261895
-```
----
 Title: Code  WellManaged Serial Communication
 Message:
 https://discord.com/channels/1229106258749948056/1246611327494127746/1320615923375149126
@@ -57,7 +45,19 @@ Title: Mac Permission Issues
 Message:
 https://discord.com/channels/1229106258749948056/1347285216107954257/1347316769974648842
 ---
-Title: IDE Errors Checklist
+Title: Coding Guide
+Message:
+```
+WKoA's writeup: https://discord.com/channels/1229106258749948056/1255319724611600384/1255319724611600384
+
+Dan + Evan's thread: https://discord.com/channels/1229106258749948056/1235701503096782911/1235701578615361647
+
+Brooksy's youtube: <https://www.youtube.com/@HackPackHackers>
+
+Johnathan's resources: https://discord.com/channels/1229106258749948056/1245218219233382461/1321587828253261895
+```
+---
+Title: IDE Not Connecting Checklist
 Message:
 1. Watch https://ide.crunchlabs.com/downloads
 2. Use Chrome.
