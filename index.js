@@ -259,10 +259,13 @@ Here is a list of each FAQ you can select from:
 // TODO: add walkthrough trigger support, with metadata for channel to activate in
 `Here is a list of interactive walkthroughs you can start for the user:
 {Walkthroughs}`
-const addAutoAIDisclaimer = text => {
+const formatForAutoAI = text => {
+    // Format like a quote
+    text = "> " + text.split("\n").join("\n> ") 
+
     return (
         'I have attempted to automatically answer your question:\n' +
-        '\n' +
+        // '\n' +
         // '```\n' +
         // text.replaceAll("```", "\\`\\`\\`") +
         text +
@@ -284,7 +287,7 @@ const autoAIFunctions = {
         const helpMessage = getHelpMessageBySubjectTitle(selectedHelpMessageTitle.subtopic, selectedHelpMessageTitle.title);
         if (!helpMessage) return;
         
-        await msg.reply(addAutoAIDisclaimer(helpMessage));
+        await msg.reply(formatForAutoAI(helpMessage));
     }
 };
 
