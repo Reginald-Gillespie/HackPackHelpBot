@@ -19,10 +19,6 @@ Title: Allow IDE without administrator
 Message:
 Best option is Arduino IDE. Alternative would be modifying some security settings per https://discord.com/channels/1229106258749948056/1262069792643219536/1262917038293389444
 ---
-Title: Reflash Bootloader
-Message:
-Reflashing the bootloader can help nano's that don't allow uploading code due to "avrdude: stk500_recv()" errors, https://discord.com/channels/1229106258749948056/1304473086560829481/1304473086560829481
----
 Title: CH340 driver
 Message:
 https://discord.com/channels/1229106258749948056/1318809015924555827/1321595906612793366
@@ -69,4 +65,17 @@ Message:
 8. Try *multiple* other USB-A to USB-C cables.
 9. Go to http://127.0.0.1:8991/ and try the "list" command
 10. Worst case, try the Arduino IDE.
+
+- Others:
+If the upload button is disabled, make sure `Monitor` is *off*
+---
+Title: Reflash Bootloader (fix stk500_getsync error)
+Message:
+if you are getting the stk500_getsync error, first make sure you are using the provided cable. If you are, see https://canary.discord.com/channels/1229106258749948056/1342582839736012843. 
+
+Before requesting a replacement arduino, make sure uploading works on a different arduino, confirming it is an arduino issue, not a computer issue.
+---
+Title: Fix IDE ReadOnly
+Message:
+To get out of read-only mode on the IDE, click the Level 2 or Level 3 tabs.
 ---

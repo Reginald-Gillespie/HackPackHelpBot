@@ -224,13 +224,16 @@ const autoAIResponseSchema = {
     },
     required: [
         "thoughts",
-        "chosen_response"
+        "chosen_response",
+        "confidence"
     ],
     propertyOrdering: [
         "thoughts",
-        "chosen_response"
+        "chosen_response",
+        "confidence"
     ]
 }
+const requiredConfidence = 4;
 const systemPrompt = 
 `- You are an advanced AI assistant designed to tie user queries to matching predefined "help messages" (FAQs) when applicable.
 - Queries are posted in a large discord server, not every query is related to you. If it does not seem to be related to the FAQs, respond with 0.
@@ -994,6 +997,8 @@ client.on('messageCreate', async (message) => {
             const responseText = result.response.text()
             const responseJSON = JSON.parse(responseText);
             const responseNumber = +responseJSON.chosen_response;
+            const confidence = +responseJSON.confidence;
+
             console.log(
                 `=`.repeat(50) +
                 `\n` +
@@ -1001,19 +1006,9 @@ client.on('messageCreate', async (message) => {
                 `${messageGeminiPostProcess}`
             );
             console.log(responseJSON);
-            if (!isNaN(responseNumber) && responseNumber !== 0)
+            if (!isNaN(responseNumber) && responseNumber !== 0 && !isNaN(confidence) && confidence >= requiredConfidence)
                 autoAIFunctions.runFAQ({ num: +responseJSON.chosen_response }, message)
 
-            //// Tool code. I think it preforms better when explaining it's thought process, and it makes it easier to update.
-            // const requestedTool = result.response.functionCalls()[0]; // Only grab the first call, consider making this clear to gemini.
-            // const requestedFunction = autoAIFunctions[requestedTool.name];
-            // if (requestedFunction) {
-            //     // Execute the function, which will take care of replies by itself. No need to reprompt gemini
-            //     // TODO: if gemini behaves poorly, consider reprompt loop to ask it if the FAQ answers the question 
-            //     await requestedFunction(requestedTool.args, message);
-            // } else {
-            //     console.log("Requested tool doesn't exist:", requestedTool)
-            // }
         } catch (error) {
             console.log("AI error:", error)
         }
