@@ -1,6 +1,6 @@
 ### Helps For Label Robot Issues
 ---
-Title: Label crunchlabs page
+Title: Label website URL
 Message:
 <https://www.crunchlabs.com/products/label>
 ---
@@ -8,12 +8,12 @@ Title: Label Light Driver Mode
 Message:
 https://discord.com/channels/1229106258749948056/1245875544419995649/1287872297927053392
 ---
-Title: Stepper Axis Will Not Move
-Message:
-Push Arduino into breadboard, it will likely click into place. If that doesn't work, try swapping which motor is plugged into which driver. (You might have to unscrew the driver from the wall). See if the issue swaps to the other motor (which means the driver is the issue) or if the same axis stepper still won't move (which means the motor is the issue).
----
 Title: Running Extremely Slow
 Message:
 Flash the label code to the domino arduino. You can use the video at https://ide.crunchlabs.com/downloads to set it up.
 If it works with the domino arduino, try reflashing code to the label arduino, if it still isn't working send a DM to @ tom_crunchlabs with your shipping address and he'll send you a replacement arduino for free.
+---
+Title: Stepper Axis Will Not Move
+Message:
+Push the Arduino firmly into breadboard, it will likely click into place if it wasn't already. Try it again, if it still doesn't work, try swapping which motor is plugged into which driver. (You might have to unscrew the driver from the wall). See if the issue swaps to the other motor (which means the driver is the issue) or if the issue stays on the same axis (which means the motor is the issue).
 ---
