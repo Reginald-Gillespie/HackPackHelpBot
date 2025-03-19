@@ -27,7 +27,9 @@ const fuseOptions = {
 };
 
 let storage = new Storage();
+global.storage = storage; // Make it easier to modularize
 
+const AutoReplyAI = require("./AutoReplyAI")
 const MarkRobot = require("./markRobot");
 storage.cache.markRobotInstances = {}; // Non-persistent cache for /mark-robot command
 storage.cache.markRobotPingsCache = {}; // Same, but for channel pings and replies
@@ -36,9 +38,6 @@ let repeatQuestions = storage.cache.repeatQuestions; // shorter reference to the
 
 // Initialize helpMessages if it doesn't exist
 storage.helpMessages = storage.helpMessages || {};
-
-
-const tripleBacktick = '```'
 
 // Register client
 const client = new Client({
@@ -53,7 +52,7 @@ const client = new Client({
 
 
 //#region functions
-function isHelpRequest(message) {
+global.isHelpRequest = function(message) { // Technically this should be in a utils file
     // Identify if a message is a request for help using rough criteria.
     message = message.toLowerCase().replace("'", "");
     return (
@@ -164,7 +163,7 @@ function getHelpMessageTitlesArray(subtopic) {
 }
 
 
-function getHelpMessageBySubjectTitle(subtopic, title) {
+global.getHelpMessageBySubjectTitle = function(subtopic, title) { // This should also be in a utils file
     if (!storage.helpMessages[subtopic]) {
         return "No Help Messages found for this subtopic.";
     }
@@ -226,140 +225,6 @@ function editHelpMessage(subtopic, title, message, formerTitle, formerSubtopic) 
 
 //#endregion functions
 
-//#region AutoAI
-const autoAICache = new NodeCache( { stdTTL: 3600, checkperiod: 600 } );
-// Configure Gemini Flash
-const genAI = new GoogleGenerativeAI(process.env.GeminiKey);
-let helpMessageList = [];
-let geminiModel;
-const autoAIResponseSchema = {
-    type: SchemaType.OBJECT,
-    properties: {
-        "thoughts": {
-            description: "Think about which response is the best, or if there is even a best response.",
-            type: SchemaType.STRING,
-            nullable: false,
-        },
-        "chosen_response": {
-            description: "After thinking, write down your final answer.",
-            type: SchemaType.INTEGER,
-        },
-        "confidence": {
-            description: "How confident you are that your answer is relevant, from 1 (fairly confident) to 5 (very confident).",
-            type: SchemaType.INTEGER,
-        }
-    },
-    required: [
-        "thoughts",
-        "chosen_response",
-        "confidence"
-    ],
-    propertyOrdering: [
-        "thoughts",
-        "chosen_response",
-        "confidence"
-    ]
-}
-const requiredConfidence = 4;
-const systemPrompt =
-`- You are an advanced AI assistant designed to tie user queries to matching predefined "help messages" (FAQs) when applicable.
-- Queries are posted in a large discord server, not every query is related to you. If it does not seem to be related to the FAQs, respond with 0.
-- If you are sure that a given FAQ title matches the provided question, use the relevant tool to activate that FAQ using it's number.
-- If no FAQ matches, respond with 0.
-- If you are not 100% confident that an FAQ would be helpful and relevent, respond with 0.
-- Sometimes some users are helping other users. If one user answers another user's question already, there is no point sending an FAQ so respond with 0.
-- If the user appears to be talking to someone else dirrectly and is claiming something, for example in a message like "Did you try running the IDE as administrator?", it sounds like the user is trying to advice someone else. In this case they don't need help, response with 0.
-- Do not extrapolate meaning too far, better to miss a vague question than answer something unrelated.
-
-For more context, you are helping answer questions about Arduino subscription box projects, including:
-- IR Turret. This box uses an IR remote to control a 3 axis turret that shoots foam darts.
-- Domino Robot. This box is a simple line-following robot that lays down dominos.
-- Label Maker. This box moves a pen up and down on a Y motor, and rolls take with the X motor to draw letters.
-- Sandy Garden. This box is a small zen sand garden using two stepper motors to move arms moving a magnetic ball in patterns.
-- IR Laser Tag. This box has two IR laser tag guns, each connected to a pair of goggles with receivers that dim when you are shot.
-- Balance Bot. This is a classic bot that balances on two wheels.
-
-Other categories:
-- IDE. These boxes use ae custom branded online IDE to code them. Some people prefer other IDEs like the Arduino IDE, but these take more setup work.
-- General. A category for anything that doesn't fit elsewhere.
-
-
-Here is a list of each FAQ you can select from:
-0. No response is a confident match.
-{FAQs}`;
-// TODO: add walkthrough trigger support, with metadata for channel to activate in
-`Here is a list of interactive walkthroughs you can start for the user:
-{Walkthroughs}`
-const formatForAutoAI = text => {
-    // Format like a quote
-    text = "> " + text.split("\n").join("\n> ")
-
-    return (
-        'I have attempted to automatically answer your question:\n' +
-        // '\n' +
-        // '```\n' +
-        // text.replaceAll("```", "\\`\\`\\`") +
-        text +
-        '\n' +
-        // '```\n' +
-        `\n-# ⚠️ This response was selected by AI and may be incorrect.`
-    )
-}
-
-// Tool calling
-const autoAIFunctions = {
-    runFAQ: async ({ num }, msg) => {
-        if (num <= 1) return;
-        console.log("Running FAQ number " + num);
-
-        const selectedHelpMessageTitle = helpMessageList[num];
-        if (!selectedHelpMessageTitle) return;
-
-        const helpMessage = getHelpMessageBySubjectTitle(selectedHelpMessageTitle.subtopic, selectedHelpMessageTitle.title);
-        if (!helpMessage) return;
-
-        await msg.reply(formatForAutoAI(helpMessage));
-    }
-};
-
-function rebuildHelpTools() {
-    let compiledSystemPrompt = systemPrompt;
-    // Build FAQs into the prompt
-    const faqs = [];
-    let index = 1;
-    const subtopics = Object.keys(storage.helpMessages);
-    for (const subtopic of subtopics) {
-        const helpMessages = storage.helpMessages[subtopic];
-        helpMessages.forEach(message => {
-          helpMessageList[index] = {title: message.title, subtopic};
-          faqs.push(`${index}. ${message.title} | (${subtopic})`);
-          index++;
-        });
-
-    }
-    compiledSystemPrompt = compiledSystemPrompt.replace("{FAQs}", faqs.join("\n"))
-
-    geminiModel = genAI.getGenerativeModel({
-        model: "gemini-2.0-flash",
-        systemInstruction: compiledSystemPrompt,
-        // tools: {
-        //     functionDeclarations: autoAITools,
-        // },
-        generationConfig: {
-            responseMimeType: "application/json",
-            responseSchema: autoAIResponseSchema,
-        },
-        toolConfig: {
-            functionCallingConfig: {
-                // Only allow function responses
-                mode: FunctionCallingMode.ANY
-            }
-        }
-    });
-}
-rebuildHelpTools() // Initialize
-
-//#endregion AutoAI
 
 //#region Handlers
 // Most non-message handlers
@@ -913,9 +778,11 @@ client.on("interactionCreate", async cmd => {
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return; // Ignore bot messages
 
-    // Fetch replied to message, since we use it for a few things
-    let repliedMessage;
-    if (message.reference) repliedMessage = await message.channel.messages.fetch(message.reference.messageId)
+    // Fetch replied to message if it wasn't already fetched
+    let repliedMessage = message.referenceData; // just where I want to store it
+    if (!repliedMessage && message.reference) {
+        repliedMessage = message.referenceData = await message.channel.messages.fetch(message.reference.messageId)
+    }
 
     ////// Mark Robot pings
     if (message.mentions.has(client.user)) {
@@ -961,91 +828,8 @@ client.on('messageCreate', async (message) => {
         message.reply(robotsReply);
     }
 
-    ////// AutoReply AI for auto FAQ lookups
-    const aiForceTrigger = "!ai "
-    const aiNoCacheTrigger = "!nocache "
-    const messageHasForceTrigger = message.content.toLowerCase().startsWith(aiForceTrigger);
-    const messageHasNoCacheTrigger = message.content.toLowerCase().startsWith(aiNoCacheTrigger);
-    // const aiDontRepeatCacheKey = `${message.author?.id}-${message.channelId}`;
-    const aiDontRepeatCacheKey = `${message.author?.id}`;
-    if (
-        !repliedMessage && // Don't run if it was a reply to smth
-        (
-            (storage.AIAutoHelp && storage.AIAutoHelp == message.guildId) ||
-            messageHasForceTrigger
-        ) &&
-        (
-            (
-                (
-                    !autoAICache.has(aiDontRepeatCacheKey) ||
-                    messageHasNoCacheTrigger
-                ) &&
-                isHelpRequest(message.content)
-            ) ||
-            (
-                messageHasForceTrigger
-            )
-        )
-    ) {
-    // Don't reply to this user in this channel after triggering for an hour
-        if(messageHasForceTrigger) {
-            autoAICache.del(aiDontRepeatCacheKey)
-            message.content = message.content.substring(aiForceTrigger.length)
-        }
-        else {
-            autoAICache.set(aiDontRepeatCacheKey, true)
-        } 
-
-        // Ignore the cache spam prevension for developing
-        if (messageHasNoCacheTrigger) message.content = message.content.substring(aiNoCacheTrigger.length)
-
-        try {
-            console.log("Running AutoAI")
-            const geminiSession = geminiModel.startChat();
-
-            let messageGeminiPostProcess = message.content;
-
-            // let messageGeminiPostProcess = 
-            //     `The user's message is as follows:\n`+
-            //     `${tripleBacktick}\n` + 
-            //     `${message.content}\n` +
-            //     `${tripleBacktick}\n` + 
-            //     `\n`
-
-            // if (repliedMessage) {
-            //     let byADiffUser = repliedMessage.author.id !== message.author.id ? " by a different user" : "";
-            //     messageGeminiPostProcess +=
-            //         `The user was replying this message${byADiffUser}:\n`+
-            //         `${tripleBacktick}\n` + 
-            //         `${repliedMessage.content}\n` +
-            //         `${tripleBacktick}\n` + 
-            //         `\n`
-            // }
-            
-            // messageGeminiPostProcess +=
-            //     `If you believe one of the FAQs directly answers the 1st user's question, send it, otherwise don't respond.`
-
-            const result = await geminiSession.sendMessage(messageGeminiPostProcess);
-            
-            const responseText = result.response.text()
-            const responseJSON = JSON.parse(responseText);
-            const responseNumber = +responseJSON.chosen_response;
-            const confidence = +responseJSON.confidence;
-
-            console.log(
-                `=`.repeat(50) +
-                `\n` +
-                `AI triggered question by ${message.author.displayName || message.author.username}:\n` +
-                `${messageGeminiPostProcess}`
-            );
-            console.log(responseJSON);
-            if (!isNaN(responseNumber) && responseNumber !== 0 && !isNaN(confidence) && confidence >= requiredConfidence)
-                autoAIFunctions.runFAQ({ num: +responseJSON.chosen_response }, message)
-
-        } catch (error) {
-            console.log("AI error:", error)
-        }
-    }
+    ////// AutoReply AI
+    AutoReplyAI.messageHandler(message);
 
     ////// Repeat messages notices
     const authorID = message.author.id;
