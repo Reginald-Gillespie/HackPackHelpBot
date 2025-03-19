@@ -28,7 +28,7 @@ For more context, you are helping answer questions about Arduino subscription bo
 - Balance Bot. This is a classic bot that balances on two wheels.
 
 Other categories:
-- IDE. These boxes use ae custom branded online IDE to code them. Some people prefer other IDEs like the Arduino IDE, but these take more setup work.
+- IDE. These boxes use are using a custom branded online IDE to code them. Some people prefer other IDEs like the Arduino IDE, but these take more setup work.
 - General. A category for anything that doesn't fit elsewhere.
 
 
@@ -45,20 +45,20 @@ You are an advanced AI assistant called 'Hack Pack Lookup' designed tailor FAQs 
 Your job consists of 3 tasks:
 1. Evaluate whether the FAQ provided is related to and answers the question of the user.
 2. Tailor the information in the FAQ to the user, filling in details where needed, removing details when they do not apply to the user.
-3. Rate how relevant your response was to the user.
+3. Rate how confident you are that your response was relevant sto the user.
 
 Step 2 is the central part of your response, containing the response text. This should be quick and short, to the point. Using basic Markdown here is acceptable. 
 
 # Context
-You are talking to {username}
+You are talking to the user named {username}
 
-For more context, you are helping answer questions about arduino subscription box projects released as toys by CrunchLabs.
+You are helping answer questions about arduino subscription box projects released as toys by CrunchLabs.
 These boxes use ae custom branded online IDE to code them. (Some people prefer other IDEs like the Arduino IDE, but these take more setup work).
 
-The FAQ is related to the category \`{subtopic}\`, here's some additional information about this category:
+The selected FAQ is related to the category \`{subtopic}\`, here's some additional information about this category:
 {subtopicInfo}
 
-The FAQ judged to be most relevant to the user's question is as follows:
+The FAQ automatically judged to be most relevant to the user's question is as follows:
 ${tripleBacktick}
 {FAQ}
 ${tripleBacktick}
@@ -71,7 +71,7 @@ ${tripleBacktick}
 
 If the FAQ is *related to the conversation*, but not helpful to single question at hand, the FAQ is **irrelevant**.
 
-The question at hand will be provided shortly by the user.
+The single question at hand will be provided shortly by the user.
 `
 
 // TODO: pull these from a 'special' help message (make that a filterable flag/title?),
@@ -253,6 +253,9 @@ class AutoReplyAI {
                 if (messageHasNoCacheTrigger)
                     discordMessage.content = discordMessage.content.substring(this.aiNoCacheTrigger.length)
 
+                
+                console.log(`=`.repeat(50)+`\n`)
+
                 // Run through stage1 AI
                 console.log(`Passing into stage1`)
                 const stage1Out = await this.stage1AIHandler(discordMessage);
@@ -269,6 +272,8 @@ class AutoReplyAI {
                 response = this.formatAIResponse(response);
 
                 discordMessage.reply(response);
+
+                console.log(`=`.repeat(50)+`\n`)
             }
 
         } catch (error) {
@@ -317,8 +322,6 @@ class AutoReplyAI {
         const confidence = +responseJSON.confidence;
 
         console.log(
-            `=`.repeat(50) +
-            `\n` +
             `AI triggered question by ${discordMessage.author.displayName || discordMessage.author.username}:\n` +
             `${discordMessage.content}`
         );
@@ -357,41 +360,18 @@ class AutoReplyAI {
     
     async stage2AIHandler(discordMessage, { FAQ, subtopic }) {
         let compiledSystemPrompt = stage2SystemPrompt;
-    
-        //// Fetch messages
-        // Try cache first
-        // let messages = discordMessage.channel.messages.cache || new Set([])
-        //     ?.filter(msg => msg.id < discordMessage.id)
-        //     ?.sort((a, b) => b.createdTimestamp - a.createdTimestamp)
-        //     ?.slice?.(0, this.stage2MessageCount);
-        // // Fetch if we don't have enough
-        // if (messages?.size < this.stage2MessageCount) {
-        //     const fetchedMessages = await discordMessage.channel.messages.fetch({ 
-        //         limit: this.stage2MessageCount, 
-        //         before: discordMessage.id 
-        //     });
-        //     messages = fetchedMessages
-        //         .sort((a, b) => a.createdTimestamp - b.createdTimestamp)
-        //         .first(this.stage2MessageCount);
-        // } else {
-        //     messages = messages.reverse(); // Ensure chronological order
-        // }
-        // // Format messages
-        // let inlineFormattedMessages = messages
-        //     .map(msg => `${msg.author.username}: ${msg.content}`)
-        //     .join("\n");
 
         const inlineFormattedMessages = await this.fetchRecentMessages(discordMessage, this.stage2MessageCount)
-        
         const subtopicInfo = subtopicInfoMap[subtopic]
 
         //// Generate prompt and create model
         compiledSystemPrompt = compiledSystemPrompt
             .replace("{messages}", inlineFormattedMessages)
+            .replace("{numMessages}", inlineFormattedMessages.length)
             .replace("{username}", discordMessage.author.username)
-            .replace("{subtopic}", subtopic)
             .replace("{FAQ}", FAQ)
-            .replace("{subtopicInfo}", subtopicInfo)
+            .replace("{subtopic}", subtopic || "<none provided")
+            .replace("{subtopicInfo}", subtopicInfo || "<none provided")
     
         const model = this.genAI.getGenerativeModel({
             model: this.model,
