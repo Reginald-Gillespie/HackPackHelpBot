@@ -67,10 +67,6 @@
             "message": "https://discord.com/channels/1229106258749948056/1255274074343473293/1255274204673347585"
         },
         {
-            "title": "Raspberry Pi Create Agent",
-            "message": "Strongly recommend using the Arduino 2 instead (see some random blog for install, TODO: find a good one myself)\r\n\r\nLink to raspberry pi create agent binary and install instructions:\r\nhttps://discord.com/channels/1229106258749948056/1245199999164350556/1285779167886966884"
-        },
-        {
             "title": "Allow IDE without administrator",
             "message": "Best option is Arduino IDE. Alternative would be modifying some security settings per https://discord.com/channels/1229106258749948056/1262069792643219536/1262917038293389444"
         },
@@ -109,6 +105,14 @@
         {
             "title": "Fix IDE ReadOnly",
             "message": "To get out of read-only mode on the IDE, click the Level 2 or Level 3 tabs."
+        },
+        {
+            "title": "Raspberry Pi Create Agent",
+            "message": "I recommend using the Arduino IDE 2 instead.\n\nHowever to use the crunchlabs version, link to raspberry pi create agent binary and install instructions:\nhttps://discord.com/channels/1229106258749948056/1245199999164350556/1285779167886966884"
+        },
+        {
+            "title": "Create Agent support on Linux",
+            "message": "The Crunchlabs Create Agent does not support linux, however it is just a branded version of the [Arduino Create Agent](https://github.com/arduino/arduino-create-agent), which runs on linux. Once you install and start this, right-click the icon in your system tray, select \"Open Config\", you'll need to add \"https://ide.crunchlabs.com/\" to the `origins` array in the config."
         }
     ],
     "label": [

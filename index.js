@@ -428,9 +428,6 @@ client.on("interactionCreate", async cmd => {
                 else appendHelpMessage(subtopic, title, message);
 
                 cmd.reply({ content: `${isEditing ? "This" : "Your"} Help Message has been ${isEditing ? "edited" : "added"}, thanks!`, ephemeral: true })
-
-                // Rebuild the AI using this message
-                rebuildHelpTools()
                 break;
         }
     }

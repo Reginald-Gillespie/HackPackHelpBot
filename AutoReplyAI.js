@@ -81,7 +81,8 @@ const subtopicInfoMap = {
     "label": "This is the Label Maker. This box moves a pen up and down on a Y motor, and rolls take with the X motor to draw letters.",
     "sandy": "This is the Sand Garden. This box is a small zen sand garden using two stepper motors to move arms moving a magnetic ball in patterns.",
     "label": "This is the IR Laser Tag. This box has two IR laser tag guns, each connected to a pair of goggles with receivers that dim when you are shot.",
-    "balance": "This is the Balance Bot. This is a classic bot that balances on two wheels."
+    "balance": "This is the Balance Bot. This is a classic bot that balances on two wheels.",
+    "ide": "This is the coding IDE. These boxes use ae custom branded online IDE (which in turn uses a branded Arduino Create Agent to allow the browser to connect to the arduino) to code the projects. Some people prefer other IDEs like the Arduino IDE, but these take more setup work and are only advised when the user requests it."
 }
 
 const stage1ResponseSchema = {
@@ -161,7 +162,7 @@ class AutoReplyAI {
         this.genAI = new GoogleGenerativeAI(process.env.GeminiKey);
         this.stage1RequiredConfidence = 2;  // How sure stage1 is that there is a matching FAQ (this will be rejudged by stage2 with extra context, so low is fine)
         this.stage2MessageCount = 8;        // How much context to pull in
-        this.stage2PrecisionThreshold = 3;  // How related the FAQ that stage 1 gave was - arguably this is the most important number as it chooses how much the fixed FAQ will be used 
+        this.stage2PrecisionThreshold = 4;  // How related the FAQ that stage 1 gave was - arguably this is the most important number as it chooses how much the fixed FAQ will be used 
         this.stage2ConfidenceThreshold = 3; // How confident in the final answer stage2 must be.
     }
 
