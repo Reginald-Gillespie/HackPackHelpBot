@@ -488,7 +488,7 @@ client.on("interactionCreate", async cmd => {
                             storage.restartData = {
                                 restartedAt: Date.now(),
                                 channelId: cmd.channel.id,
-                                messageId: message.id
+                                messageId: message.id || message.interaction?.responseMessageId
                             };
                         }
                         console.log("Restarting...")
@@ -890,7 +890,7 @@ client.once("ready", async () => {
     console.log(`Logged in as ${client.user.tag}`);
 
     try {
-        const restartUpdateThreshold = 10000;
+        const restartUpdateThreshold = 20000;
         const rebootData = storage.restartData;
         
         if (!rebootData) return;
@@ -899,27 +899,29 @@ client.once("ready", async () => {
         const timeSinceRebootCommand = Date.now() - restartedAt;
         console.log(`Last restarted ${timeSinceRebootCommand/1000} seconds ago`);
         
-        if (timeSinceRebootCommand < restartUpdateThreshold) {
+        if (messageId && timeSinceRebootCommand < restartUpdateThreshold) {
             try {
                 const channel = await client.channels.fetch(channelId);
                 if (!channel) {
-                    console.error("Channel not found");
+                    console.log("Channel not found");
                     return;
                 }
                 
-                const message = await channel.messages.fetch(messageId);
+                const message = await channel.messages.fetch(messageId || "0");
                 if (!message) {
-                    console.error("Message not found");
+                    console.log("Message not found");
                     return;
                 }
                 
                 await message.edit({
-                    content: `Rebooting... done - took ${(timeSinceRebootCommand/1000).toFixed(2)} seconds`
-                });
+                    content: `Restarting... done - took ${(timeSinceRebootCommand/1000).toFixed(2)} seconds`
+                });                
                 
             } catch (error) {
                 console.error("Error updating restart message:", error);
             }
+        } else {
+            console.log("Restart message is too old")
         }
 
         // Clear restart data after booting
