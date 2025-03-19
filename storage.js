@@ -7,10 +7,23 @@ const fs = require("fs");
 
 class Storage {
     constructor() {
-        this.storageLocations = ["./storage1.json", "./storage2.json"]; // JSON storage has the downside of corupting if the write is stopped halfway, we write between two files to avoid this
-        this.storageCycleIndex = 0; // cycle writes between files
-        this.data = this.readLatestDatabase();
-        this.cache = {}; // a temprary version of storage ig
+        this.privStorageLocations = ["./Storage/storage1.json", "./Storage/storage2.json"]; // JSON storage has the downside of corrupting if the write is stopped halfway, we write between two files to avoid this
+        this.privStorageCycleIndex = 0; // cycle writes between files
+        this.data = this.readLatestDatabase(this.privStorageLocations);
+        this.cache = {}; // a temporary global version of storage for convenience
+
+        // Proxy to save help messages on write 
+        this.helpMessageLocations = ["./Storage/helpMessagesSave1.json", "./Storage/helpMessagesSave2.json"] // Again, 3-2-1 backup rule.
+        this.helpMessageCycleIndex = 0; // cycle writes between files
+        const _helpMessages = this.readLatestDatabase(this.helpMessageLocations);
+        this.helpMessages = _helpMessages;
+        // this.helpMessages = new Proxy(_helpMessages, {
+        //     set: (target, prop, value) => {
+        //         target[prop] = value;
+        //         target.saveHelps(); // Save changes automatically
+        //         return true;
+        //     }
+        // });
 
         // Return a proxy reference to this object so we can do storageObj[key] storageObj.data[key]
         return new Proxy(this, {
@@ -23,26 +36,26 @@ class Storage {
             },
             set: (target, prop, value) => {
                 if (prop in target) {
-                    // Write dirrectly if these props exist in the Storage object (e.g., cache)
+                    // Write directly if these props exist in the Storage object (e.g., cache)
                     target[prop] = value;
                 } else {
                     // Write to the data object for all other keys
                     target.data[prop] = value;
                 }
-                target.save(); // Save changes automatically
+                target.savePrivStorage(); // Save changes automatically
                 return true;
             }
         });
         
     }
 
-    readLatestDatabase() {
-
+    readLatestDatabase(storageLocs) {
+    
         // We'll overwrite these right away once we read the correct one
         const corruptedFiles = []
 
         // Get a list, in order of which ones we should read first
-        const sortedLocations = this.storageLocations
+        const sortedLocations = storageLocs
             .filter(file => fs.existsSync(file)) // For file that exists,
             .map(file => ({
                 file,
@@ -58,6 +71,7 @@ class Storage {
 
                 // This shouldn't be needed, unless it was a boot-loop error that kept corrupting it's own files. Plan for the worst.
                 corruptedFiles.forEach(file => {
+                    console.log(`Fixing corrupted file at ${file}`)
                     fs.writeFileSync(file, JSON.stringify(data));
                 })
                 
@@ -75,11 +89,17 @@ class Storage {
         process.exit();
     }
 
-    save() {
-        let writeLocation = this.storageLocations[this.storageCycleIndex % this.storageLocations.length];
+    savePrivStorage() {
+        let writeLocation = this.privStorageLocations[this.privStorageCycleIndex % this.privStorageLocations.length];
         fs.writeFileSync(writeLocation, JSON.stringify(this.data, null, 4));
-        this.storageCycleIndex++; 
+        this.privStorageCycleIndex++; 
         // console.log(`Just wrote DB to ${writeLocation}`)
+    }
+
+    saveHelps() {
+        let writeLocation = this.helpMessageLocations[this.helpMessageCycleIndex % this.helpMessageLocations.length];
+        fs.writeFileSync(writeLocation, JSON.stringify(this.helpMessages, null, 4));
+        this.helpMessageCycleIndex++; 
     }
 }
 

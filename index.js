@@ -4,7 +4,8 @@
 // If I want to add per-user storage, storage create messages from users if they are failed and insert them as starting point when they run create again.
 // Lots of other limiting char counts
 // Command to upload photos from photo database of different parts of each box?
-// 
+// Allow admin who create a message with a non-already-created-topic to do so... but only after adding delete command ig
+// ToDo: support moving a help message cross-topic
 
 Object.assign(process.env, require('./env.json'));
 const beta = process.env.beta == "true";
@@ -14,10 +15,8 @@ const {Client, Events, ActionRowBuilder, GatewayIntentBits, ModalBuilder, TextIn
 const { GoogleGenerativeAI, FunctionCallingMode, SchemaType } = require("@google/generative-ai");
 const fs = require("fs");
 const { get } = require('https');
-const { getDescription, getHelpMessageTitlesArray, getHelpMessageBySubjectTitle, getFileContent, appendHelpMessage, editHelpMessage, getSubtopics } = require("./helpFileParse")
 const { getChartOptions, getPathToFlowchart } = require("./flowcharter")
 const { getQuestionAndAnswers, postProcessForDiscord } = require("./mermaidParse")
-const subtopics = getSubtopics();
 const Fuse = require('fuse.js');
 const path = require("path")
 const Storage = require("./storage");
@@ -33,15 +32,19 @@ const MarkRobot = require("./markRobot");
 storage.cache.markRobotInstances = {}; // Non-persistent cache for /mark-robot command
 storage.cache.markRobotPingsCache = {}; // Same, but for channel pings and replies
 storage.cache.repeatQuestions = {} // {id: [{message: <hash>, channelID, repeats: 1}, ...]}
-let repeatQuestions = storage.cache.repeatQuestions; // shorter reference to the above 
+let repeatQuestions = storage.cache.repeatQuestions; // shorter reference to the above
+
+// Initialize helpMessages if it doesn't exist
+storage.helpMessages = storage.helpMessages || {};
+
 
 const tripleBacktick = '```'
 
 // Register client
 const client = new Client({
-    intents: [ 
-        GatewayIntentBits.Guilds, 
-        GatewayIntentBits.GuildMessages, 
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildMessageReactions
     ],
@@ -75,13 +78,13 @@ function isHelpRequest(message) {
 }
 function areTheSame(msg1, msg2) {
     const threshold = 0.85;
-    
+
     msg1 = msg1.slice(0, 1000);
     msg2 = msg2.slice(0, 1000);
 
     const edits = levenshtein(msg1, msg2)
     const similarity = 1 - edits/Math.max(msg1.length + msg2.length)
-    
+
     return similarity > threshold
 }
 function markRobotMessagePostProcess(message, guild) {
@@ -91,7 +94,7 @@ function markRobotMessagePostProcess(message, guild) {
             // return "@Mark-Robot";
             // Due to what seems to be an idiotic whitelist process, best to keep messages as uniform as possible
             // *cough* *cough* which entirely defeates the purpose of using an LLM in the first place.
-            // You might as well query an FAQ database or even better if you want to be high tech, use a CSV-FAQ-Matching ML algorithm. 
+            // You might as well query an FAQ database or even better if you want to be high tech, use a CSV-FAQ-Matching ML algorithm.
             return "";
         }
         const user = guild.members.cache.get(userId); // Fetch the user from the guild
@@ -105,7 +108,7 @@ function isCreator(userID) {
 }
 function sortByMatch(items, text) {
     if (!text) return items;
-    const fuse = new Fuse(items.map(title => ({ title })), fuseOptions);            
+    const fuse = new Fuse(items.map(title => ({ title })), fuseOptions);
     const scoredResults = fuse.search(text)
         .filter(result => result.score <= 2) // Roughly similar-ish
         .sort((a, b) => a.score - b.score);
@@ -153,6 +156,74 @@ function findButtonOfId(actionRows, ID) {
     return null
 }
 
+function getHelpMessageTitlesArray(subtopic) {
+    if (!storage.helpMessages[subtopic]) {
+        return [];
+    }
+    return storage.helpMessages[subtopic].map(message => message.title);
+}
+
+
+function getHelpMessageBySubjectTitle(subtopic, title) {
+    if (!storage.helpMessages[subtopic]) {
+        return "No Help Messages found for this subtopic.";
+    }
+    const message = storage.helpMessages[subtopic].find(m => m.title === title);
+    return message ? message.message : "No content found for this query";
+}
+
+
+function appendHelpMessage(subtopic, title, message) {
+    // Filter fields with regex (keeping only allowed characters)
+    subtopic = subtopic.match(/[\w-]/g).join("");
+    title = title.match(/[\s\w\/&\(\)]/g).join("");
+    message = message.match(/[\x20-\x7E\n]/g).join(""); // ASCII range
+
+    // Trim extra newlines or spaces
+    [subtopic, title, message] = [subtopic.trim(), title.trim(), message.trim()];
+
+    const newMessage = {
+        title: title,
+        message: message
+    };
+
+    if (!storage.helpMessages[subtopic]) {
+        storage.helpMessages[subtopic] = [];
+    }
+    storage.helpMessages[subtopic].push(newMessage);
+    storage.saveHelps();
+    console.log("Message added:", newMessage, "to subtopic:", subtopic);
+}
+
+
+function editHelpMessage(subtopic, title, message, formerTitle, formerSubtopic) {
+    // Filter message like adding
+    message = message.match(/[\x20-\x7E\n]/g).join("").trim();
+
+    // Remove the old message (if it exists and if the subtopic is different)
+    if (formerSubtopic && storage.helpMessages[formerSubtopic]) {
+        storage.helpMessages[formerSubtopic] = storage.helpMessages[formerSubtopic].filter(m => m.title !== formerTitle);
+    }
+
+    // Add the new/updated message
+    if (!storage.helpMessages[subtopic]) {
+        storage.helpMessages[subtopic] = [];
+    }
+
+    // Check if message exists to update, otherwise add
+    const existingMessageIndex = storage.helpMessages[subtopic].findIndex(m => m.title === title);
+    if (existingMessageIndex > -1) {
+        storage.helpMessages[subtopic][existingMessageIndex] = { title: title, message: message };
+    }
+    else {
+        storage.helpMessages[subtopic].push({title:title, message: message});
+    }
+
+    storage.saveHelps();
+    console.log("Message edited:", { title: title, message: message }, "in subtopic:", subtopic);
+}
+
+
 //#endregion functions
 
 //#region AutoAI
@@ -190,12 +261,12 @@ const autoAIResponseSchema = {
     ]
 }
 const requiredConfidence = 4;
-const systemPrompt = 
+const systemPrompt =
 `- You are an advanced AI assistant designed to tie user queries to matching predefined "help messages" (FAQs) when applicable.
 - Queries are posted in a large discord server, not every query is related to you. If it does not seem to be related to the FAQs, respond with 0.
 - If you are sure that a given FAQ title matches the provided question, use the relevant tool to activate that FAQ using it's number.
 - If no FAQ matches, respond with 0.
-- If you are not 100% confident that an FAQ would be helpful and relevent, respond with 0. 
+- If you are not 100% confident that an FAQ would be helpful and relevent, respond with 0.
 - Sometimes some users are helping other users. If one user answers another user's question already, there is no point sending an FAQ so respond with 0.
 - If the user appears to be talking to someone else dirrectly and is claiming something, for example in a message like "Did you try running the IDE as administrator?", it sounds like the user is trying to advice someone else. In this case they don't need help, response with 0.
 - Do not extrapolate meaning too far, better to miss a vague question than answer something unrelated.
@@ -221,7 +292,7 @@ Here is a list of each FAQ you can select from:
 {Walkthroughs}`
 const formatForAutoAI = text => {
     // Format like a quote
-    text = "> " + text.split("\n").join("\n> ") 
+    text = "> " + text.split("\n").join("\n> ")
 
     return (
         'I have attempted to automatically answer your question:\n' +
@@ -246,7 +317,7 @@ const autoAIFunctions = {
 
         const helpMessage = getHelpMessageBySubjectTitle(selectedHelpMessageTitle.subtopic, selectedHelpMessageTitle.title);
         if (!helpMessage) return;
-        
+
         await msg.reply(formatForAutoAI(helpMessage));
     }
 };
@@ -256,14 +327,15 @@ function rebuildHelpTools() {
     // Build FAQs into the prompt
     const faqs = [];
     let index = 1;
+    const subtopics = Object.keys(storage.helpMessages);
     for (const subtopic of subtopics) {
-        const helpFile = getFileContent(subtopic);
-        const helpMessagesTitles = getHelpMessageTitlesArray(helpFile);
-        helpMessagesTitles.forEach((title) => {
-            helpMessageList[index] = {title, subtopic};
-            faqs.push(`${index}. ${title} | (${subtopic})`);
-            index++;
+        const helpMessages = storage.helpMessages[subtopic];
+        helpMessages.forEach(message => {
+          helpMessageList[index] = {title: message.title, subtopic};
+          faqs.push(`${index}. ${message.title} | (${subtopic})`);
+          index++;
         });
+
     }
     compiledSystemPrompt = compiledSystemPrompt.replace("{FAQs}", faqs.join("\n"))
 
@@ -317,9 +389,9 @@ client.on("interactionCreate", async cmd => {
             // Check if we have previous data
             const history = storage.cache[context.id]?.helpHistory;
             if (!history || !history.length > 1) return cmd.reply({content: "There is no history to go back to. Please start a new command.", ephemeral: true})
-            
+
             // Make sure this history is for this interaction
-            if (history.slice(-1)[0][2] !== interactionId) return cmd.reply({content: "There is no history to go back to. Please start a new command.", ephemeral: true}) 
+            if (history.slice(-1)[0][2] !== interactionId) return cmd.reply({content: "There is no history to go back to. Please start a new command.", ephemeral: true})
 
             history.pop(); // Remove the current page
 
@@ -379,7 +451,7 @@ client.on("interactionCreate", async cmd => {
                 .setTitle(`Recorded answers`)
                 .setFields([])
         }
-        
+
         // Add the recorded answers to the answer embed
         answerEmbed.data.fields.push({ name: `Q: ${question}`, value: `> ${thisButton.data.label}` })
         answerEmbed.data.fields = answerEmbed.data.fields.slice(-25); // Make sure we don't hit the discord limit
@@ -391,7 +463,7 @@ client.on("interactionCreate", async cmd => {
         questionEmbedBuild = EmbedBuilder.from(questionEmbed)
         questionEmbedBuild.setThumbnail("attachment://flowchart.png");
 
-        await message.edit({ 
+        await message.edit({
             embeds: [ answerEmbed, questionEmbedBuild ],
             // files: [ flowchartAttachment ],
             components: rows,
@@ -404,6 +476,7 @@ client.on("interactionCreate", async cmd => {
     if (cmd.isAutocomplete()) {
         const field = cmd.options.getFocused(true);
         const typedSoFar = field.value;
+        const subtopics = Object.keys(storage.helpMessages);
 
         switch(field.name) { // we base the switch off what the the felid is, either a topic autocomplete or a title autocomplete
             case "title":
@@ -418,19 +491,18 @@ client.on("interactionCreate", async cmd => {
                     }
                 }
 
-                const helpFile = getFileContent(subtopic);
-                var helpMessagesTitles = getHelpMessageTitlesArray(helpFile)
+                var helpMessagesTitles = getHelpMessageTitlesArray(subtopic)
 
                 // Now we're going to filter our suggestions by similar the things are to what they've typed so far
                 if (typedSoFar) { // only refine if they've started typing
-                    const fuse = new Fuse(helpMessagesTitles.map(title => ({ title })), fuseOptions);            
+                    const fuse = new Fuse(helpMessagesTitles.map(title => ({ title })), fuseOptions);
                     const scoredResults = fuse.search(typedSoFar).sort((a, b) => a.score - b.score);
                     helpMessagesTitles = scoredResults.map(entry => entry.item.title);
                 }
-                
+
                 cmd.respond(arrayToAutocorrect(helpMessagesTitles));
                 break;
-            
+
             case "subtopic":
                 const options = subtopics.filter(subtopic => subtopic.startsWith(typedSoFar));
                 cmd.respond(arrayToAutocorrect(options))
@@ -451,31 +523,32 @@ client.on("interactionCreate", async cmd => {
             case "createModal":
                 const isEditing = cmd.customId == "editModal";
 
-                // Some fields have embeded data, so extract that ( fieldName-data ) 
+                // Some fields have embeded data, so extract that ( fieldName-data )
                 const modalFields = cmd.fields.fields.map(field => field.customId);
                 const subtopicFieldID = modalFields.filter(field => field.startsWith("S-"))[0];
                 const titleFieldID = modalFields.filter(field => field.startsWith("T-"))[0];
-                
+
                 const message = cmd.fields.getTextInputValue('Message');
                 const title = cmd.fields.getTextInputValue(titleFieldID);
                 const subtopic = cmd.fields.getTextInputValue(subtopicFieldID);
+                const subtopics = Object.keys(storage.helpMessages);
+
 
                 // Embeded data from fields, default to the current values if not specified
                 const formerSubtopic = subtopicFieldID.split("-").slice(1).join("-") || subtopic;
                 const formerTitle = titleFieldID.split("-").slice(1).join("-") || title;
-            
+
                 // Make sure topic exists
                 if (!subtopics.includes(subtopic)) {
                     cmd.reply({ content: "That is not a valid subtopic.", ephemeral: true })
                     break;
                 }
-                
+
                 // Make sure the title does not already exist (unless it's an edit AND it's going into the same file)
-                // TODO: cleanup logic when it isn't 11:30 PM lol
-                const tilesInNewLocation = getHelpMessageTitlesArray(getFileContent(subtopic));
+                const tilesInNewLocation = getHelpMessageTitlesArray(subtopic);
                 if (
                     // If this title already exists where we're trying to put it and we are create a new post
-                    (tilesInNewLocation.includes(title) && !isEditing) || 
+                    (tilesInNewLocation.includes(title) && !isEditing) ||
                     // Or if we're editing, and the subtopic changed
                     (tilesInNewLocation.includes(title) && isEditing && formerSubtopic != subtopic) ||
                     // Or if we're editing, the subtopic did not changed, but the name has (possibly mimicking another entry)
@@ -490,7 +563,7 @@ client.on("interactionCreate", async cmd => {
                 else appendHelpMessage(subtopic, title, message);
 
                 cmd.reply({ content: `${isEditing ? "This" : "Your"} Help Message has been ${isEditing ? "edited" : "added"}, thanks!`, ephemeral: true })
-                
+
                 // Rebuild the AI using this message
                 rebuildHelpTools()
                 break;
@@ -502,7 +575,7 @@ client.on("interactionCreate", async cmd => {
         switch(cmd.commandName) {
             case "admin":
                 const ephemeral = cmd.options.getBoolean("private");
-                
+
                 if (cmd.user.id !== process.env.owner && !storage?.admins?.includes(cmd.user.id)) {
                     return cmd.reply({content:"You are not authorized to run this command", ephemeral})
                 }
@@ -521,7 +594,7 @@ client.on("interactionCreate", async cmd => {
                         newUsers = [...new Set(newUsers)] // filter duplicates
                         storage[type] = newUsers;
                         return cmd.reply({content:"This user has been whitelisted", ephemeral})
-                    
+
                     case "Unadminize ID":
                     case "Unwhitelist ID":
                         var type = adminChoice == "Unadminize ID" ? "admins" : "creators"
@@ -607,10 +680,10 @@ client.on("interactionCreate", async cmd => {
                         { name: '\n', value: '\n' },
                     )
                     .setFooter({ text: `Interaction ${cmd.id}`, iconURL: who.displayAvatarURL() });
-                
-                
+
+
                 // Parse buttons - Each button's ID will be the AnswerID
-                //                 The first button's ID will always always have "|<content>", 
+                //                 The first button's ID will always always have "|<content>",
                 //                 where content is a json payload of userID and questionID
                 const buttons = [];
                 for (let i = 0; i < answersArray.length; i++) {
@@ -651,16 +724,16 @@ client.on("interactionCreate", async cmd => {
                     components: rows,
                     files: [ flowchartAttachment ]
                 });
-                
+
                 break;
-            
+
             case "lookup":
                 const subtopic = cmd.options.getSubcommand();
                 const messageTopic = cmd.options.getString("title");
 
                 // Lookup response to this query
                 const reply = getHelpMessageBySubjectTitle(subtopic, messageTopic);
-                
+
                 cmd.reply({ content: reply, ephemeral: true });
                 break;
 
@@ -674,7 +747,7 @@ client.on("interactionCreate", async cmd => {
                 var [chartPath, error] = await getPathToFlowchart(chart, false, sendHTML, overrideCache);
                 if (error) {
                     cmd.followUp({ content: error, ephemeral: true });
-                    break
+                    break;
                 }
 
                 var response = `Here is the \`${chart}\` chart`;
@@ -686,14 +759,14 @@ client.on("interactionCreate", async cmd => {
                 let files = [
                     new AttachmentBuilder(chartPath),
                 ]
-                if (sendHTML) files.push( new AttachmentBuilder(`./Flowcharts/generated.html`) ) // ideally the path would be determined by flowcharter.js, oh well 
+                if (sendHTML) files.push( new AttachmentBuilder(`./Flowcharts/generated.html`) ) // ideally the path would be determined by flowcharter.js, oh well
 
                 cmd.followUp({
-                    content: response, 
+                    content: response,
                     files: files,
                     ephemeral: false
                 });
-                break
+                break;
 
             case "edit_flowchart":
                 if (!isCreator(cmd.user.id)) {
@@ -704,7 +777,7 @@ client.on("interactionCreate", async cmd => {
                 var [chartPath, error] = await getPathToFlowchart(chart, true); // only fetching mermaid path
                 if (error) {
                     cmd.reply({ content: error, ephemeral: true });
-                    break
+                    break;
                 }
 
                 // If we have the file, we use it - otherwise, send the user the current file
@@ -756,6 +829,7 @@ client.on("interactionCreate", async cmd => {
 
                 // Check if it's a valid topic
                 const createSubtopic = cmd.options.getString("subtopic");
+                const subtopics = Object.keys(storage.helpMessages);
                 if (!subtopics.includes(createSubtopic)) {
                     cmd.reply({ content: "That is not a valid subtopic.", ephemeral: true })
                     break;
@@ -794,7 +868,7 @@ client.on("interactionCreate", async cmd => {
                     title.setCustomId("T-"+titleToEdit)
 
                     // Confirm it is a valid title
-                    if (!getHelpMessageTitlesArray(getFileContent(createSubtopic)).includes(titleToEdit)) {
+                    if (!getHelpMessageTitlesArray(createSubtopic).includes(titleToEdit)) {
                         cmd.reply({ content: "No Help Message exists with that title.", ephemeral: true })
                         break;
                     }
