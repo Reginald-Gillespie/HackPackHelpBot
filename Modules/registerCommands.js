@@ -1,10 +1,10 @@
 // Helper file to manage discord settings and stuff
 
-reqiure("./setEnvs")
+require("./setEnvs")
 
 const { REST, Routes, PermissionFlagsBits, SlashCommandBuilder, ContextMenuCommandBuilder, ApplicationCommandType, ChannelType } = require('discord.js');
 const fs = require("fs");
-const { getDescription, getHelpMessageTitlesArray, getFileContent } = require("./helpFileParse")
+const Storage = require("./storage"); // We'll get subtopics directly from storage
 
 // Command registration stuff
 const Context_UserOnly = [2]
@@ -21,14 +21,20 @@ const extraInfo = { // makes these commands useable too users who install the bo
 };
 
 // Gather files and metadata
-const subtopics = fs.readdirSync("./GeneralTopicStore");
+let storage = new Storage();  // Load subtopics from storage
+const subtopics = Object.keys(storage.helpMessages);
+
 const subtopicDescriptions = {};
-const helpMessagesList = {}; // {'filename': ['how to do x', 'how to do y']}
-subtopics.forEach( file => { // Read file and parse out topic descriptions for commands
-	const fileContent = getFileContent(file);
-	subtopicDescriptions[file] = getDescription(fileContent);
-	helpMessagesList[file] = getHelpMessageTitlesArray(fileContent)
-})
+
+// Initialize descriptions - could be more robust later
+subtopics.forEach(subtopic => {
+    subtopicDescriptions[subtopic] = `Help Messages for the ${subtopic} category`;
+    // Ensure that even if a subtopic somehow exists without any messages, it's still handled
+    if (!storage.helpMessages[subtopic]) {
+        storage.helpMessages[subtopic] = [];
+    }
+});
+
 
 // Build a lookup command for each topic file
 var lookupCommand = new SlashCommandBuilder().setName("lookup").setDescription("Lookup Command");
@@ -37,7 +43,7 @@ subtopics.forEach(topic => {
 		command.setName(topic).setDescription(subtopicDescriptions[topic]).addStringOption(option=>
 			option.setName("title").setDescription("The Help Message to lookup").setAutocomplete(true).setRequired(true)
 		)
-	)	
+	)
 })
 
 let createOption = o => ({"name":o,"value":o});
@@ -112,7 +118,7 @@ var markRobot = new SlashCommandBuilder().setName("mark-robot").setDescription("
 		option.setName("clear").setDescription("Start a new conversation").setRequired(false)
 	)
 
-// Build commands, assign registration info, register 
+// Build commands, assign registration info, register
 const commands = [
 	adminCommand,
 	lookupCommand,
@@ -159,6 +165,5 @@ rest.put(Routes.applicationCommands(process.env.clientId), { body: commands }).t
 			});
 		}
 	});
-	fs.writeFileSync("./commands.json", JSON.stringify(comms));
-	console.log("Updated commands on Discord and wrote commands to ./commands.json");
+	console.log("Updated commands on Discord");
 }).catch(console.error);

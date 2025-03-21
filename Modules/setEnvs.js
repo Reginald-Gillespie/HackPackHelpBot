@@ -1,6 +1,6 @@
 // Simple file to easily swap between production and dev envirnments.
 
-Object.assign(process.env, require('./env.json'));
+Object.assign(process.env, require('../env.json'));
 
 const beta = process.argv.includes('--dev') || process.argv.includes('--beta') || process.env.beta == "true";
 

@@ -1,3 +1,5 @@
+# Systemd file to manage and start the bot on boot.
+
 ## To load into systemd, copy this file to /etc/systemd/system/HackPackHelpBot.service
 ## Then run:
 # sudo systemctl daemon-reload

@@ -5,5 +5,4 @@ test*.js
 test*.html
 Flowcharts/cache/*
 generated.html
-commands.json
 logs/

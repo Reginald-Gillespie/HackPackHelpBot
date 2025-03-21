@@ -7,13 +7,13 @@ const fs = require("fs");
 
 class Storage {
     constructor() {
-        this.privStorageLocations = ["./Storage/storage1.json", "./Storage/storage2.json"]; // JSON storage has the downside of corrupting if the write is stopped halfway, we write between two files to avoid this
+        this.privStorageLocations = ["../Storage/storage1.json", "../Storage/storage2.json"]; // JSON storage has the downside of corrupting if the write is stopped halfway, we write between two files to avoid this
         this.privStorageCycleIndex = 0; // cycle writes between files
         this.data = this.readLatestDatabase(this.privStorageLocations);
         this.cache = {}; // a temporary global version of storage for convenience
 
         // Proxy to save help messages on write 
-        this.helpMessageLocations = ["./Storage/helpMessagesSave1.json", "./Storage/helpMessagesSave2.json"] // Again, 3-2-1 backup rule.
+        this.helpMessageLocations = [".,/Storage/helpMessagesSave1.json", "../Storage/helpMessagesSave2.json"] // Again, 3-2-1 backup rule.
         this.helpMessageCycleIndex = 0; // cycle writes between files
         const _helpMessages = this.readLatestDatabase(this.helpMessageLocations);
         this.helpMessages = _helpMessages;

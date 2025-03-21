@@ -7,17 +7,17 @@
 // Allow admin who create a message with a non-already-created-topic to do so... but only after adding delete command ig
 // ToDo: support moving a help message cross-topic
 
-require("./setEnvs")
+require("./Modules/setEnvs")
 const NodeCache = require( "node-cache" );
 const {Client, Events, ActionRowBuilder, GatewayIntentBits, ModalBuilder, TextInputBuilder, TextInputStyle, Partials, EmbedBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder, ComponentType } = require("discord.js");
 const { GoogleGenerativeAI, FunctionCallingMode, SchemaType } = require("@google/generative-ai");
 const fs = require("fs");
 const { get } = require('https');
-const { getChartOptions, getPathToFlowchart } = require("./flowcharter")
-const { getQuestionAndAnswers, postProcessForDiscord } = require("./mermaidParse")
+const { getChartOptions, getPathToFlowchart } = require("./Modules/flowcharter")
+const { getQuestionAndAnswers, postProcessForDiscord } = require("./Modules/mermaidParse")
 const Fuse = require('fuse.js');
 const path = require("path")
-const Storage = require("./storage");
+const Storage = require("./Modules/storage");
 const { distance: levenshtein } = require('fastest-levenshtein')
 const fuseOptions = {
     includeScore: true,
@@ -27,8 +27,8 @@ const fuseOptions = {
 let storage = new Storage();
 global.storage = storage; // Make it easier to modularize
 
-const AutoReplyAI = require("./AutoReplyAI")
-const MarkRobot = require("./markRobot");
+const AutoReplyAI = require("./Modules/AutoReplyAI")
+const MarkRobot = require("./Modules/markRobot");
 storage.cache.markRobotInstances = {}; // Non-persistent cache for /mark-robot command
 storage.cache.markRobotPingsCache = {}; // Same, but for channel pings and replies
 storage.cache.repeatQuestions = {} // {id: [{message: <hash>, channelID, repeats: 1}, ...]}
@@ -723,7 +723,7 @@ client.on("interactionCreate", async cmd => {
                 // If we're editing, lookup and set the values of each field so they don't have to be reentered to edit
                 if (isEditing) {
                     // Fill title field
-                    const titleToEdit = cmd.options.getString("title").match(/[\s\w\/&\(\)]/g).join(""); // Filter out special characters before using as custom ID - TODO this would be better placed in helpFileParse to keep regexes togetehr
+                    const titleToEdit = cmd.options.getString("title").match(/[\s\w\/&\(\)]/g).join(""); // Filter out special characters before using as custom ID
                     title.setValue(titleToEdit);
                     title.setCustomId("T-"+titleToEdit)
 
