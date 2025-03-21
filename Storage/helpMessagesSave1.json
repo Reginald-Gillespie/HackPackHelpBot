@@ -71,10 +71,6 @@
             "message": "Best option is Arduino IDE. Alternative would be modifying some security settings per https://discord.com/channels/1229106258749948056/1262069792643219536/1262917038293389444"
         },
         {
-            "title": "CH340 driver",
-            "message": "https://discord.com/channels/1229106258749948056/1318809015924555827/1321595906612793366"
-        },
-        {
             "title": "Run As Administrator Steps Image",
             "message": "https://discord.com/channels/1229106258749948056/1245199186014634044/1309297668526309408\r\n\r\nhttps://media.discordapp.net/attachments/1245199186014634044/1322657200325267587/image.png?ex=6771ac02&is=67705a82&hm=7779a18874995221f085a10769fcc54b245425502cccae65629f7386339c84e1&=&format=webp&quality=lossless&width=698&height=700"
         },
@@ -113,6 +109,14 @@
         {
             "title": "Create Agent support on Linux",
             "message": "The Crunchlabs Create Agent does not support linux, however it is just a branded version of the [Arduino Create Agent](https://github.com/arduino/arduino-create-agent), which runs on linux. Once you install and start this, right-click the icon in your system tray, select \"Open Config\", you'll need to add \"https://ide.crunchlabs.com/\" to the `origins` array in the config."
+        },
+        {
+            "title": "Serial Monitor Not Working",
+            "message": "If the Serial Monitor is not working, first make sure you have monitor on. If you have it turned on and it still is not working, it might be due to conflicts with driver versions, follow the steps here to resolve \nhttps://discord.com/channels/1229106258749948056/1318809015924555827/1321595906612793366"
+        },
+        {
+            "title": "CH340 Driver",
+            "message": "The latest CH340 driver can be installed here https://www.arduined.eu/ch340-windows-10-driver-download/"
         }
     ],
     "label": [
@@ -131,6 +135,10 @@
         {
             "title": "Stepper Axis Will Not Move",
             "message": "Push the Arduino firmly into breadboard, it will likely click into place if it wasn't already. Try it again, if it still doesn't work, try swapping which motor is plugged into which driver. (You might have to unscrew the driver from the wall). See if the issue swaps to the other motor (which means the driver is the issue) or if the issue stays on the same axis (which means the motor is the issue)."
+        },
+        {
+            "title": "Visual Character Editor",
+            "message": "Here is a link to a tutorial on how to create custom characters https://discord.com/channels/1229106258749948056/1275557292472795136/1275557292472795136"
         }
     ],
     "laser": [
@@ -172,7 +180,7 @@
         },
         {
             "title": "Recode Turret For Different Remote",
-            "message": "https://discord.com/channels/1229106258749948056/1296827364021370900/1296827364021370900"
+            "message": "To use a different remote for the turret, you will need to setup the turret to print all remote button value it receives. Then you will have to look at the button value, and modify the code to use this value instead of the currently assigned value. See https://discord.com/channels/1229106258749948056/1296827364021370900/1296827364021370900 for a video about this process"
         }
     ]
 }

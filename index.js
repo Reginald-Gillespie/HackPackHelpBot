@@ -7,9 +7,7 @@
 // Allow admin who create a message with a non-already-created-topic to do so... but only after adding delete command ig
 // ToDo: support moving a help message cross-topic
 
-Object.assign(process.env, require('./env.json'));
-const beta = process.env.beta == "true";
-
+require("./setEnvs")
 const NodeCache = require( "node-cache" );
 const {Client, Events, ActionRowBuilder, GatewayIntentBits, ModalBuilder, TextInputBuilder, TextInputStyle, Partials, EmbedBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder, ComponentType } = require("discord.js");
 const { GoogleGenerativeAI, FunctionCallingMode, SchemaType } = require("@google/generative-ai");
@@ -965,4 +963,4 @@ process.on('unhandledRejection', handleException);
 process.on('unhandledException', handleException);
 
 // Start
-client.login(beta ? process.env.betaToken : process.env.token);
+client.login(process.env.token);

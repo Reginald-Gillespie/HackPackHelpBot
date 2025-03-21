@@ -51,6 +51,10 @@
         {
             "title": "All Known Boxes",
             "message": "Here is a list of all boxes we know of: https://discord.com/channels/1229106258749948056/1245218219233382461/1312093917289779272"
+        },
+        {
+            "title": "Test",
+            "message": "# \" ' content;` abc"
         }
     ],
     "ide": [
@@ -63,16 +67,8 @@
             "message": "https://discord.com/channels/1229106258749948056/1255274074343473293/1255274204673347585"
         },
         {
-            "title": "Raspberry Pi Create Agent",
-            "message": "Strongly recommend using the Arduino 2 instead (see some random blog for install, TODO: find a good one myself)\r\n\r\nLink to raspberry pi create agent binary and install instructions:\r\nhttps://discord.com/channels/1229106258749948056/1245199999164350556/1285779167886966884"
-        },
-        {
             "title": "Allow IDE without administrator",
             "message": "Best option is Arduino IDE. Alternative would be modifying some security settings per https://discord.com/channels/1229106258749948056/1262069792643219536/1262917038293389444"
-        },
-        {
-            "title": "CH340 driver",
-            "message": "https://discord.com/channels/1229106258749948056/1318809015924555827/1321595906612793366"
         },
         {
             "title": "Run As Administrator Steps Image",
@@ -105,6 +101,22 @@
         {
             "title": "Fix IDE ReadOnly",
             "message": "To get out of read-only mode on the IDE, click the Level 2 or Level 3 tabs."
+        },
+        {
+            "title": "Raspberry Pi Create Agent",
+            "message": "I recommend using the Arduino IDE 2 instead.\n\nHowever to use the crunchlabs version, link to raspberry pi create agent binary and install instructions:\nhttps://discord.com/channels/1229106258749948056/1245199999164350556/1285779167886966884"
+        },
+        {
+            "title": "Create Agent support on Linux",
+            "message": "The Crunchlabs Create Agent does not support linux, however it is just a branded version of the [Arduino Create Agent](https://github.com/arduino/arduino-create-agent), which runs on linux. Once you install and start this, right-click the icon in your system tray, select \"Open Config\", you'll need to add \"https://ide.crunchlabs.com/\" to the `origins` array in the config."
+        },
+        {
+            "title": "Serial Monitor Not Working",
+            "message": "If the Serial Monitor is not working, first make sure you have monitor on. If you have it turned on and it still is not working, it might be due to conflicts with driver versions, follow the steps here to resolve \nhttps://discord.com/channels/1229106258749948056/1318809015924555827/1321595906612793366"
+        },
+        {
+            "title": "CH340 Driver",
+            "message": "The latest CH340 driver can be installed here https://www.arduined.eu/ch340-windows-10-driver-download/"
         }
     ],
     "label": [
@@ -164,7 +176,7 @@
         },
         {
             "title": "Recode Turret For Different Remote",
-            "message": "https://discord.com/channels/1229106258749948056/1296827364021370900/1296827364021370900"
+            "message": "To use a different remote for the turret, you will need to setup the turret to print all remote button value it receives. Then you will have to look at the button value, and modify the code to use this value instead of the currently assigned value. See https://discord.com/channels/1229106258749948056/1296827364021370900/1296827364021370900 for a video about this process"
         }
     ]
 }

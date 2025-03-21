@@ -1,7 +1,6 @@
 // Helper file to manage discord settings and stuff
 
-Object.assign(process.env, require('./env.json'));
-const beta = process.env.beta == "true";
+reqiure("./setEnvs")
 
 const { REST, Routes, PermissionFlagsBits, SlashCommandBuilder, ContextMenuCommandBuilder, ApplicationCommandType, ChannelType } = require('discord.js');
 const fs = require("fs");
@@ -129,9 +128,9 @@ const commands = [
 
 
 // The following code was stolen from a friend (so that's why it doesn't have comments and isn't readable -s)
-const rest = new REST({ version: '9' }).setToken(beta ? process.env.betaToken : process.env.token);
+const rest = new REST({ version: '9' }).setToken(process.env.token);
 var comms = {};
-rest.put(Routes.applicationCommands(beta ? process.env.betaClientId : process.env.clientId), { body: commands }).then(d => {
+rest.put(Routes.applicationCommands(process.env.clientId), { body: commands }).then(d => {
 	d.forEach(c => {
 		comms[c.name] = {
 			mention: `</${c.name}:${c.id}>`,

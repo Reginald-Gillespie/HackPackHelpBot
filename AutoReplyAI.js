@@ -31,6 +31,7 @@ Other categories:
 - IDE. These boxes use are using a custom branded online IDE to code them. Some people prefer other IDEs like the Arduino IDE, but these take more setup work.
 - General. A category for anything that doesn't fit elsewhere.
 
+The user is currently asking their question in the thread: {channelInfo}
 
 Here is a list of each FAQ you can select from:
 0. No response is a confident match.
@@ -42,15 +43,17 @@ const stage2SystemPrompt =
 `# Behavior
 You are an advanced AI assistant called 'Hack Pack Lookup' designed tailor FAQs related to user questions to the user's specific scenario.
 
-Your job consists of 3 tasks:
-1. Evaluate whether the FAQ provided is related to and answers the question of the user.
-2. Tailor the information in the FAQ to the user, filling in details where needed, removing details when they do not apply to the user.
-3. Rate how confident you are that your response was relevant sto the user.
-
-Step 2 is the central part of your response, containing the response text. This should be quick and short, to the point. Using basic Markdown here is acceptable. 
+Your job consists of 4 tasks:
+1. Process whether you think the FAQ can reliably be used as the primary source to answer the questions, and whether it is helpful in this context.
+    1.1. You will be provided recent messages in this thread, use these to judge how helpful the FAQ will be.
+    1.2. If user is helping another user, or currently is being helped by another user, the FAQ is *NOT RELEVENT* to them. 
+    1.3. FAQs are only relevent when you can use the information in them as the primary source to fully help the user. Even if you can answer the question yourself without the FAQ, the FAQ relevence is low.
+2. Evaluate how relevent the FAQ provided is related to and answers the question of the user. 
+3. Tailor the information in the FAQ to the user, filling in details where needed, removing details when they do not apply to the user. This is the central part of your response, containing the response text. Using basic Markdown here is acceptable.
+4. Rate how confident you are that your tailored response was relevant to the user, is helpful in this conversation, and does not get in the way of users helping each other.
 
 # Context
-You are talking to the user named {username}
+You are talking to the user named {username}, who is asking their question in the thread: {channelInfo}
 
 You are helping answer questions about arduino subscription box projects released as toys by CrunchLabs.
 These boxes use ae custom branded online IDE to code them. (Some people prefer other IDEs like the Arduino IDE, but these take more setup work).
@@ -58,12 +61,13 @@ These boxes use ae custom branded online IDE to code them. (Some people prefer o
 The selected FAQ is related to the category \`{subtopic}\`, here's some additional information about this category:
 {subtopicInfo}
 
-The FAQ automatically judged to be most relevant to the user's question is as follows:
+The following FAQ response was automatically selected by AI based on the title only. It may or may not be relevent.
+The title is "{FAQTitle}", and the content is as follows: 
 ${tripleBacktick}
 {FAQ}
 ${tripleBacktick}
 
-Here is a conversation log of the last {numMessages}. You are not answering any questions in this conversation, this is merely context regarding the question at hand.
+Here is a conversation log of the last {numMessages} messages. You are not answering any questions in this conversation, this is merely context regarding the question at hand.
 Conversation:
 ${tripleBacktick}
 {messages}
@@ -124,7 +128,7 @@ const stage2ResponseSchema = {
             nullable: false,
         },
         "reliably_confidence": {
-            description: "How confident you are that the given question can be reliably answered, from 1 (fairly confident) to 5 (very confident).",
+            description: "How confident you are that FAQ answers the question, from 1 (somewhat confident) to 5 (very confident).",
             type: SchemaType.INTEGER,
         },
         "tailored_response": {
@@ -133,7 +137,7 @@ const stage2ResponseSchema = {
             nullable: false,
         },
         "confidence": {
-            description: "How confident you are that your answer is relevant and correct, from 1 (fairly confident) to 5 (very confident).",
+            description: "How confident you are that your answer is relevant and correct, from 1 (somewhat confident) to 5 (very confident).",
             type: SchemaType.INTEGER,
         }
     },
@@ -160,22 +164,19 @@ class AutoReplyAI {
         this.aiNoCacheTrigger = "!nocache ";
         this.model = "gemini-2.0-flash";
         this.genAI = new GoogleGenerativeAI(process.env.GeminiKey);
-        this.stage1RequiredConfidence = 2;  // How sure stage1 is that there is a matching FAQ (this will be rejudged by stage2 with extra context, so low is fine)
+        this.stage1RequiredConfidence = 3;  // How sure stage1 is that there is a matching FAQ (this will be rejudged by stage2 with extra context, so low is fine)
         this.stage2MessageCount = 8;        // How much context to pull in
         this.stage2PrecisionThreshold = 4;  // How related the FAQ that stage 1 gave was - arguably this is the most important number as it chooses how much the fixed FAQ will be used 
-        this.stage2ConfidenceThreshold = 3; // How confident in the final answer stage2 must be.
+        this.stage2ConfidenceThreshold = 4; // How confident in the final answer stage2 must be.
     }
 
     formatAIResponse(text) {
-        // Format like a quote
-        text = "> " + text.split("\n").join("\n> ")
-
         return (
             '=== I have attempted to automatically answer your question ===\n' +
             // '\n' +
             // '```\n' +
             // text.replaceAll("```", "\\`\\`\\`") +
-            text +
+            ("> " + text.split("\n").join("\n> ")) + // Format like a quote
             '\n' +
             // '```\n' +
             `\n-# ⚠️ This response was written by AI and may be incorrect.`
@@ -202,7 +203,7 @@ class AutoReplyAI {
         const helpMessage = getHelpMessageBySubjectTitle(selectedHelpMessageTitle.subtopic, selectedHelpMessageTitle.title);
         if (!helpMessage) return false;
 
-        return { message: helpMessage, subtopic: selectedHelpMessageTitle.subtopic };
+        return { message: helpMessage, FAQTitle: selectedHelpMessageTitle.title, subtopic: selectedHelpMessageTitle.subtopic };
     }
 
     async messageHandler(discordMessage) {
@@ -282,10 +283,18 @@ class AutoReplyAI {
         }
     }
 
+    getChannelInfo(discordMessage) {
+        // Simple function to give the channel name to the AI to help it have more context about what is being asked
+        let channelName = `#${discordMessage.channel.name}`
+        const parent = discordMessage.channel.parent;
+        if (parent) channelName = `${parent.name} > ${channelName}`
+
+        return channelName;
+    }
     
     // Stage 1:
     // Select relevant FAQ from list of titles and user message
-    buildStage1Model() {
+    buildStage1Model(discordMessage) {
         let compiledSystemPrompt = stage1SystemPrompt;
         // Build FAQs into the prompt
         const faqs = [];
@@ -300,7 +309,10 @@ class AutoReplyAI {
             });
 
         }
-        compiledSystemPrompt = compiledSystemPrompt.replace("{FAQs}", faqs.join("\n"))
+
+        compiledSystemPrompt = compiledSystemPrompt
+            .replace("{FAQs}", faqs.join("\n"))
+            .replace("{channelInfo}", this.getChannelInfo(discordMessage))
 
         return this.genAI.getGenerativeModel({
             model: this.model,
@@ -313,7 +325,7 @@ class AutoReplyAI {
     }
 
     async stage1AIHandler(discordMessage) {
-        const geminiSession = this.buildStage1Model().startChat();
+        const geminiSession = this.buildStage1Model(discordMessage).startChat();
         const result = await geminiSession.sendMessage(discordMessage.content);
 
         const responseText = result.response.text()
@@ -332,10 +344,10 @@ class AutoReplyAI {
             isNaN(confidence) || confidence < this.stage1RequiredConfidence
         ) return false;
 
-        const { message, subtopic } = this.getFaqByNum(responseNumber);
+        const { message, FAQTitle, subtopic } = this.getFaqByNum(responseNumber);
         if (!message) return false;
         
-        return { FAQ: message, subtopic };
+        return { FAQ: message, FAQTitle, subtopic };
     }
 
     // Stage 2:
@@ -355,24 +367,26 @@ class AutoReplyAI {
             `[${msg.createdAt.toLocaleTimeString()}] ${msg.author.username}: ${msg.content}`
         ).join("\n");
     
-        return inlineFormattedMessages;
+        return {messageText: inlineFormattedMessages, numMessages: recentMessages.size };
     }
     
-    async stage2AIHandler(discordMessage, { FAQ, subtopic }) {
+    async stage2AIHandler(discordMessage, { FAQ, FAQTitle, subtopic }) {
         let compiledSystemPrompt = stage2SystemPrompt;
 
-        const inlineFormattedMessages = await this.fetchRecentMessages(discordMessage, this.stage2MessageCount)
+        const { messageText, numMessages } = await this.fetchRecentMessages(discordMessage, this.stage2MessageCount)
         const subtopicInfo = subtopicInfoMap[subtopic]
 
         //// Generate prompt and create model
         compiledSystemPrompt = compiledSystemPrompt
-            .replace("{messages}", inlineFormattedMessages)
-            .replace("{numMessages}", inlineFormattedMessages.length)
+            .replace("{messages}", messageText)
+            .replace("{numMessages}", numMessages)
             .replace("{username}", discordMessage.author.username)
             .replace("{FAQ}", FAQ)
+            .replace("{FAQTitle}", FAQTitle)
             .replace("{subtopic}", subtopic || "<none provided")
             .replace("{subtopicInfo}", subtopicInfo || "<none provided")
-    
+            .replace("{channelInfo}", this.getChannelInfo(discordMessage))
+
         const model = this.genAI.getGenerativeModel({
             model: this.model,
             systemInstruction: compiledSystemPrompt,
