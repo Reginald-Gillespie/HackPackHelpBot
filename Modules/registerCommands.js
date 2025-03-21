@@ -35,6 +35,9 @@ subtopics.forEach(subtopic => {
     }
 });
 
+// Add global command
+subtopics.unshift("global");
+subtopicDescriptions["global"] = "Search all help messages at once";
 
 // Build a lookup command for each topic file
 var lookupCommand = new SlashCommandBuilder().setName("lookup").setDescription("Lookup Command");

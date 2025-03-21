@@ -5,7 +5,6 @@ const CryptoJS = require("crypto-js");
 const puppeteer = require('puppeteer');
 const path = require('path');
 const process = require('process');
-process.chdir(path.dirname(__filename)); // Make sure this file is always cd-ed into its dir
 
 
 // This file returns the filepath to the requested flowcharts, 
@@ -16,7 +15,7 @@ function hash(data) {
 }
 
 function getChartOptions() {
-    let files = fs.readdirSync("./Flowcharts");
+    let files = fs.readdirSync(path.join(__dirname, "../Flowcharts"));
     files = files
         .filter(filename => filename.toLowerCase().endsWith(".json"))
         .map(filename => filename.slice(0, -5))
@@ -26,7 +25,7 @@ function getChartOptions() {
 async function renderHTML(html, overrideCache=false) {
     // returns imageLoc
 
-    const fileLoc = `./Flowcharts/cache/${hash(html)}.jpg`;
+    const fileLoc = path.join(__dirname, `../Flowcharts/cache/${hash(html)}.jpg`);
       
     // Render with puppeteer if this HTML has not been rendered before
     if (overrideCache || !fs.existsSync(fileLoc)) {
@@ -133,12 +132,12 @@ async function getPathToFlowchart(chartName, mermaidOnly=false, dumpHTML=false, 
     }
 
     // Create HTML
-    const mermaidPath = `./Flowcharts/${chartName}.json`;
+    const mermaidPath = path.join(__dirname, `../Flowcharts/${chartName}.json`);
     if (mermaidOnly) return [mermaidPath, null]; // for editing the template we don't need the whole thiing
-    const templatePath = `./Flowcharts/template.html`;
+    const templatePath = path.join(__dirname, `../Flowcharts/template.html`);
 
     // const mermaidContent = fs.readFileSync(mermaidPath).toString()
-    const mermaidContent = await getMermaidFromJSON(`./Flowcharts/${chartName}.json`)
+    const mermaidContent = await getMermaidFromJSON(path.join(__dirname, `../Flowcharts/${chartName}.json`))
 
     let templateContent = fs.readFileSync(templatePath).toString()
     const templateColor = "#"+mermaidContent.match(/%% templateColor #?([a-zA-Z\d]+)/)?.[1]
@@ -146,8 +145,8 @@ async function getPathToFlowchart(chartName, mermaidOnly=false, dumpHTML=false, 
     templateContent = templateContent.replace("##flowchart##", mermaidContent);
 
     if (dumpHTML) {
-        fs.writeFileSync(`./Flowcharts/generated.html`, templateContent)
-        fs.writeFileSync(`./Flowcharts/mermaid.md`, mermaidContent)
+        fs.writeFileSync(path.join(__dirname, `../Flowcharts/generated.html`), templateContent)
+        fs.writeFileSync(path.join(__dirname, `./Flowcharts/mermaid.md`), mermaidContent)
     }
 
     const imageLoc = await renderHTML(templateContent, overrideCache);

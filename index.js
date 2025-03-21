@@ -25,6 +25,7 @@ const fuseOptions = {
 };
 
 let storage = new Storage();
+
 global.storage = storage; // Make it easier to modularize
 
 const AutoReplyAI = require("./Modules/AutoReplyAI")
@@ -153,16 +154,38 @@ function findButtonOfId(actionRows, ID) {
     return null
 }
 
+function buildGlobalHelps() {
+    // Return an array mapping of global name to subcat + title
+    let mapping = {}
+    let index = 1;
+    const subtopics = Object.keys(storage.helpMessages);
+    for (const subtopic of subtopics) {
+        const helpMessages = storage.helpMessages[subtopic];
+        helpMessages.forEach(message => {
+            const combinedTitle = `${index}. ${message.title} | (${subtopic})`;
+            mapping[combinedTitle] = { title: message.title, subtopic };
+            index++;
+        });
+    }
+    return mapping;
+}
+
 function getHelpMessageTitlesArray(subtopic) {
-    if (!storage.helpMessages[subtopic]) {
+    if (subtopic == "global") {
+        return Object.keys(buildGlobalHelps());
+    }
+    else if (!storage.helpMessages[subtopic]) {
         return [];
     }
     return storage.helpMessages[subtopic].map(message => message.title);
 }
 
-
 global.getHelpMessageBySubjectTitle = function(subtopic, title) { // This should also be in a utils file
-    if (!storage.helpMessages[subtopic]) {
+    if (subtopic == "global") {
+        const originalData = buildGlobalHelps()[title];
+        [ subtopic, title ] = [ originalData.subtopic, originalData.title ];
+    } 
+    else if (!storage.helpMessages[subtopic]) {
         return "No Help Messages found for this subtopic.";
     }
     const message = storage.helpMessages[subtopic].find(m => m.title === title);
