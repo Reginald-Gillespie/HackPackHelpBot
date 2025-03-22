@@ -104,7 +104,7 @@ function markRobotMessagePostProcess(message, guild) {
     return message;
 }
 function isCreator(userID) {
-    return storage?.creators.includes(userID) || storage?.admins.includes(userID)
+    return storage.creators?.includes(userID) || storage.admins?.includes(userID)
 }
 function sortByMatch(items, text) {
     if (!text) return items;

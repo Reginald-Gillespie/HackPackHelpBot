@@ -11,10 +11,6 @@
             "message": "<https://www.crunchlabs.com/products/domino-robot>"
         },
         {
-            "title": "Domino IR Control",
-            "message": "https://discord.com/channels/1229106258749948056/1257938635295031366/1257938635295031366"
-        },
-        {
             "title": "Fix Slight Domino Drift",
             "message": "https://discord.com/channels/1229106258749948056/1254079583809179709/1261335789376241675"
         },
@@ -29,6 +25,10 @@
         {
             "title": "Domino Robot Not Turning On",
             "message": "Check for backwards red and black wires, and backwards H-Bridge wires.\r\nIf these are all correct, make sure your battery is charged."
+        },
+        {
+            "title": "Domino IR Control",
+            "message": "Instructions and code for adding IR control to the domino robot are here: https://discord.com/channels/1229106258749948056/1257938635295031366/1257938635295031366\n\nA video explaining this further can be found at https://youtu.be/WLICyCNntyY"
         }
     ],
     "general": [

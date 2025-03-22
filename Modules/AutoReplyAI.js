@@ -28,7 +28,7 @@ For more context, you are helping answer questions about Arduino subscription bo
 - Balance Bot. This is a classic bot that balances on two wheels.
 
 Other categories:
-- IDE. These boxes use are using a custom branded online IDE to code them. Some people prefer other IDEs like the Arduino IDE, but these take more setup work.
+- IDE. These boxes use are using a custom branded online IDE to code them. Some people prefer other IDEs like the Arduino IDE, but these take more setup work. A lot of users may refer to coding as "Hacking", as this is the language the product is advertised with.
 - General. A category for anything that doesn't fit elsewhere.
 
 The user is currently asking their question in the thread: {channelInfo}
@@ -86,7 +86,7 @@ const subtopicInfoMap = {
     "sandy": "This is the Sand Garden. This box is a small zen sand garden using two stepper motors to move arms moving a magnetic ball in patterns.",
     "label": "This is the IR Laser Tag. This box has two IR laser tag guns, each connected to a pair of goggles with receivers that dim when you are shot.",
     "balance": "This is the Balance Bot. This is a classic bot that balances on two wheels.",
-    "ide": "This is the coding IDE. These boxes use ae custom branded online IDE (which in turn uses a branded Arduino Create Agent to allow the browser to connect to the arduino) to code the projects. Some people prefer other IDEs like the Arduino IDE, but these take more setup work and are only advised when the user requests it."
+    "ide": "This is the coding IDE. These boxes use ae custom branded online IDE (which in turn uses a branded Arduino Create Agent to allow the browser to connect to the arduino) to code the projects. Some people prefer other IDEs like the Arduino IDE, but these take more setup work and are only advised when the user requests it. A lot of users may refer to coding as \"Hacking\", as this is the language the product is advertised with."
 }
 
 const stage1ResponseSchema = {
