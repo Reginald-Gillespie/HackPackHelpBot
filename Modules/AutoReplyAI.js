@@ -171,6 +171,12 @@ class AutoReplyAI {
     }
 
     formatAIResponse(text) {
+        //// Postprocess
+        // It sometimes makes the link and link text the same, fix that
+        text = text.replace(/\[(.*?)\]\((.*?)\)/g, (match, text, url) => {
+            return text === url ? url : match;
+        });        
+        
         return (
             '=== I have attempted to automatically answer your question ===\n' +
             // '\n' +

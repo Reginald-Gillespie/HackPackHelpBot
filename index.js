@@ -59,6 +59,8 @@ global.isHelpRequest = function(message) { // Technically this should be in a ut
         message.length >= 20
     ) && (
         // Must contain one of these:
+        /\bany\b.{10}\bknow\b/.test(message) ||
+        /\bcan'?t\b/.test(message) ||
         /\?/iu.test(message) ||
         /anyone know/iu.test(message) ||
         /\bhow\b/iu.test(message) ||

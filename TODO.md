@@ -1,6 +1,7 @@
 /admin
 - Update
 - Create new box / flowchart slots
+- Deleting boxes
 
 Make sure IDE flowchart covers windows driver issues... might mean seperating paths? Maybe add dirrectives to json that "if answer includes this earlier, go this way"
 
