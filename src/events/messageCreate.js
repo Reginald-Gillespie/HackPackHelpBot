@@ -1,5 +1,5 @@
 const { Events } = require("discord.js");
-const AutoReplyAI = require('../modules/AutoReplyAI');
+const AutoReplyAI = require('../modules/autoReplyAI');
 const utils = require('../modules/utils');
 const MarkRobot = require('../modules/markRobot');
 

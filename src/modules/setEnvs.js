@@ -12,6 +12,7 @@ if (beta) {
     process.env.clientId = process.env.betaClientId;
     console.log('Starting in development mode.');
 } else {
-    console.log('Starting in production');
+    global.beta = beta;
     delete process.env.beta;
+    console.log('Starting in production');
 }
