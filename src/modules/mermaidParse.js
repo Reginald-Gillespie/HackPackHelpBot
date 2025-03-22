@@ -31,7 +31,6 @@ function matchMultipleGroups(content, regex=/./) {
     return results;
 }
 
-
 function getQuestionAndAnswers(chartJSON, currentQuestionID, currentAnswerID) {
     // returns [{questionID, question}, [ answer1, answer2, ...]]
     try {

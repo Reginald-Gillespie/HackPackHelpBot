@@ -146,7 +146,7 @@ async function getPathToFlowchart(chartName, mermaidOnly=false, dumpHTML=false, 
 
     if (dumpHTML) {
         fs.writeFileSync(path.join(__dirname, `../Flowcharts/generated.html`), templateContent)
-        fs.writeFileSync(path.join(__dirname, `./Flowcharts/mermaid.md`), mermaidContent)
+        fs.writeFileSync(path.join(__dirname, `../Flowcharts/mermaid.md`), mermaidContent)
     }
 
     const imageLoc = await renderHTML(templateContent, overrideCache);

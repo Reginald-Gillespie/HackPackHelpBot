@@ -9,8 +9,8 @@ const path = require("path")
 class Storage {
     constructor() {
         this.privStorageLocations = [
-            path.join(__dirname, "../Storage/storage1.json"),
-            path.join(__dirname, "../Storage/storage2.json")
+            path.join(__dirname, "../../Storage/storage1.json"),
+            path.join(__dirname, "../../Storage/storage2.json")
         ];
         this.privStorageCycleIndex = 0; // cycle writes between files
         this.data = this.readLatestDatabase(this.privStorageLocations);
@@ -18,19 +18,12 @@ class Storage {
 
         // Proxy to save help messages on write 
         this.helpMessageLocations = [
-            path.join(__dirname, "../Storage/helpMessagesSave1.json"),
-            path.join(__dirname, "../Storage/helpMessagesSave2.json")
+            path.join(__dirname, "../../Storage/helpMessagesSave1.json"),
+            path.join(__dirname, "../../Storage/helpMessagesSave2.json")
         ];
         this.helpMessageCycleIndex = 0; // cycle writes between files
         const _helpMessages = this.readLatestDatabase(this.helpMessageLocations);
-        this.helpMessages = _helpMessages;
-        // this.helpMessages = new Proxy(_helpMessages, {
-        //     set: (target, prop, value) => {
-        //         target[prop] = value;
-        //         target.saveHelps(); // Save changes automatically
-        //         return true;
-        //     }
-        // });
+        this.helpMessages = _helpMessages; // These are saved by calling saveHelps directly instead of by the proxy
 
         // Return a proxy reference to this object so we can do storageObj[key] storageObj.data[key]
         return new Proxy(this, {

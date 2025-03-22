@@ -5,6 +5,7 @@
 
 const { GoogleGenerativeAI, FunctionCallingMode, SchemaType } = require("@google/generative-ai");
 const NodeCache = require("node-cache");
+const { isHelpRequest, getHelpMessageBySubjectTitle } = require('../modules/utils');
 const tripleBacktick = '```'
 
 
@@ -187,19 +188,6 @@ class AutoReplyAI {
             // '```\n' +
             `\n-# ⚠️ This response was written by AI and may be incorrect.`
         )
-    }
-
-    async runFAQ({ num }, msg) {
-        if (num <= 1) return;
-        console.log("Running FAQ number " + num);
-
-        const selectedHelpMessageTitle = this.helpMessageList[num];
-        if (!selectedHelpMessageTitle) return;
-
-        const helpMessage = getHelpMessageBySubjectTitle(selectedHelpMessageTitle.subtopic, selectedHelpMessageTitle.title);
-        if (!helpMessage) return;
-
-        await msg.reply(this.formatForAutoAI(helpMessage));
     }
 
     getFaqByNum(num) {

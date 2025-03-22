@@ -51,10 +51,6 @@
         {
             "title": "All Known Boxes",
             "message": "Here is a list of all boxes we know of: https://discord.com/channels/1229106258749948056/1245218219233382461/1312093917289779272"
-        },
-        {
-            "title": "Test",
-            "message": "# \" ' content;` abc"
         }
     ],
     "ide": [

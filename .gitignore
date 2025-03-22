@@ -3,6 +3,4 @@ env.json
 .vscode
 test*.js
 test*.html
-Flowcharts/cache/*
-generated.html
 logs/
