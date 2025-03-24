@@ -3,7 +3,7 @@ const { Events } = require("discord.js");
 
 module.exports = {
     name: Events.MessageReactionAdd,
-    async execute(reaction, user, client) {  // Add 'client' here
+    async execute(reaction, user) {
         if (reaction.partial) {
             try {
                 await reaction.fetch();
