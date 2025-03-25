@@ -55,10 +55,6 @@
     ],
     "ide": [
         {
-            "title": "Mac Guide",
-            "message": "So you need to go to Finder -> Downloads -> Find CrunchLabsArduinoCreateAgent -> Open -> Drag the CreateAgent Icon into the Applications Folder -> Go back to Finder -> Applications -> CrunchlabsArduinoCreateAgent -> Open. The CreateAgent does not have a window that opens when you open it, it runs in the background. You can check to make sure it is running by looking at your system tray in the top right. If you see a black circle with the Hack Pack logo on it, then it is running. Also make sure to use chrome as Safari will not work unless you want to mess with your settings as described here https://discord.com/channels/1229106258749948056/1261395362963263488"
-        },
-        {
             "title": "Arduino IDE Setup Guide",
             "message": "https://discord.com/channels/1229106258749948056/1255274074343473293/1255274204673347585"
         },
@@ -111,8 +107,12 @@
             "message": "If the Serial Monitor is not working, first make sure you have monitor on. If you have it turned on and it still is not working, it might be due to conflicts with driver versions, follow the steps here to resolve \nhttps://discord.com/channels/1229106258749948056/1318809015924555827/1321595906612793366"
         },
         {
+            "title": "Create Agent Install On Mac Guide",
+            "message": "Once you download the agent at https://ide.crunchlabs.com/downloads, you need to go to Finder -> Downloads -> Find the CrunchLabsArduinoCreateAgent -> Open -> Drag the CreateAgent Icon into the Applications Folder -> Go back to Finder -> Applications -> CrunchlabsArduinoCreateAgent -> Open. The CreateAgent does not have a window that opens when you open it, it runs in the background. You can check to make sure it is running by looking at your system tray in the top right. If you see a black circle with the Hack Pack logo on it, then it is running. Also make sure to use chrome as Safari will not work unless you want to mess with your settings as described here https://discord.com/channels/1229106258749948056/1261395362963263488"
+        },
+        {
             "title": "CH340 Driver",
-            "message": "The latest CH340 driver can be installed here https://www.arduined.eu/ch340-windows-10-driver-download/"
+            "message": "The latest CH340 driver can be installed here <https://www.arduined.eu/ch340-windows-10-driver-download>"
         }
     ],
     "label": [
@@ -145,6 +145,10 @@
         {
             "title": "Swap Gun and Goggles",
             "message": "First, unplug the gun from the goggles on each and swap it. Keep track of which gun does not work. If the same gun does not work, it's on the gun side (IR emitter) that it is not working, if it swaps to being the other gun, it is on the goggle side (IR receiver) that it is not working."
+        },
+        {
+            "title": "Generic Laser Tag Not Working",
+            "message": "If neither laser gun can shoot the other, and they are not reacting to each other, the issue is almost always that they have not been set to both run on different teams. To set them to different teams, the short green wire should connect the black ground rail with A1, A2, or A3 to indicate whether the gun is on team 1, 2, or 3."
         }
     ],
     "sandy": [
