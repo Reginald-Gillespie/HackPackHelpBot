@@ -135,6 +135,10 @@
         {
             "title": "Visual Character Editor",
             "message": "Here is a link to a tutorial on how to create custom characters https://discord.com/channels/1229106258749948056/1275557292472795136/1275557292472795136"
+        },
+        {
+            "title": "Generic Screen Issues Debugging",
+            "message": "If your screen is showing random letters or showing lights but no letters, reading through this thread contains debugging steps for most issues: https://discord.com/channels/1229106258749948056/1281377595035746408/1281377595035746408\n\nIf the screen's backlight isn't turning on, check to make sure the black and red wires to the LCD are secure first"
         }
     ],
     "laser": [
@@ -161,8 +165,8 @@
             "message": "https://discord.com/channels/1229106258749948056/1302464936773161010"
         },
         {
-            "title": "One bead chain tight one loose",
-            "message": "The bottom chain is on the wrong side of the orange standoff by the gears. Take it off and move it to the other side."
+            "title": "Bead Chain Tightness Issues",
+            "message": "If one chain is too tight and one is too loose, the bottom chain is on the wrong side of the orange standoff by the gears. Take it off and move it to the other side.\n\nIf both are too tight, you might have the orange motor-holder on backwards."
         }
     ],
     "turret": [
@@ -180,7 +184,7 @@
         },
         {
             "title": "Recode Turret For Different Remote",
-            "message": "To use a different remote for the turret, you will need to setup the turret to print all remote button value it receives. Then you will have to look at the button value, and modify the code to use this value instead of the currently assigned value. See https://discord.com/channels/1229106258749948056/1296827364021370900/1296827364021370900 for a video about this process"
+            "message": "To use a different remote for the turret, or to make any button preform any action you want such as firing, you will need to setup the turret to print all remote button value it receives. Then you will have to look at the button value, and modify the code to use this value instead of the currently assigned value. See https://discord.com/channels/1229106258749948056/1296827364021370900/1296827364021370900 for a video about this process"
         }
     ]
 }

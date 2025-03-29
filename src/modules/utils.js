@@ -25,7 +25,9 @@ module.exports = {
                 /\bwont/iu.test(message) ||
                 /\bisnt/iu.test(message) ||
                 /is not/iu.test(message) ||
+                /error/iu.test(message) ||
                 /^does/iu.test(message) ||
+                /^t work/iu.test(message) ||
                 /\bhelp\b/iu.test(message)
             )
     },

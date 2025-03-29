@@ -10,7 +10,7 @@ process.chdir(path.dirname(__filename));
 (async function main() {
 
     // Import renderer
-    const { getChartOptions, getPathToFlowchart } = require("../flowcharter")
+    const { getChartOptions, getPathToFlowchart } = require("../modules/flowcharter")
     const allCharts = getChartOptions();
     const usedCache = []; // Keep track of unused cached and remove it to keep things clean
     for (chart of allCharts) {
@@ -21,7 +21,7 @@ process.chdir(path.dirname(__filename));
             continue;
         }
         // Copy image to more readable path
-        const newCharPath = `./Flowcharts/cache/${chart}-dev.jpg`;
+        const newCharPath = `../Flowcharts/cache/${chart}-dev.jpg`;
         fs.copyFileSync(imagePath, newCharPath);
         console.log(`\x1b[32mSaved to ${newCharPath}\x1b[0m`);
 
@@ -30,13 +30,13 @@ process.chdir(path.dirname(__filename));
     }
 
     // Remove unused cache
-    const cacheDir = "./Flowcharts/cache";
-    const files = fs.readdirSync(cacheDir);
-    files.forEach(file => {
-        if (!usedCache.includes(`${cacheDir}/${file}`)) {
-            fs.unlinkSync(`${cacheDir}/${file}`);
-        }
-    })
+    // const cacheDir = "./Flowcharts/cache";
+    // const files = fs.readdirSync(cacheDir);
+    // files.forEach(file => {
+    //     if (!usedCache.includes(`${cacheDir}/${file}`)) {
+    //         fs.unlinkSync(`${cacheDir}/${file}`);
+    //     }
+    // })
 
     console.log(`\n${"=".repeat(50)}\nFinished`);
 
