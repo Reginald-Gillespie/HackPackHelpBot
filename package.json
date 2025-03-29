@@ -1,9 +1,9 @@
 {
   "name": "hackpackhelpbot",
   "version": "1.0.0",
-  "main": "src/index.js", // Correct main file path
+  "main": "src/index.js",
   "scripts": {
-    "start": "node ." // Makes running bot easier, just need to do "node ." or "npm run start"
+    "start": "node ."
   },
   "author": "",
   "license": "ISC",
