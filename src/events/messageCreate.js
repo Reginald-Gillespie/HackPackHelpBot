@@ -89,7 +89,7 @@ module.exports = {
                 const originalChannel = await client.channels.fetch(originalChannelId);
                 const originalMessage = await originalChannel.messages.fetch(existingQuestion.originalLink.split('/').pop());
                 if (originalMessage) {
-                    message.reply(`- <info:1330047959806771210> This appears to be a duplicate question. The original question was asked here ${existingQuestion.originalLink}`);
+                    message.reply(`-# <:info:1330047959806771210> This appears to be a duplicate question. The original question was asked here ${existingQuestion.originalLink}`);
                 }
             } catch (error) {
                 existingQuestion.repeats = 1;
