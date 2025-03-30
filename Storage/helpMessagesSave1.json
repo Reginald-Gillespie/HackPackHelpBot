@@ -87,10 +87,6 @@
             "message": "1. Watch https://ide.crunchlabs.com/downloads\r\n2. Use Chrome.\r\n3. Use provided USB cable.\r\n4. Connecting cable to silver USB-C on arduino, not black breadboard box.\r\n5. Reload webpage.\r\n6. Try in incognito mode\r\n7. Turn off bluetooth then restart your computer.\r\n8. Try *multiple* other USB-A to USB-C cables.\r\n9. Go to http://127.0.0.1:8991/ and try the \"list\" command\r\n10. Worst case, try the Arduino IDE.\r\n\r\n- Others:\r\nIf the upload button is disabled, make sure `Monitor` is *off*"
         },
         {
-            "title": "Reflash Bootloader (fix stk500_getsync error)",
-            "message": "if you are getting the stk500_getsync error, first make sure you are using the provided cable. If you are, see https://canary.discord.com/channels/1229106258749948056/1342582839736012843. \r\n\r\nBefore requesting a replacement arduino, make sure uploading works on a different arduino, confirming it is an arduino issue, not a computer issue."
-        },
-        {
             "title": "Fix IDE ReadOnly",
             "message": "To get out of read-only mode on the IDE, click the Level 2 or Level 3 tabs."
         },
@@ -113,6 +109,10 @@
         {
             "title": "CH340 Driver",
             "message": "The latest CH340 driver can be installed here <https://www.arduined.eu/ch340-windows-10-driver-download>"
+        },
+        {
+            "title": "Reflash Bootloader (fix stk500_getsync error)",
+            "message": "if you are getting the stk500_getsync error, first make sure you are using the provided cable, other cables can cause this issue.\n\nIf you are using the proper cable and the issue still occurs, see this thread for mor information about the issue and https://discord.com/channels/1229106258749948056/1342582839736012843/1342582839736012843. \n\nBefore requesting a replacement arduino, make sure uploading works on a different arduino, confirming it is an arduino issue, not a computer issue."
         }
     ],
     "label": [
