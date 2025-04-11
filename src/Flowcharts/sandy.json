@@ -1,0 +1,308 @@
+{
+    "config": {
+        "color": "#D3D3D3"
+    },
+    "Title": {
+        "question": "My Sand Garden Troubleshooting - Note: this troubleshoot transcript was converted by gemini and is not recommended",
+        "answers": [
+            {
+                "answer": "Start",
+                "nextStep": "SelectIssue"
+            }
+        ]
+    },
+    "SelectIssue": {
+        "question": "What is the issue?",
+        "answers": [
+            {
+                "answer": "My Sand Garden isn't turning on.",
+                "nextStep": "CheckUSBBreadboard"
+            },
+            {
+                "answer": "One or both of the motors aren't working.",
+                "nextStep": "CheckMotorConnections"
+            },
+            {
+                "answer": "The patterns run, but look kind of messed up.",
+                "nextStep": "PatternsMessedUpIntro"
+            },
+            {
+                "answer": "The arm is jamming or getting stuck.",
+                "nextStep": "CheckMechanismJammingInitial"
+            },
+            {
+                "answer": "The LED bar or joystick isn't working.",
+                "nextStep": "CheckLEDPower"
+            }
+        ]
+    },
+
+    "CheckUSBBreadboard": {
+        "question": "Is the USB cable plugged into the breadboard (not the microcontroller)?",
+        "answers": [
+            {
+                "answer": "Yes",
+                "nextStep": "CheckPreviousBattery"
+            },
+            {
+                "answer": "No",
+                "nextStep": "PlugIntoBreadboardPort"
+            }
+        ]
+    },
+    "PlugIntoBreadboardPort": {
+        "question": "Plug the USB cable into the breadboard USB port, and not the microcontroller's USB port.",
+        "answers": [
+            {
+                "answer": "Done",
+                "nextStep": "CheckPreviousBattery"
+            }
+        ]
+    },
+    "CheckPreviousBattery": {
+        "question": "Is the USB cable plugged into a battery from a previous Hack Pack?",
+        "answers": [
+            {
+                "answer": "Yes",
+                "nextStep": "CheckPowerBankLEDs"
+            },
+            {
+                "answer": "No",
+                "nextStep": "Check5VSource"
+            }
+        ]
+    },
+    "CheckPowerBankLEDs": {
+        "question": "Try pressing the button on the side of the power bank. Do the LEDs on the power bank light up?",
+        "answers": [
+            {
+                "answer": "Yes",
+                "nextStep": "CheckPowerSwitchOn"
+            },
+            {
+                "answer": "No",
+                "nextStep": "ChargeBatteryBank"
+            }
+        ]
+    },
+    "ChargeBatteryBank": {
+        "question": "The battery bank needs to be charged.",
+        "answers": []
+    },
+    "Check5VSource": {
+        "question": "Make sure the cable is plugged into a 5V USB power source like a wall charger or computer USB port.",
+        "answers": [
+             {
+                "answer": "Done",
+                "nextStep": "CheckPowerSwitchOn"
+            }
+        ]
+    },
+     "CheckPowerSwitchOn": {
+        "question": "Make sure the breadboard power switch is in the ON position. Is the Sand Garden turning on now?",
+        "answers": [
+            {
+                "answer": "Yes",
+                "nextStep": "SuccessGeneral"
+            },
+            {
+                "answer": "No",
+                "nextStep": "CheckPowerWiring"
+            }
+        ]
+    },
+    "CheckPowerWiring": {
+        "question": "Check the orientation of all red and black power wires that are plugged into the breadboard. The black wires should all be plugged into the black row of the breadboard, and the red wires should all be plugged into the red row. If one set is backwards, this can cause a short circuit that prevents the Sand Garden from turning on. Does the Sand Garden turn on now?",
+        "answers": [
+            {
+                "answer": "Yes",
+                "nextStep": "SuccessGeneral"
+            },
+            {
+                "answer": "No",
+                "nextStep": "TryDifferentCable"
+            }
+        ]
+    },
+    "TryDifferentCable": {
+        "question": "Try a different USB cable. Not all USB cables can carry power. Does Sand Garden turn on now?",
+        "answers": [
+            {
+                "answer": "Yes",
+                "nextStep": "SuccessGeneral"
+            },
+            {
+                "answer": "No",
+                "nextStep": "MakeSureMicrocontrollerPressed"
+            }
+        ]
+    },
+    "MakeSureMicrocontrollerPressed": {
+        "question": "Make sure the microcontroller is fully pressed into the breadboard. Does the Sand Garden turn on now?",
+        "answers": [
+            {
+                "answer": "Yes",
+                "nextStep": "SuccessGeneral"
+            },
+            {
+                "answer": "No",
+                "nextStep": "ContactSupportMCBreadboard"
+            }
+        ]
+    },
+    "ContactSupportMCBreadboard": {
+        "question": "This might be a problem with the microcontroller or breadboard. Please contact customer support for a replacement.",
+        "answers": []
+    },
+
+    "CheckMotorConnections": {
+        "question": "Make sure the motor wire connectors are fully plugged into the connectors on the motor driver boards. Does it work now?",
+        "answers": [
+            {
+                "answer": "Yes",
+                "nextStep": "SuccessGeneral"
+            },
+            {
+                "answer": "No",
+                "nextStep": "CheckMotorDriverWires"
+            }
+        ]
+    },
+    "CheckMotorDriverWires": {
+        "question": "Are the motor driver wires correctly plugged into the breadboard? The wire color order should match what is shown on the breadboard. Make sure they're fully plugged in too. Is it working now?",
+        "answers": [
+            {
+                "answer": "Yes",
+                "nextStep": "SuccessGeneral"
+            },
+            {
+                "answer": "No",
+                "nextStep": "CheckMCUSBConnection"
+            }
+        ]
+    },
+     "CheckMCUSBConnection": {
+        "question": "Is the USB cable connected to the microcontroller's USB port? If it is, connect the USB cable to the breadboard USB port instead. Does it work now?",
+        "answers": [
+             {
+                "answer": "Yes",
+                "nextStep": "SuccessGeneral"
+            },
+            {
+                "answer": "No",
+                "nextStep": "CheckPowerWiringMotorBranch"
+            }
+        ]
+    },
+    "CheckPowerWiringMotorBranch": {
+         "question": "Check the orientation of all red and black power wires that are plugged into the breadboard. The black wires should all be plugged into the black row of the breadboard, and the red wires should all be plugged into the red row. If one set is backwards, this can cause a short circuit that prevents the Sand Garden from turning on. Does the Sand Garden turn on now?",
+        "answers": [
+            {
+                "answer": "Yes",
+                "nextStep": "SuccessGeneral"
+            },
+            {
+                "answer": "No",
+                "nextStep": "ContactSupportMotors"
+            }
+        ]
+    },
+    "ContactSupportMotors": {
+        "question": "This might be a problem with the motors or motor driver boards. Please contact customer support for a replacement.",
+        "answers": []
+    },
+
+    "PatternsMessedUpIntro": {
+        "question": "The patterns run, but look kind of messed up. This could be a few different problems.",
+        "answers": [
+            {
+                "answer": "Check the motors",
+                "nextStep": "CheckMotorConnections"
+            },
+             {
+                "answer": "Check mechanism jamming",
+                "nextStep": "CheckMechanismJammingInitial"
+            }
+        ]
+    },
+
+    "CheckMechanismJammingInitial": {
+        "question": "Look at the bottom of the sand tray. The two base pieces that join with a puzzle connection should be flat. Are there edges dropping down that the magnet arm could get caught on?",
+        "answers": [
+            {
+                "answer": "Yes",
+                "nextStep": "FixTrayConnection"
+            },
+            {
+                "answer": "No",
+                "nextStep": "CheckAssemblyOrder"
+            }
+        ]
+    },
+    "FixTrayConnection": {
+        "question": "Disassemble the sand tray and try to flatten out the connection between the puzzle base pieces. Cover the seam with clear tape if needed. Is the mechanism still jamming?",
+        "answers": [
+            {
+                "answer": "Yes",
+                "nextStep": "ContactSupportJamming"
+            },
+            {
+                "answer": "No",
+                "nextStep": "SuccessGeneral"
+            }
+        ]
+    },
+    "CheckAssemblyOrder": {
+        "question": "Double check your build against the instructions to make sure everything was assembled in the correct order. With everything assembled correctly, is the mechanism still jamming?",
+        "answers": [
+             {
+                "answer": "Yes",
+                "nextStep": "ContactSupportJamming"
+            },
+            {
+                "answer": "No",
+                "nextStep": "SuccessGeneral"
+            }
+        ]
+    },
+    "ContactSupportJamming": {
+        "question": "We might need to see pictures or video to help with this. Please contact customer support. You can also get on the Discord for further help!",
+        "answers": []
+    },
+
+    "CheckLEDPower": {
+        "question": "Make sure that the power wires are plugged in to the breadboard correctly. The red wire should be in the red row, the black wire in the black row. Does it work now?",
+        "answers": [
+            {
+                "answer": "Yes",
+                "nextStep": "SuccessGeneral"
+            },
+            {
+                "answer": "No",
+                "nextStep": "CheckLEDSignal"
+            }
+        ]
+    },
+    "CheckLEDSignal": {
+        "question": "Is the signal wire plugged into the correct spot on the breadboard? This is the purple wire for the LED bar, and the set of green, yellow, and orange wires for the joystick. Does it work now?",
+        "answers": [
+             {
+                "answer": "Yes",
+                "nextStep": "SuccessGeneral"
+            },
+            {
+                "answer": "No",
+                "nextStep": "ContactSupportLEDJoystick"
+            }
+        ]
+    },
+    "ContactSupportLEDJoystick": {
+        "question": "This might be a problem with the joystick or LED bar. Please contact customer support for a replacement.",
+        "answers": []
+    },
+    
+    "SuccessGeneral": {
+        "question": "Nice! It seems to be working now.",
+        "answers": []
+    }
+}

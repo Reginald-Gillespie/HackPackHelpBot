@@ -55,13 +55,13 @@
         {
             "title": "Arduino red light blinking on full battery",
             "message": "If the `PWR` light is blinking on the arduino, that likely means something is shorting. Check that you don't have any backwards black and red wires."
+        },
+        {
+            "title": "Connecting an Ultrasonic Sensor to the Breadboard",
+            "message": "See this video clip: https://www.youtube.com/clip/Ugkxwagi5_dizmSQrOdtyFtvkn5_6Bg17E7h"
         }
     ],
     "ide": [
-        {
-            "title": "Arduino IDE Setup Guide",
-            "message": "https://discord.com/channels/1229106258749948056/1255274074343473293/1255274204673347585"
-        },
         {
             "title": "Allow IDE without administrator",
             "message": "Best option is Arduino IDE. Alternative would be modifying some security settings per https://discord.com/channels/1229106258749948056/1262069792643219536/1262917038293389444"
@@ -117,6 +117,10 @@
         {
             "title": "Coding Guide",
             "message": "```\nWKoA's writeup: https://discord.com/channels/1229106258749948056/1255319724611600384/1255319724611600384\n\nDan + Evan's thread: https://discord.com/channels/1229106258749948056/1235701503096782911/1235701578615361647\n\nBrooksy's youtube: <https://www.youtube.com/@HackPackHackers>, especially key concepts of coding video: <https://discord.com/channels/1229106258749948056/1356416720826536070/1356416720826536070>\n\nJonathan's resources: https://discord.com/channels/1229106258749948056/1245218219233382461/1321587828253261895\n```"
+        },
+        {
+            "title": "Arduino IDE Setup Guide",
+            "message": "https://discord.com/channels/1229106258749948056/1255274074343473293/1255274204673347585\n\nTEST"
         }
     ],
     "label": [
