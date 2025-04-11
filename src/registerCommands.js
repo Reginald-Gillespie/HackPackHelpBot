@@ -3,6 +3,9 @@ const { REST, Routes } = require('discord.js');
 const fs = require("fs");
 const path = require("path");
 
+const Storage = require('./modules/storage');
+const storage = global.storage = new Storage();
+
 const commands = [];
 const commandsPath = path.join(__dirname, 'commands');
 const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));

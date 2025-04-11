@@ -12,6 +12,8 @@ module.exports = {
                 { name: "AI Pings Killswitch", value: "AI Pings Killswitch" },
                 { name: "AI AutoHelp Killswitch", value: "AI AutoHelp Killswitch" },
                 { name: "Dup Notif Killswitch", value: "Dup Notif Killswitch" },
+                { name: "Whitelist Tag", value: "Whitelist Tag" },
+                { name: "Blacklist Tag", value: "Blacklist Tag" },
                 { name: "Restart", value: "Restart" },
             ).setRequired(true)
         )
@@ -57,9 +59,28 @@ module.exports = {
                 storage.AIAutoHelp = adminInput ? adminInput : false;
                 return cmd.reply({ content: `AI AutoHelp has been ${adminInput ? `set to guild ${adminInput}` : `disabled`}`, ephemeral })
 
+            case "AI Tagger Killswitch":
+                storage.autoTagger = !storage.autoTagger;
+                return cmd.reply({ content: `AI auto tagger has been ${storage.autoTagger ? "enabled" : "disabled"}`, ephemeral })
+                
             case "Dup Notif Killswitch":
                 storage.dupeNotifs = !storage.dupeNotifs;
                 return cmd.reply({ content: `Duplicate question notifs have been ${storage.dupeNotifs ? "enabled" : "disabled"}`, ephemeral })
+
+            case "Blacklist Tag":
+                if (!storage.allowedTags) storage.allowedTags = [];
+                storage.allowedTags.splice(storage.allowedTags.indexOf(adminInput), 1);
+                storage.savePrivStorage();
+                return cmd.reply({ content: "Tag has been removed", ephemeral });
+                
+            case "Whitelist Tag":
+                if (!storage.allowedTags) storage.allowedTags = [];
+                if (!storage.allowedTags.includes(adminInput)) {
+                    storage.allowedTags.push(adminInput);
+                    storage.savePrivStorage();
+                    return cmd.reply({ content: "Tag has been added", ephemeral });
+                }   
+                return cmd.reply({ content: "This tag is already whitelisted.", ephemeral });
 
             case "Restart":
                 if (ephemeral) {

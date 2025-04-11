@@ -490,7 +490,8 @@ class AutoTaggerAI {
                 const appliedTags = message.channel.appliedTags;
                 if (appliedTags.length == 0) {
                     // If no tags were applied - time for gemini to apply them
-                    const availableTags = message.channel.parent.availableTags;
+                    const availableTags = message.channel.parent.availableTags
+                        .filter(tag => storage.allowedTags.includes(tag.name));
 
                     // Feed through model
                     const model = this.buildModel(availableTags);
@@ -511,10 +512,17 @@ class AutoTaggerAI {
                     console.log("Chosen tags:", tagNames);
                     console.log("=======    ========    ======= ");
 
-                    const tagsToApply = availableTags.filter(tag => tagNames.includes(tag.name));
+                    const tagsToApply = availableTags
+                        .filter(tag => tagNames.includes(tag.name));
+
                     if (tagsToApply.length > 0) {
                         await message.channel.setAppliedTags(tagsToApply.map(tag => tag.id));
+                        
+                        message.channel.send(
+                            `-# No tags were applied, so I added \`${tagsToApply.map(tag => tag.name).join("`, `")}\``
+                        )
                     }
+
                 }
             }
         }
