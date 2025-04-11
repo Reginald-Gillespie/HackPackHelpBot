@@ -1,13 +1,17 @@
 const { Events } = require("discord.js");
-const AutoReplyAI = require('../modules/autoReplyAI');
+const { AutoReplyAI, AutoTaggerAI } = require('../modules/autoReplyAI');
 const utils = require('../modules/utils');
 const MarkRobot = require('../modules/markRobot');
+const { ChannelType } = require("discord.js");
+const { GoogleGenerativeAI, FunctionCallingMode, SchemaType } = require("@google/generative-ai");
+
 
 module.exports = {
     name: Events.MessageCreate,
     async execute(message, client, storage) {
         if (message.author.bot) return;
 
+        // Mark Robot
         let repliedMessage = message.referenceData;
         if (!repliedMessage && message.reference) {
             repliedMessage = message.referenceData = await message.channel.messages.fetch(message.reference.messageId)
@@ -47,13 +51,17 @@ module.exports = {
             message.reply(robotsReply);
         }
 
-        AutoReplyAI.messageHandler(message); // Keep this as is
+        // Auto Reply AI
+        AutoReplyAI.messageHandler(message);
+
+        // Auto Tag AI
+        AutoTaggerAI.messageHandler(message);
 
         const authorID = message.author.id;
         let repeatQuestions = storage.cache.repeatQuestions;
         repeatQuestions[authorID] = repeatQuestions[authorID] || [] //{message: "", channelID: 0, repeats: 0}
 
-        // Find/create message
+        //#region Repeat Detection
         let existingQuestion = repeatQuestions[authorID].find(q => utils.areTheSame(message.content, q.message));
         if (existingQuestion) {
             if (existingQuestion.channelID !== message.channel.id && existingQuestion.guildId == message.guildId) {
@@ -96,5 +104,6 @@ module.exports = {
                 existingQuestion.originalLink = `https://discord.com/channels/${message.guild.id}/${message.channel.id}/${message.id}`;
             }
         }
+        //#endregion
     }
 };
