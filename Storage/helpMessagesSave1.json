@@ -23,12 +23,12 @@
             "message": "You can buy them at https://bulkdominoes.com/ or you can 3d print them: https://www.printables.com/model/1057620-hack-pack-domino"
         },
         {
-            "title": "Domino Robot Not Turning On",
-            "message": "Check for backwards red and black wires, and backwards H-Bridge wires.\r\nIf these are all correct, make sure your battery is charged."
-        },
-        {
             "title": "Domino IR Control",
             "message": "Instructions and code for adding IR control to the domino robot are here: https://discord.com/channels/1229106258749948056/1257938635295031366/1257938635295031366\n\nA video explaining this further can be found at https://youtu.be/WLICyCNntyY"
+        },
+        {
+            "title": "Domino Robot Not Turning On",
+            "message": "Check for backwards red and black wires, and backwards H-Bridge wires. This can cause a short, and can make the Arduino's red `PWR` flash for a second.\n\nIf all yours wires are all correct, make sure your battery is charged."
         }
     ],
     "general": [
@@ -51,6 +51,10 @@
         {
             "title": "All Known Boxes",
             "message": "Here is a list of all boxes we know of: https://discord.com/channels/1229106258749948056/1245218219233382461/1312093917289779272"
+        },
+        {
+            "title": "Arduino red light blinking on full battery",
+            "message": "If the `PWR` light is blinking on the arduino, that likely means something is shorting. Check that you don't have any backwards black and red wires."
         }
     ],
     "ide": [
@@ -77,10 +81,6 @@
         {
             "title": "Mac Permission Issues",
             "message": "https://discord.com/channels/1229106258749948056/1347285216107954257/1347316769974648842"
-        },
-        {
-            "title": "Coding Guide",
-            "message": "```\r\nWKoA's writeup: https://discord.com/channels/1229106258749948056/1255319724611600384/1255319724611600384\r\n\r\nDan + Evan's thread: https://discord.com/channels/1229106258749948056/1235701503096782911/1235701578615361647\r\n\r\nBrooksy's youtube: <https://www.youtube.com/@HackPackHackers>\r\n\r\nJohnathan's resources: https://discord.com/channels/1229106258749948056/1245218219233382461/1321587828253261895\r\n```"
         },
         {
             "title": "IDE Not Connecting Checklist",
@@ -113,6 +113,10 @@
         {
             "title": "Reflash Bootloader (fix stk500_getsync error)",
             "message": "if you are getting the stk500_getsync error, first make sure you are using the provided cable, other cables can cause this issue.\n\nIf you are using the proper cable and the issue still occurs, see this thread for mor information about the issue and https://discord.com/channels/1229106258749948056/1342582839736012843/1342582839736012843. \n\nBefore requesting a replacement arduino, make sure uploading works on a different arduino, confirming it is an arduino issue, not a computer issue."
+        },
+        {
+            "title": "Coding Guide",
+            "message": "```\nWKoA's writeup: https://discord.com/channels/1229106258749948056/1255319724611600384/1255319724611600384\n\nDan + Evan's thread: https://discord.com/channels/1229106258749948056/1235701503096782911/1235701578615361647\n\nBrooksy's youtube: <https://www.youtube.com/@HackPackHackers>, especially key concepts of coding video: <https://discord.com/channels/1229106258749948056/1356416720826536070/1356416720826536070>\n\nJonathan's resources: https://discord.com/channels/1229106258749948056/1245218219233382461/1321587828253261895\n```"
         }
     ],
     "label": [
