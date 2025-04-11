@@ -7,7 +7,18 @@ const { GoogleGenerativeAI, FunctionCallingMode, SchemaType } = require("@google
 const NodeCache = require("node-cache");
 const { isHelpRequest, getHelpMessageBySubjectTitle } = require('../modules/utils');
 const tripleBacktick = '```'
+const { ChannelType, PermissionsBitField } = require("discord.js")
 
+// Per-box information given to the AI.
+const subtopicInfoMap = {
+    "turret": "This is the IR Turret. This box uses an IR remote to control a 3 axis turret that shoots foam darts.",
+    "domino-robot": "This is the Domino Robot. This box is a simple line(black/white tape)-following robot that lays down dominos. It uses two IR object sensors to stay centered over the line",
+    "label": "This is the Label Maker. This box moves a pen up and down on a Y motor, and rolls take with the X motor to draw letters.",
+    "sandy": "This is the Sand Garden. This box is a small zen sand garden using two stepper motors to move arms moving a magnetic ball in patterns.",
+    "laser-tag": "This is the IR Laser Tag. This box has two IR laser tag guns, each connected to a pair of goggles with receivers that dim when you are shot.",
+    "balance": "This is the Balance Bot. This is a classic bot that balances on two wheels.",
+    "ide": "This is the coding IDE. These boxes use ae custom branded online IDE (which in turn uses a branded Arduino Create Agent to allow the browser to connect to the arduino) to code the projects. Some people prefer other IDEs like the Arduino IDE, but these take more setup work and are only advised when the user requests it. A lot of users may refer to coding as \"Hacking\", as this is the language the product is advertised with."
+}
 
 // Setup AI data
 const stage1SystemPrompt = 
@@ -37,8 +48,6 @@ The user is currently asking their question in the thread: {channelInfo}
 Here is a list of each FAQ you can select from:
 0. No response is a confident match.
 {FAQs}`;
-
-
 
 const stage2SystemPrompt = 
 `# Behavior
@@ -79,16 +88,41 @@ If the FAQ is *related to the conversation*, but not helpful to single question 
 The single question at hand will be provided shortly by the user.
 `
 
-// TODO: pull these from a 'special' help message (make that a filterable flag/title?),
-const subtopicInfoMap = {
-    "turret": "This is the IR Turret. This box uses an IR remote to control a 3 axis turret that shoots foam darts.",
-    "domino-robot": "This is the Domino Robot. This box is a simple line(black/white tape)-following robot that lays down dominos. It uses two IR object sensors to stay centered over the line",
-    "label": "This is the Label Maker. This box moves a pen up and down on a Y motor, and rolls take with the X motor to draw letters.",
-    "sandy": "This is the Sand Garden. This box is a small zen sand garden using two stepper motors to move arms moving a magnetic ball in patterns.",
-    "label": "This is the IR Laser Tag. This box has two IR laser tag guns, each connected to a pair of goggles with receivers that dim when you are shot.",
-    "balance": "This is the Balance Bot. This is a classic bot that balances on two wheels.",
-    "ide": "This is the coding IDE. These boxes use ae custom branded online IDE (which in turn uses a branded Arduino Create Agent to allow the browser to connect to the arduino) to code the projects. Some people prefer other IDEs like the Arduino IDE, but these take more setup work and are only advised when the user requests it. A lot of users may refer to coding as \"Hacking\", as this is the language the product is advertised with."
+// Just a trial for now:
+const formTaggerPrompt = 
+`- You are an advanced AI assistant designed to add tags to user form posts.
+- Your task is to identify which tags are most appropriate based off the details you know.
+- If the user query does not match any known forms, an empty array is acceptable."
+
+For more context, you are helping answer questions about Arduino subscription box projects, including: {extraInfo}
+
+Please select which out of these tags that apply to the user's message: {tags}
+`
+// TODO: storage whitelist of tags the AI is allowed to apply
+
+const formAutoTaggerSchema = {
+    "type": SchemaType.OBJECT,
+    "properties": {
+        "thoughts": {
+            "type": SchemaType.STRING
+        },
+        "tags": {
+            "type": SchemaType.ARRAY,
+            "items": {
+                "type": SchemaType.STRING
+            }
+        },
+    },
+    required: [
+        "thoughts",
+        "tags"
+    ],
+    propertyOrdering: [
+        "thoughts",
+        "tags"
+    ]
 }
+
 
 const stage1ResponseSchema = {
     type: SchemaType.OBJECT,
@@ -156,7 +190,7 @@ const stage2ResponseSchema = {
     ]
 }
 
-
+// Replying to help messages
 class AutoReplyAI {
     constructor() {
         this.autoAICache = new NodeCache({ stdTTL: 3600, checkperiod: 600 }); // Used to only check posted questions that are "out of the blue" not in a long convo
@@ -410,4 +444,85 @@ class AutoReplyAI {
     
 }
 
-module.exports = new AutoReplyAI();
+
+// Auto tagging forums with relevant tags
+class AutoTaggerAI {
+    constructor() {
+        this.autoAICache = new NodeCache({ stdTTL: 3600, checkperiod: 600 }); // Used to only check posted questions that are "out of the blue" not in a long convo
+        this.helpMessageList = [];
+        this.model = "gemini-2.0-flash";
+        this.genAI = new GoogleGenerativeAI(process.env.GeminiKey);
+    }
+
+    buildModel(tags) {
+        const extraInfo = Object.entries(subtopicInfoMap)
+            .map(([box, content]) => `\n- ${box}: ${content}`)
+            .join("");
+        
+        const compiledSystemPrompt = formTaggerPrompt
+            .replace("{extraInfo}", extraInfo)
+            .replace("{tags}", tags
+                .map(tag => `\n- ${tag.name}`)
+                .join("")
+            );
+
+        return this.genAI.getGenerativeModel({
+            model: this.model,
+            systemInstruction: compiledSystemPrompt,
+            generationConfig: {
+                responseMimeType: "application/json",
+                responseSchema: formAutoTaggerSchema,
+            }
+        });
+    }
+
+    async messageHandler(message) {
+        // Form auto-tagger - TODO: move to separate file
+        if (storage.autoTagger && message.channel.isThread() && message.channel?.parent?.type === ChannelType.GuildForum) {
+            const starterMessage = await message.channel.fetchStarterMessage();
+
+            const botMember = await message.channel.guild.members.fetch(client.user.id);
+            const permissions = message.channel.permissionsFor(botMember);
+
+            if (permissions.has(PermissionsBitField.Flags.ManageThreads) && message.id === starterMessage?.id) {
+                // If this is the original message of the form and we can manage it
+
+                const appliedTags = message.channel.appliedTags;
+                if (appliedTags.length == 0) {
+                    // If no tags were applied - time for gemini to apply them
+                    const availableTags = message.channel.parent.availableTags;
+
+                    // Feed through model
+                    const model = this.buildModel(availableTags);
+                    const geminiSession = model.startChat();
+                    const result = await geminiSession.sendMessage(
+                        `Title: ${starterMessage.channel.name}\n`+
+                        `---\n`+
+                        `${message.content}`
+                    );
+            
+                    const responseText = result.response.text();
+                    const responseJSON = JSON.parse(responseText);
+                    const thoughts = responseJSON.thoughts;
+                    const tagNames = responseJSON.tags;
+
+                    console.log("======= Auto Tagger AI ======= ");
+                    console.log("thoughts:", thoughts);
+                    console.log("Chosen tags:", tagNames);
+                    console.log("=======    ========    ======= ");
+
+                    const tagsToApply = availableTags.filter(tag => tagNames.includes(tag.name));
+                    if (tagsToApply.length > 0) {
+                        await message.channel.setAppliedTags(tagsToApply.map(tag => tag.id));
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+module.exports = {
+    AutoReplyAI: new AutoReplyAI(),
+    AutoTaggerAI: new AutoTaggerAI()
+};
