@@ -30,5 +30,5 @@ This bot tries to use Gemini to answer questions based on loaded help messages, 
 
 ---
 
-You can join the Offical Hack Pack Discord [here](https://discord.gg/gKvCPtbmcg).
+You can join the Offical Hack Pack Discord [here](https://mee6.xyz/i/RAMmVgdtYZ).
 
