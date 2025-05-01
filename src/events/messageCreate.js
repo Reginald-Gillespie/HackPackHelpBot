@@ -36,13 +36,13 @@ module.exports = {
 
             let userHistory = storage.cache.markRobotPingsCache[message.author.id] || {
                 lastChatLoc: "",
-                markRobot: new MarkRobot({ "useDevVersion": true })
+                markRobot: new MarkRobot()
             };
 
             if (message.channelId !== userHistory.lastChatLoc)
                 userHistory = {
                     lastChatLoc: "",
-                    markRobot: new MarkRobot({ "useDevVersion": true })
+                    markRobot: new MarkRobot()
                 };
 
             const robotsReply = await userHistory.markRobot.message(messageContentForRobot, repliedToMessage, repliedToAuthor)
