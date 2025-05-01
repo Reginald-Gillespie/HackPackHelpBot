@@ -6,7 +6,7 @@ const { v4: uuidv4 } = require('uuid');
 
 // Each MarkRobot instance is intended for one person, history and all is managed by this class
 class MarkRobot {
-    constructor({ useDevVersion }={}) {
+    constructor({ useDevVersion=false }={}) {
         this.history = [];
         this.uuid = uuidv4();
         this.pendingQuestion = false;
