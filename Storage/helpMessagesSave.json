@@ -49,10 +49,6 @@
             "message": "For Hack Pack boxes, you will get one box every other month, starting from when you purchased the subscription. The next year, when your subscription auto renews or when you manually renew it, you will start receiving the next set of 6 new level 2 boxes."
         },
         {
-            "title": "All Known Boxes",
-            "message": "Here is a list of all boxes we know of: https://discord.com/channels/1229106258749948056/1245218219233382461/1312093917289779272"
-        },
-        {
             "title": "Arduino red light blinking on full battery",
             "message": "If the `PWR` light is blinking on the arduino, that likely means something is shorting. Check that you don't have any backwards black and red wires."
         },
@@ -63,6 +59,10 @@
         {
             "title": "Crunchlabs Trophy Case Website Link",
             "message": "The CrunchLabs Trophy Case has not yet been pushed live to the website yet, however everything in it is pulled from the `#featured-hacks` channels in this server, so check those out."
+        },
+        {
+            "title": "All Known Boxes",
+            "message": "A list of all boxes we know of can be found at https://discord.com/channels/1229106258749948056/1245218219233382461/1312093917289779272"
         }
     ],
     "ide": [
@@ -119,12 +119,12 @@
             "message": "```\nWKoA's writeup: https://discord.com/channels/1229106258749948056/1255319724611600384/1255319724611600384\n\nDan + Evan's thread: https://discord.com/channels/1229106258749948056/1235701503096782911/1235701578615361647\n\nBrooksy's youtube: <https://www.youtube.com/@HackPackHackers>, especially key concepts of coding video: <https://discord.com/channels/1229106258749948056/1356416720826536070/1356416720826536070>\n\nJonathan's resources: https://discord.com/channels/1229106258749948056/1245218219233382461/1321587828253261895\n```"
         },
         {
-            "title": "Arduino IDE Setup Guide",
-            "message": "https://discord.com/channels/1229106258749948056/1255274074343473293/1255274204673347585"
-        },
-        {
             "title": "Fix IDE ReadOnly",
             "message": "To get out of read-only mode on the IDE, click the Level 2 or Level 3 tabs.\n\nLevel 1 is viewing the code only, no editing. \nLevel 2 only allows editing some variable values.\nLevel 3 is full access to write the code."
+        },
+        {
+            "title": "Arduino IDE Setup Guide",
+            "message": "https://discord.com/channels/1229106258749948056/1365396698138148894/1365396881693343845"
         }
     ],
     "label": [
@@ -205,8 +205,24 @@
     ],
     "card-dealer": [
         {
-            "title": "balance website URL",
-            "message": "<https://www.crunchlabs.com/products/balance-bot>"
+            "title": "Card Dealer Website URL",
+            "message": "<https://www.crunchlabs.com/products/card-dealing-robot>"
+        },
+        {
+            "title": "Tune Card Holder and Flywheel",
+            "message": "This video starting from this timestamp shows how to tune the Card Dealer's gate to only let one card through, and how to make sure the flywheel is set to the correct height: https://youtu.be/qxBkah9Xl2U?list=TLGGcGXJaJUePXMyNzA0MjAyNQ&t=1518"
+        },
+        {
+            "title": "Fix shooting multiple cards",
+            "message": "If your card dealer is shooting multiple cards, there are two likely reasons:\n\n1. You need to tune your IR sensor so it knows when it has shot a single card, see this spot of the build video: https://youtu.be/qxBkah9Xl2U?list=TLGGcGXJaJUePXMyNzA0MjAyNQ&t=1556\n\n2. You need to tune your card dealer's gate to only let a single card through, see this spot of the build video: https://youtu.be/qxBkah9Xl2U?list=TLGGcGXJaJUePXMyNzA0MjAyNQ&t=1518"
+        },
+        {
+            "title": "Cards Getting Stuck at flywheel",
+            "message": "Try these three solutions:\n1. Make sure you have the screws anchoring your servo as in step 24 of the instructions, see https://discord.com/channels/1229106258749948056/1364009252326211676/1366226275211022359\n\n2. Push the flywheel further out, rather than having it as close to the wood.\n\n3. Try reducing friction by putting standard scotch tape on the bottom of the card holder as seen here https://discord.com/channels/1229106258749948056/13640092creat52326211676/1366228201491136594."
+        },
+        {
+            "title": "Not recognizing color tagged player positions",
+            "message": "If your card dealer is not stopping at each color, most likely you need to tune your color sensor. See this spot in the build video for how to do this: https://youtu.be/qxBkah9Xl2U?list=TLGGcGXJaJUePXMyNzA0MjAyNQ&t=1628\n\nTurn the screw as far counter-clockwise as you possibly can. \nBoth the D3 and the D2 lights should be on.\nThen slowly rotate the screw clockwise until the D3 light turns off"
         }
     ]
 }
