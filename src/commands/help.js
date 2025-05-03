@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, AttachmentBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, AttachmentBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, PermissionFlagsBits } = require('discord.js');
 const { getPathToFlowchart } = require('../modules/flowcharter');
 const { postProcessForDiscord, getQuestionAndAnswers } = require('../modules/mermaidParse');
 
@@ -10,13 +10,29 @@ module.exports = {
         .addUserOption(option =>
             option.setName("who").setDescription("Select a user who should walk through this chart").setRequired(false)
         ),
-    async execute(cmd, storage) {
 
+    async execute(cmd, storage) {
+        // Early exit conditions
+
+        // Make sure we have embed message perms
+        const fullChannel = await cmd.channel.fetch();
+        const myPerms = fullChannel.permissionsFor(client.user);
+        if (
+            !myPerms?.has(PermissionFlagsBits.EmbedLinks) || 
+            !myPerms?.has(PermissionFlagsBits.AttachFiles)
+        ) {
+            return cmd.reply({ 
+                content: "Try this command in another channel.\n-# I don't have permission to send messages and/or embed links in this channel.", 
+                ephemeral: false // I want to know when someone hits this to know that they tried 
+            });
+        }
+
+        // Make sure we're in a server
         if (!cmd.guild) {
             return cmd.reply({ content: "This command only works when the bot is installed in the server", ephemeral: true });
         }
 
-        var chart = cmd.options.getString("chart");;
+        var chart = cmd.options.getString("chart");
         const who = cmd.options.getUser("who") || cmd.user;
 
         var [mermaidPath, error] = await getPathToFlowchart(chart, true); // only fetching mermaid path
