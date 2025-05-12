@@ -342,15 +342,6 @@ class AutoReplyAI {
             faqs.push(`${index}. ${faq.title} | (${faq.category})`);
         });
 
-        // for (const subtopic of subtopics) {
-        //     const helpMessages = storage.helpMessages[subtopic];
-        //     helpMessages.forEach(message => {
-        //         this.helpMessageList[index] = { title: message.title, subtopic };
-        //         faqs.push(`${index}. ${message.title} | (${subtopic})`);
-        //         index++;
-        //     });
-        // }
-
         compiledSystemPrompt = compiledSystemPrompt
             .replace("{FAQs}", faqs.join("\n"))
             .replace("{channelInfo}", this.getChannelInfo(discordMessage))

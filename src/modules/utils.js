@@ -55,7 +55,6 @@ module.exports = {
         return message;
     },
     async isCreator(userID) {
-        //Access storage through global
         const config = await ConfigDB.findOne({});
         return config.creators?.includes(userID) || config.admins?.includes(userID)
     },
@@ -117,16 +116,6 @@ module.exports = {
             mapping[combinedTitle] = { title: faq.title, subtopic: faq.category };
         });
 
-        // const subtopics = config.allowedHelpMessageCategories;
-        // for (const subtopic of subtopics) {
-        //     const helpMessages = global.storage.helpMessages[subtopic];
-        //     helpMessages.forEach(message => {
-        //         const combinedTitle = `${index}. ${message.title} | (${subtopic})`;
-        //         mapping[combinedTitle] = { title: message.title, subtopic };
-        //         index++;
-        //     });
-        // }
-
         return mapping;
     },
     async getHelpMessageTitlesArray(subtopic) {
@@ -177,21 +166,6 @@ module.exports = {
     },
     editHelpMessage(subtopic, title, message, formerTitle, formerSubtopic) {
         message = message.match(/[\x20-\x7E\n]/g).join("").trim();
-
-        // if (formerSubtopic && global.storage.helpMessages[formerSubtopic]) {
-        //     global.storage.helpMessages[formerSubtopic] = global.storage.helpMessages[formerSubtopic].filter(m => m.title !== formerTitle);
-        // }
-        // if (!global.storage.helpMessages[subtopic]) {
-        //     global.storage.helpMessages[subtopic] = [];
-        // }
-        // const existingMessageIndex = global.storage.helpMessages[subtopic].findIndex(m => m.title === title);
-        // if (existingMessageIndex > -1) {
-        //     global.storage.helpMessages[subtopic][existingMessageIndex] = { title: title, message: message };
-        // }
-        // else {
-        //     global.storage.helpMessages[subtopic].push({ title: title, message: message });
-        // }
-        // global.storage.saveHelps();
 
         StoredMessages.updateOne({
             category: formerSubtopic,
