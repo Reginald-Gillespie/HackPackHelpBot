@@ -10,12 +10,12 @@ class Storage {
     constructor() {
         const baseDir = path.join(__dirname, "../../Storage");
 
-        this.privStorageLocations = {
-            current: path.join(baseDir, "storage.json"),
-            temp: path.join(baseDir, "storage-temp.json"),
-            backup: path.join(baseDir, "storage-bak.json")
-        };
-        this.data = this.readLatestDatabase([this.privStorageLocations.current, this.privStorageLocations.backup]);
+        // this.privStorageLocations = {
+        //     current: path.join(baseDir, "storage.json"),
+        //     temp: path.join(baseDir, "storage-temp.json"),
+        //     backup: path.join(baseDir, "storage-bak.json")
+        // };
+        // this.data = this.readLatestDatabase([this.privStorageLocations.current, this.privStorageLocations.backup]);
         this.cache = {}; // a temporary global version of storage for convenience
 
         // Proxy to save help messages on write
@@ -91,19 +91,19 @@ class Storage {
         process.exit();
     }
 
-    savePrivStorage() {
-        const tempLocation = this.privStorageLocations.temp;
-        const currentLocation = this.privStorageLocations.current;
-        const backupLocation = this.privStorageLocations.backup;
+    // savePrivStorage() {
+    //     const tempLocation = this.privStorageLocations.temp;
+    //     const currentLocation = this.privStorageLocations.current;
+    //     const backupLocation = this.privStorageLocations.backup;
 
-        fs.writeFileSync(tempLocation, JSON.stringify(this.data, null, 4));
+    //     fs.writeFileSync(tempLocation, JSON.stringify(this.data, null, 4));
 
-        if (fs.existsSync(currentLocation)) {
-            fs.renameSync(currentLocation, backupLocation);
-        }
-        fs.renameSync(tempLocation, currentLocation);
-        // console.log(`Just wrote DB to ${currentLocation}`)
-    }
+    //     if (fs.existsSync(currentLocation)) {
+    //         fs.renameSync(currentLocation, backupLocation);
+    //     }
+    //     fs.renameSync(tempLocation, currentLocation);
+    //     // console.log(`Just wrote DB to ${currentLocation}`)
+    // }
 
     saveHelps() {
         const tempLocation = this.helpMessageLocations.temp;

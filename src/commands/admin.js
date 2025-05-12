@@ -1,5 +1,6 @@
 const { SlashCommandBuilder } = require('discord.js');
 const utils = require('../modules/utils');
+const { ConfigDB } = require('../modules/database');
 
 module.exports = {
     data: new SlashCommandBuilder().setName("admin").setDescription("Quick access admin options")
@@ -23,15 +24,18 @@ module.exports = {
         .addBooleanOption(option =>
             option.setName("private").setDescription("Make response ephemeral").setRequired(false)
         ),
-    async execute(cmd, storage) {
-        const ephemeral = cmd.options.getBoolean("private");
 
-        if (!utils.isCreator(cmd.user.id)) {
+    async execute(cmd) {
+
+        const ephemeral = cmd.options.getBoolean("private");
+        const adminInput = cmd.options.getString("input");
+        const adminChoice = cmd.options.getString("choice");
+
+        if (!(await utils.isCreator(cmd.user.id))) {
             return cmd.reply({ content: "You are not authorized to run this command", ephemeral })
         }
 
-        const adminInput = cmd.options.getString("input");
-        const adminChoice = cmd.options.getString("choice");
+        let config = await ConfigDB.findOne({});
 
         switch (adminChoice) {
             case "Adminize ID":
@@ -40,62 +44,74 @@ module.exports = {
                 if (!adminInput.match(/^\d+$/)) {
                     return cmd.reply({ content: "This command expects a discord ID of the user", ephemeral })
                 }
-                let newUsers = (storage?.[type] || []).concat(adminInput);
+                let newUsers = config[type].concat(adminInput);
                 newUsers = [...new Set(newUsers)] // filter duplicates
-                storage[type] = newUsers;
-                return cmd.reply({ content: "This user has been whitelisted", ephemeral })
+                config[type] = newUsers;
+                // return 
+                cmd.reply({ content: "This user has been whitelisted", ephemeral })
+                break;
 
             case "Unadminize ID":
             case "Unwhitelist ID":
                 var type = adminChoice == "Unadminize ID" ? "admins" : "creators"
-                storage[type] = (storage?.[type] || []).filter(element => element !== adminInput); //adminInput was previously item
-                return cmd.reply({ content: "This user has been removed from the whitelisted", ephemeral })
+                config[type] = config[type].filter(element => element !== adminInput);
+                // config = await ConfigDB.findOneAndUpdate({}, {
+                //     $pull: { [type]: adminInput }
+                // })
+                // return 
+                cmd.reply({ content: "This user has been removed from the whitelisted", ephemeral })
+                break;
 
             case "AI Pings Killswitch":
-                storage.AIPings = !storage.AIPings;
-                return cmd.reply({ content: `AI ping responses have been ${storage.AIPings ? "enabled" : "disabled"}`, ephemeral })
+                config.AIPings = !config.AIPings;
+                cmd.reply({ content: `AI ping responses have been ${config.AIPings ? "enabled" : "disabled"}`, ephemeral })
+                break;
 
             case "AI AutoHelp Killswitch":
-                storage.AIAutoHelp = adminInput ? adminInput : false;
-                return cmd.reply({ content: `AI AutoHelp has been ${adminInput ? `set to guild ${adminInput}` : `disabled`}`, ephemeral })
+                config.AIAutoHelp = adminInput ? adminInput : false;
+                cmd.reply({ content: `AI AutoHelp has been ${adminInput ? `set to guild ${adminInput}` : `disabled`}`, ephemeral })
+                break;
 
             case "AI Tagger Killswitch":
-                storage.autoTagger = !storage.autoTagger;
-                return cmd.reply({ content: `AI auto tagger has been ${storage.autoTagger ? "enabled" : "disabled"}`, ephemeral })
+                config.autoTagger = !config.autoTagger;
+                cmd.reply({ content: `AI auto tagger has been ${config.autoTagger ? "enabled" : "disabled"}`, ephemeral })
+                break;
                 
             case "Dup Notif Killswitch":
-                storage.dupeNotifs = !storage.dupeNotifs;
-                return cmd.reply({ content: `Duplicate question notifs have been ${storage.dupeNotifs ? "enabled" : "disabled"}`, ephemeral })
+                config.dupeNotifs = !config.dupeNotifs;
+                cmd.reply({ content: `Duplicate question notifs have been ${config.dupeNotifs ? "enabled" : "disabled"}`, ephemeral })
+                break;
 
             case "Blacklist Tag":
-                if (!storage.allowedTags) storage.allowedTags = [];
-                storage.allowedTags.splice(storage.allowedTags.indexOf(adminInput), 1);
-                storage.savePrivStorage();
-                return cmd.reply({ content: "Tag has been removed", ephemeral });
+                config.allowedTags.splice(config.allowedTags.indexOf(adminInput), 1);
+                cmd.reply({ content: "Tag has been removed", ephemeral });
+                break;
                 
             case "Whitelist Tag":
-                if (!storage.allowedTags) storage.allowedTags = [];
-                if (!storage.allowedTags.includes(adminInput)) {
-                    storage.allowedTags.push(adminInput);
-                    storage.savePrivStorage();
-                    return cmd.reply({ content: "Tag has been added", ephemeral });
+                if (!config.allowedTags.includes(adminInput)) {
+                    config.allowedTags.push(adminInput);
+                    cmd.reply({ content: "Tag has been added", ephemeral });
                 }   
-                return cmd.reply({ content: "This tag is already whitelisted.", ephemeral });
+                else cmd.reply({ content: "This tag is already whitelisted.", ephemeral });
+                break;
 
             case "Restart":
                 if (ephemeral) {
                     await cmd.reply({ content: "Restarting...", ephemeral: true });
-                    storage.restartData = null; // Don't try to update ephemeral messages
+                    config.restartData = null; // Don't try to update ephemeral messages
                 } else {
                     const message = await cmd.reply({ content: "Restarting...", ephemeral: false, withResponse: true });
-                    storage.restartData = {
+                    config.restartData = {
                         restartedAt: Date.now(),
                         channelId: cmd.channel.id,
                         messageId: message.id || message.interaction?.responseMessageId
                     };
                 }
                 console.log("Restarting...")
+                await config.save();
                 process.exit(0);
         }
+
+        config.save();
     }
 };

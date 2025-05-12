@@ -1,7 +1,8 @@
 const Fuse = require('fuse.js');
 const { getChartOptions, getPathToFlowchart } = require("./flowcharter") //Moved from main file
 const { ComponentType } = require("discord.js");
-const { distance: levenshtein } = require('fastest-levenshtein')
+const { distance: levenshtein } = require('fastest-levenshtein');
+const { ConfigDB, StoredMessages } = require("./database")
 
 const fuseOptions = {
     includeScore: true,
@@ -53,9 +54,10 @@ module.exports = {
         message = message.trim()
         return message;
     },
-    isCreator(userID) {
+    async isCreator(userID) {
         //Access storage through global
-        return global.storage.creators?.includes(userID) || global.storage.admins?.includes(userID)
+        const config = await ConfigDB.findOne({});
+        return config.creators?.includes(userID) || config.admins?.includes(userID)
     },
     sortByMatch(items, text) {
         if (!text) return items;
@@ -101,39 +103,56 @@ module.exports = {
         }
         return null
     },
-    buildGlobalHelps() {
+    async buildGlobalHelps() {
         let mapping = {}
         let index = 1;
-        const subtopics = Object.keys(global.storage.helpMessages);
-        for (const subtopic of subtopics) {
-            const helpMessages = global.storage.helpMessages[subtopic];
-            helpMessages.forEach(message => {
-                const combinedTitle = `${index}. ${message.title} | (${subtopic})`;
-                mapping[combinedTitle] = { title: message.title, subtopic };
-                index++;
-            });
-        }
+        
+        const allMessages = await StoredMessages.find({})
+            .lean()
+            .sort({ category: 1 }) // Group categories for AI
+
+        allMessages.forEach((faq, i) => {
+            const index = i + 1;
+            const combinedTitle = `${index}. ${faq.title} | (${faq.category})`;
+            mapping[combinedTitle] = { title: faq.title, subtopic: faq.category };
+        });
+
+        // const subtopics = config.allowedHelpMessageCategories;
+        // for (const subtopic of subtopics) {
+        //     const helpMessages = global.storage.helpMessages[subtopic];
+        //     helpMessages.forEach(message => {
+        //         const combinedTitle = `${index}. ${message.title} | (${subtopic})`;
+        //         mapping[combinedTitle] = { title: message.title, subtopic };
+        //         index++;
+        //     });
+        // }
+
         return mapping;
     },
-    getHelpMessageTitlesArray(subtopic) {
+    async getHelpMessageTitlesArray(subtopic) {
         if (subtopic == "global") {
-            return Object.keys(this.buildGlobalHelps());
+            return Object.keys(await this.buildGlobalHelps());
         }
-        else if (!global.storage.helpMessages[subtopic]) {
-            return [];
-        }
-        return global.storage.helpMessages[subtopic].map(message => message.title);
+
+        // Grab all titles under this category
+        const faqs = await StoredMessages.find({
+            category: subtopic
+        }).select("title").lean()
+
+        return faqs.map(message => message.title);
     },
-    getHelpMessageBySubjectTitle(subtopic, title) {
+    async getHelpMessageBySubjectTitle(subtopic, title) {
         if (subtopic == "global") {
-            const originalData = this.buildGlobalHelps()[title];
+            const originalData = (await this.buildGlobalHelps())[title];
             [subtopic, title] = [originalData.subtopic, originalData.title];
         }
-        else if (!global.storage.helpMessages[subtopic]) {
-            return "No Help Messages found for this subtopic.";
-        }
-        const message = global.storage.helpMessages[subtopic].find(m => m.title === title);
-        return message ? message.message : "No content found for this query";
+        
+        const message = await StoredMessages.findOne({
+            category: subtopic,
+            title: title
+        })
+
+        return message ? message.message : "I could not find that message";
     },
     appendHelpMessage(subtopic, title, message) {
         subtopic = subtopic.match(/[\w-]/g).join("");
@@ -146,34 +165,48 @@ module.exports = {
             message: message
         };
 
-        if (!global.storage.helpMessages[subtopic]) {
-            global.storage.helpMessages[subtopic] = [];
-        }
-        global.storage.helpMessages[subtopic].push(newMessage);
-        global.storage.saveHelps();
+        let storedMesasge = new StoredMessages({
+            category: subtopic,
+            title: title,
+            message: message
+        });
+        storedMesasge.save()
+            .catch(e => console.log("Error, probably already exists.", e));
+        
         console.log("Message added:", newMessage, "to subtopic:", subtopic);
     },
     editHelpMessage(subtopic, title, message, formerTitle, formerSubtopic) {
         message = message.match(/[\x20-\x7E\n]/g).join("").trim();
 
-        if (formerSubtopic && global.storage.helpMessages[formerSubtopic]) {
-            global.storage.helpMessages[formerSubtopic] = global.storage.helpMessages[formerSubtopic].filter(m => m.title !== formerTitle);
-        }
+        // if (formerSubtopic && global.storage.helpMessages[formerSubtopic]) {
+        //     global.storage.helpMessages[formerSubtopic] = global.storage.helpMessages[formerSubtopic].filter(m => m.title !== formerTitle);
+        // }
+        // if (!global.storage.helpMessages[subtopic]) {
+        //     global.storage.helpMessages[subtopic] = [];
+        // }
+        // const existingMessageIndex = global.storage.helpMessages[subtopic].findIndex(m => m.title === title);
+        // if (existingMessageIndex > -1) {
+        //     global.storage.helpMessages[subtopic][existingMessageIndex] = { title: title, message: message };
+        // }
+        // else {
+        //     global.storage.helpMessages[subtopic].push({ title: title, message: message });
+        // }
+        // global.storage.saveHelps();
 
-        if (!global.storage.helpMessages[subtopic]) {
-            global.storage.helpMessages[subtopic] = [];
-        }
-
-        const existingMessageIndex = global.storage.helpMessages[subtopic].findIndex(m => m.title === title);
-        if (existingMessageIndex > -1) {
-            global.storage.helpMessages[subtopic][existingMessageIndex] = { title: title, message: message };
-        }
-        else {
-            global.storage.helpMessages[subtopic].push({ title: title, message: message });
-        }
-
-        global.storage.saveHelps();
-        console.log("Message edited:", { title: title, message: message }, "in subtopic:", subtopic);
+        StoredMessages.updateOne({
+            category: formerSubtopic,
+            title: formerTitle
+        }, {
+            $set: {
+                category: subtopic,
+                title: title,
+                message: message
+            }
+        })
+            .then(() => {
+                console.log("Message updated:", { title: title, message: message }, "in subtopic:", subtopic);
+            })
+            .catch(e => console.log("Error, probably already exists.", e))
     },
     getPathToFlowchart, //Add to utils
     getChartOptions,

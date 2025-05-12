@@ -17,7 +17,7 @@ module.exports = {
         await cmd.deferReply();
         var chart = cmd.options.getString("chart");
         const overrideCacheAttempt = cmd.options.getBoolean("override-cache")
-        const overrideCache = overrideCacheAttempt && utils.isCreator(cmd.user.id);
+        const overrideCache = overrideCacheAttempt && (await utils.isCreator(cmd.user.id));
         const sendHTML = cmd.options.getBoolean("attach-html")
 
         var [chartPath, error] = await getPathToFlowchart(chart, false, sendHTML, overrideCache);

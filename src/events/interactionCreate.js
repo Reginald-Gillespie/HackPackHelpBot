@@ -2,15 +2,17 @@ const utils = require('../modules/utils');
 const { Events, EmbedBuilder, AttachmentBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require("discord.js");
 const { postProcessForDiscord, getQuestionAndAnswers } = require("../modules/mermaidParse")
 const Fuse = require('fuse.js');
+const { helpHistoryCache } = require("../commands/help")
+const { ConfigDB } = require('../modules/database');
 
 module.exports = {
     name: Events.InteractionCreate,
-    async execute(cmd, client, storage) {
+    async execute(cmd, client) {
         if (cmd.isCommand()) {
             const command = client.commands.get(cmd.commandName);
             if (!command) return;
             try {
-                await command.execute(cmd, storage);
+                await command.execute(cmd);
             } catch (error) {
                 console.error(error);
                 await cmd.reply({ content: 'There was an error while executing this command!', ephemeral: true });
@@ -34,7 +36,7 @@ module.exports = {
             let questionData, answersArray;
 
             if (customId === "Back") {
-                const history = storage.cache[context.id]?.helpHistory;
+                const history = helpHistoryCache.get(context.id);
                 if (!history || !history.length > 1) return cmd.reply({ content: "There is no history to go back to. Please start a new command.", ephemeral: true })
                 if (history.slice(-1)[0][2] !== interactionId) return cmd.reply({ content: "There is no history to go back to. Please start a new command.", ephemeral: true })
 
@@ -44,7 +46,7 @@ module.exports = {
             }
             else {
                 [questionData, answersArray] = getQuestionAndAnswers(mermaidJSON, context.questionID, customId);
-                storage.cache[context.id]?.helpHistory?.push([questionData, answersArray, interactionId])
+                helpHistoryCache.get(context.id).push([questionData, answersArray, interactionId])
             }
 
             const message = await cmd.message.fetch();
@@ -115,7 +117,9 @@ module.exports = {
                     const message = cmd.fields.getTextInputValue('Message');
                     const title = cmd.fields.getTextInputValue(titleFieldID);
                     const subtopic = cmd.fields.getTextInputValue(subtopicFieldID);
-                    const subtopics = Object.keys(storage.helpMessages);
+
+                    const config = await ConfigDB.findOne({});
+                    const subtopics = config.allowedHelpMessageCategories;
 
                     const formerSubtopic = subtopicFieldID.split("-").slice(1).join("-") || subtopic;
                     const formerTitle = titleFieldID.split("-").slice(1).join("-") || title;
@@ -125,7 +129,7 @@ module.exports = {
                         break;
                     }
 
-                    const tilesInNewLocation = utils.getHelpMessageTitlesArray(subtopic);
+                    const tilesInNewLocation = await utils.getHelpMessageTitlesArray(subtopic);
                     if (
                         (tilesInNewLocation.includes(title) && !isEditing) ||
                         (tilesInNewLocation.includes(title) && isEditing && formerSubtopic != subtopic) ||
@@ -144,7 +148,9 @@ module.exports = {
         } else if (cmd.isAutocomplete()) {
             const field = cmd.options.getFocused(true);
             const typedSoFar = field.value;
-            const subtopics = Object.keys(storage.helpMessages);
+
+            const config = await ConfigDB.findOne({});
+            const subtopics = config.allowedHelpMessageCategories;
 
             switch (field.name) {
                 case "title":
@@ -160,7 +166,7 @@ module.exports = {
                     }
 
 
-                    var helpMessagesTitles = utils.getHelpMessageTitlesArray(subtopic);
+                    var helpMessagesTitles = await utils.getHelpMessageTitlesArray(subtopic);
 
                     if (typedSoFar) {
                         helpMessagesTitles = utils.sortByMatch(helpMessagesTitles, typedSoFar); //Simplified

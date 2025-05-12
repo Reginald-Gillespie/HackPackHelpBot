@@ -8,6 +8,8 @@ const NodeCache = require("node-cache");
 const { isHelpRequest, getHelpMessageBySubjectTitle } = require('../modules/utils');
 const tripleBacktick = '```'
 const { ChannelType, PermissionsBitField } = require("discord.js")
+const { ConfigDB, StoredMessages } = require('../modules/database');
+
 
 // Per-box information given to the AI.
 const subtopicInfoMap = {
@@ -98,8 +100,6 @@ For more context, you are helping answer questions about Arduino subscription bo
 
 Please select which out of these tags that apply to the user's message: {tags}
 `
-// TODO: storage whitelist of tags the AI is allowed to apply
-
 const formAutoTaggerSchema = {
     "type": SchemaType.OBJECT,
     "properties": {
@@ -224,11 +224,11 @@ class AutoReplyAI {
         )
     }
 
-    getFaqByNum(num) {
+    async getFaqByNum(num) {
         const selectedHelpMessageTitle = this.helpMessageList[num];
         if (!selectedHelpMessageTitle) return false;
 
-        const helpMessage = getHelpMessageBySubjectTitle(selectedHelpMessageTitle.subtopic, selectedHelpMessageTitle.title);
+        const helpMessage = await getHelpMessageBySubjectTitle(selectedHelpMessageTitle.subtopic, selectedHelpMessageTitle.title);
         if (!helpMessage) return false;
 
         return { message: helpMessage, FAQTitle: selectedHelpMessageTitle.title, subtopic: selectedHelpMessageTitle.subtopic };
@@ -245,11 +245,13 @@ class AutoReplyAI {
             if (!repliedMessage && discordMessage.reference) {
                 repliedMessage = discordMessage.referenceData = await discordMessage.channel.messages.fetch(discordMessage.reference.messageId)
             }
+
+            const config = await ConfigDB.findOne({});
         
             let preliminaryTrigger = (
                 !repliedMessage && // Don't run if it was a reply to smth
                 (
-                    (storage.AIAutoHelp && storage.AIAutoHelp == discordMessage.guildId) ||
+                    (config.AIAutoHelp && config.AIAutoHelp == discordMessage.guildId) ||
                     messageHasForceTrigger
                 ) &&
                 (
@@ -322,21 +324,32 @@ class AutoReplyAI {
     
     // Stage 1:
     // Select relevant FAQ from list of titles and user message
-    buildStage1Model(discordMessage) {
+    async buildStage1Model(discordMessage) {
         let compiledSystemPrompt = stage1SystemPrompt;
         // Build FAQs into the prompt
         const faqs = [];
         let index = 1;
-        const subtopics = Object.keys(storage.helpMessages);
-        for (const subtopic of subtopics) {
-            const helpMessages = storage.helpMessages[subtopic];
-            helpMessages.forEach(message => {
-                this.helpMessageList[index] = { title: message.title, subtopic };
-                faqs.push(`${index}. ${message.title} | (${subtopic})`);
-                index++;
-            });
+        const config = await ConfigDB.findOne({});
 
-        }
+        // Build subtopics
+        const allMessages = await StoredMessages.find({})
+            .lean()
+            .sort({ category: 1 }) // Group categories for AI
+
+        allMessages.forEach((faq, i) => {
+            const index = i + 1;
+            this.helpMessageList[index] = { title: faq.title, subtopic: faq.category };
+            faqs.push(`${index}. ${faq.title} | (${faq.category})`);
+        });
+
+        // for (const subtopic of subtopics) {
+        //     const helpMessages = storage.helpMessages[subtopic];
+        //     helpMessages.forEach(message => {
+        //         this.helpMessageList[index] = { title: message.title, subtopic };
+        //         faqs.push(`${index}. ${message.title} | (${subtopic})`);
+        //         index++;
+        //     });
+        // }
 
         compiledSystemPrompt = compiledSystemPrompt
             .replace("{FAQs}", faqs.join("\n"))
@@ -353,7 +366,7 @@ class AutoReplyAI {
     }
 
     async stage1AIHandler(discordMessage) {
-        const geminiSession = this.buildStage1Model(discordMessage).startChat();
+        const geminiSession = (await this.buildStage1Model(discordMessage)).startChat();
         const result = await geminiSession.sendMessage(discordMessage.content);
 
         const responseText = result.response.text()
@@ -372,7 +385,7 @@ class AutoReplyAI {
             isNaN(confidence) || confidence < this.stage1RequiredConfidence
         ) return false;
 
-        const { message, FAQTitle, subtopic } = this.getFaqByNum(responseNumber);
+        const { message, FAQTitle, subtopic } = await this.getFaqByNum(responseNumber);
         if (!message) return false;
         
         return { FAQ: message, FAQTitle, subtopic };
@@ -445,7 +458,7 @@ class AutoReplyAI {
 }
 
 
-// Auto tagging forums with relevant tags
+// Auto tagging forums with relevant tags - TODO: move to separate file
 class AutoTaggerAI {
     constructor() {
         this.autoAICache = new NodeCache({ stdTTL: 3600, checkperiod: 600 }); // Used to only check posted questions that are "out of the blue" not in a long convo
@@ -477,8 +490,11 @@ class AutoTaggerAI {
     }
 
     async messageHandler(message) {
-        // Form auto-tagger - TODO: move to separate file
-        if (storage.autoTagger && message.channel.isThread() && message.channel?.parent?.type === ChannelType.GuildForum) {
+        const config = await ConfigDB.findOne({})
+            .lean({ defaults: true })
+            .select("autoTagger allowedTags");
+
+        if (config.autoTagger && message.channel.isThread() && message.channel?.parent?.type === ChannelType.GuildForum) {
             const starterMessage = await message.channel.fetchStarterMessage();
 
             const botMember = await message.channel.guild.members.fetch(client.user.id);
@@ -491,7 +507,7 @@ class AutoTaggerAI {
                 if (appliedTags.length == 0) {
                     // If no tags were applied - time for gemini to apply them
                     const availableTags = message.channel.parent.availableTags
-                        .filter(tag => storage.allowedTags.includes(tag.name));
+                        .filter(tag => config.allowedTags.includes(tag.name));
 
                     // Feed through model
                     const model = this.buildModel(availableTags);
