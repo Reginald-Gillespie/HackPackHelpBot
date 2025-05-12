@@ -74,12 +74,17 @@ const connectedPromise = (async () => {
     )
 
     // Finally, make sure certian ones exist
-    const config = await ConfigDB.findOne();
-    if (!config) {
-        // If no config exists, create one
-        const newConfig = new ConfigDB({});
-        await newConfig.save();
-    }
+    let config = await ConfigDB.findOneAndUpdate(
+        { },
+        { },
+        {
+            upsert: true,
+            new: true,
+            setDefaultsOnInsert: true
+        }
+    );
+    if (!config) config = new ConfigDB({});
+    await config.save();
 })();
 
 
