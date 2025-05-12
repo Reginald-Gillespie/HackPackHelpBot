@@ -133,10 +133,6 @@
             "message": "<https://www.crunchlabs.com/products/label>"
         },
         {
-            "title": "Label Light Driver Mode",
-            "message": "https://discord.com/channels/1229106258749948056/1245875544419995649/1287872297927053392"
-        },
-        {
             "title": "Running Extremely Slow",
             "message": "Flash the label code to the domino arduino. You can use the video at https://ide.crunchlabs.com/downloads to set it up.\r\nIf it works with the domino arduino, try reflashing code to the label arduino, if it still isn't working send a DM to @ tom_crunchlabs with your shipping address and he'll send you a replacement arduino for free."
         },
@@ -155,6 +151,10 @@
         {
             "title": "Label Prank Code text replacement",
             "message": "The label maker has an official code modification  that swaps one word that was typed out with a different word when printed. Instructions for how to do this are linked here https://discord.com/channels/1229106258749948056/1361022296763928646/1361022296763928646"
+        },
+        {
+            "title": "Label Light Driver Mode Description",
+            "message": "Light driver mode is where you use the IR line sensor from the domino robot, attack it to where the pen goes, and you put black tape on the purple tape roll and then you try to avoid the tape by moving the joystick up and down. See https://discord.com/channels/1229106258749948056/1287873897152253962/1287873897152253962 for how to modify it to do this"
         }
     ],
     "laser": [
@@ -213,16 +213,20 @@
             "message": "This video starting from this timestamp shows how to tune the Card Dealer's gate to only let one card through, and how to make sure the flywheel is set to the correct height: https://youtu.be/qxBkah9Xl2U?list=TLGGcGXJaJUePXMyNzA0MjAyNQ&t=1518"
         },
         {
-            "title": "Fix shooting multiple cards",
-            "message": "If your card dealer is shooting multiple cards, there are two likely reasons:\n\n1. You need to tune your IR sensor so it knows when it has shot a single card, see this spot of the build video: https://youtu.be/qxBkah9Xl2U?list=TLGGcGXJaJUePXMyNzA0MjAyNQ&t=1556\n\n2. You need to tune your card dealer's gate to only let a single card through, see this spot of the build video: https://youtu.be/qxBkah9Xl2U?list=TLGGcGXJaJUePXMyNzA0MjAyNQ&t=1518"
+            "title": "Not recognizing color tagged player positions",
+            "message": "If your card dealer is not stopping at each color, most likely you need to tune your color sensor. See this spot in the build video for how to do this: https://youtu.be/qxBkah9Xl2U?list=TLGGcGXJaJUePXMyNzA0MjAyNQ&t=1628\n\nTurn the screw as far counter-clockwise as you possibly can. \nBoth the D3 and the D2 lights should be on.\nThen slowly rotate the screw clockwise until the D3 light turns off"
         },
         {
             "title": "Cards Getting Stuck at flywheel",
-            "message": "Try these three solutions:\n1. Make sure you have the screws anchoring your servo as in step 24 of the instructions, see https://discord.com/channels/1229106258749948056/1364009252326211676/1366226275211022359\n\n2. Push the flywheel further out, rather than having it as close to the wood.\n\n3. Try reducing friction by putting standard scotch tape on the bottom of the card holder as seen here https://discord.com/channels/1229106258749948056/13640092creat52326211676/1366228201491136594."
+            "message": "Try these three solutions:\n1. Make sure you have the screws anchoring your servo as in step 24 of the instructions, see https://discord.com/channels/1229106258749948056/1364009252326211676/1366226275211022359\n\n2. Push the flywheel further out, rather than having it as close to the wood.\n\n3. Try reducing friction by putting standard scotch tape on the bottom of the card holder as seen here https://discord.com/channels/1229106258749948056/1364009252326211676/1366228201491136594."
         },
         {
-            "title": "Not recognizing color tagged player positions",
-            "message": "If your card dealer is not stopping at each color, most likely you need to tune your color sensor. See this spot in the build video for how to do this: https://youtu.be/qxBkah9Xl2U?list=TLGGcGXJaJUePXMyNzA0MjAyNQ&t=1628\n\nTurn the screw as far counter-clockwise as you possibly can. \nBoth the D3 and the D2 lights should be on.\nThen slowly rotate the screw clockwise until the D3 light turns off"
+            "title": "Fix shooting multiple cards",
+            "message": "If your card dealer is shooting multiple cards, there are two likely reasons:\n\n1. You need to tune your IR sensor so it knows when it has shot a single card, see this spot of the build video: <https://youtu.be/qxBkah9Xl2U?list=TLGGcGXJaJUePXMyNzA0MjAyNQ&t=1556>\n\n2. You need to tune your card dealer's gate to only let a single card through, see this spot of the build video: <https://youtu.be/qxBkah9Xl2U?list=TLGGcGXJaJUePXMyNzA0MjAyNQ&t=1518>"
+        },
+        {
+            "title": "How to make new games",
+            "message": "To make new games for the card dealer, there are two suggested methods:\n\n1. The harder method, Ctrl+F and search for \"Fish\", since that will  likely appear anywhere with code who's handling changes per game\n\n2. The easier method, start with the code here that is much easier to work with: https://discord.com/channels/1229106258749948056/1366296668818903050/1366296668818903050"
         }
     ]
 }
