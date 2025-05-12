@@ -13,7 +13,7 @@ module.exports = {
             option.setName('file').setDescription('The new mermaid flowchart as a text file').setRequired(false)
         ),
     async execute(cmd) {
-        if (!utils.isCreator(cmd.user.id)) {
+        if (!(await utils.isCreator(cmd.user.id))) {
             return cmd.reply({ content: "You are not authorized to use this command", ephemeral: true });
         }
         const fileUpload = cmd.options.getAttachment("file");

@@ -1,8 +1,14 @@
 const { SlashCommandBuilder, EmbedBuilder, AttachmentBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, PermissionFlagsBits } = require('discord.js');
 const { getPathToFlowchart } = require('../modules/flowcharter');
 const { postProcessForDiscord, getQuestionAndAnswers } = require('../modules/mermaidParse');
+const LRUCache = require("lru-cache").LRUCache;
+const ms = require("ms")
+
+const helpHistoryCache = new LRUCache({ ttl: ms("1h") })
 
 module.exports = {
+    helpHistoryCache,
+    
     data: new SlashCommandBuilder().setName("help").setDescription("Walk a user through the a debugging flowcharts")
         .addStringOption(option =>
             option.setName("chart").setDescription("The chart to walk through").setAutocomplete(true).setRequired(true)
@@ -11,7 +17,7 @@ module.exports = {
             option.setName("who").setDescription("Select a user who should walk through this chart").setRequired(false)
         ),
 
-    async execute(cmd, storage) {
+    async execute(cmd) {
         // Early exit conditions
 
         // Make sure we have embed message perms
@@ -49,9 +55,10 @@ module.exports = {
         }
         const [questionData, answersArray] = getQuestionAndAnswers(mermaidJSON)
 
-        storage.cache[who.id] = {}
-        storage.cache[who.id].helpHistory = []
-        storage.cache[who.id]?.helpHistory.push([questionData, answersArray, cmd.id])
+        // Store so we know what to go back to
+        helpHistoryCache.set(who.id, 
+            [questionData, answersArray, cmd.id]
+        ) // TODO: this should also be keyed by the message the embed is on's ID
 
         const templateColor = parseInt(mermaidJSON.config?.color?.replaceAll("#", "") || "dd8836", 16)
 

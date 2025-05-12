@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, ModalBuilder, ActionRowBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const utils = require('../modules/utils');
+const { ConfigDB } = require("../modules/database");
 
 module.exports = {
     data: new SlashCommandBuilder().setName("edit").setDescription("Edit an existing Help Message")
@@ -9,15 +10,15 @@ module.exports = {
         .addStringOption(option =>
             option.setName("title").setDescription("The Help Message to edit").setAutocomplete(true).setRequired(true)
         ),
-    async execute(cmd, storage) {
-        const isEditing = true;
-
-        if (!utils.isCreator(cmd.member?.user?.id)) {
+    async execute(cmd) {
+        if (!(await utils.isCreator(cmd.member?.user?.id))) {
             return cmd.reply({ content: `You are not authorized to edit messages.`, ephemeral: true });
 
         }
         const createSubtopic = cmd.options.getString("subtopic");
-        const subtopics = Object.keys(storage.helpMessages);
+
+        const config = await ConfigDB.findOne();
+        const subtopics = config.allowedHelpMessageCategories;
 
         if (!subtopics.includes(createSubtopic)) {
             return cmd.reply({ content: "That is not a valid subtopic.", ephemeral: true });
@@ -53,12 +54,12 @@ module.exports = {
         title.setCustomId("T-" + titleToEdit)
 
 
-        if (!utils.getHelpMessageTitlesArray(createSubtopic).includes(titleToEdit)) {
+        if (!(await utils.getHelpMessageTitlesArray(createSubtopic)).includes(titleToEdit)) {
             cmd.reply({ content: "No Help Message exists with that title.", ephemeral: true })
             return;
         }
 
-        const messageContent = utils.getHelpMessageBySubjectTitle(createSubtopic, titleToEdit);
+        const messageContent = await utils.getHelpMessageBySubjectTitle(createSubtopic, titleToEdit);
         message.setValue(messageContent);
 
 

@@ -15,7 +15,7 @@ module.exports = {
 
         if (['❌', '👎', ":x:", ":thumbsdown:"].includes(reaction.emoji.name)) {
             if (reaction.message.author.id !== client.user.id) return;
-            if (!utils.isCreator(user.id)) return;
+            if (!(await utils.isCreator(user.id))) return;
 
             try {
                 await reaction.message.delete();

@@ -8,7 +8,7 @@
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "program": "${workspaceFolder}\\src\\index.js"
+            "program": "${workspaceFolder}/src/index.js"
         },
         {
             "type": "node",
@@ -17,7 +17,7 @@
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "program": "${workspaceFolder}\\src\\registerCommands.js"
+            "program": "${workspaceFolder}/src/registerCommands.js"
         },
         {
             "type": "node",
@@ -26,7 +26,7 @@
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "program": "${workspaceFolder}\\Flowcharts\\render.js"
+            "program": "${workspaceFolder}/Flowcharts/render.js"
         },
         {
             "type": "node",
@@ -35,7 +35,7 @@
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "program": "${workspaceFolder}\\test.js"
+            "program": "${workspaceFolder}/test.js"
         }
     ]
 }

@@ -1,11 +1,12 @@
 const { SlashCommandBuilder } = require('discord.js');
 const utils = require('../modules/utils');
+const { ConfigDB } = require('../modules/database');
 
 module.exports = {
     // Auto expand lookup commands into each one
-    data: (() => {
-        let storage = global.storage;
-        const subtopics = Object.keys(storage.helpMessages);
+    data: (async () => {
+        const config = await ConfigDB.findOne({});
+        const subtopics = config.allowedHelpMessageCategories;
 
         const subtopicDescriptions = {};
         subtopics.forEach(subtopic => {
@@ -30,7 +31,7 @@ module.exports = {
         const subtopic = cmd.options.getSubcommand();
         const messageTopic = cmd.options.getString("title");
         const isVisible = cmd.options.getBoolean("visible");
-        const reply = utils.getHelpMessageBySubjectTitle(subtopic, messageTopic);
+        const reply = await utils.getHelpMessageBySubjectTitle(subtopic, messageTopic);
 
         // Check if a message was actually found:
         if (reply === "No content found for this query") {

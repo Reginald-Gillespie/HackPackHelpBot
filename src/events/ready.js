@@ -1,12 +1,16 @@
+const { ConfigDB } = require('../modules/database');
+
 module.exports = {
     name: 'ready',
     once: true, // Important: This event should only fire once.
-    async execute(client) { // Pass in client and storage
+    async execute(client) {
         console.log(`Logged in as ${client.user.tag}`);
 
         try {
             const restartUpdateThreshold = 20000;
-            const rebootData = storage.restartData;
+
+            const config = await ConfigDB.findOne({});
+            const rebootData = config.restartData;
 
             if (!rebootData) {
                 beta && console.log("No reboot data")
@@ -41,7 +45,8 @@ module.exports = {
             } else {
                 console.log("Restart message is too old")
             }
-            storage.restartData = null;
+            delete config.restartData;
+            config.save();
         } catch (error) {
             console.error("Error in ready event:", error);
         }
