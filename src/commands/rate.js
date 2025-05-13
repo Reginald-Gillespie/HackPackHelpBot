@@ -133,26 +133,25 @@ module.exports = {
                 ephemeral: true,
             });
 
-            const criteria = ['Overall', 'Hackability', 'Usability', 'Building', 'Design', 'CodeCleanliness'];
-            const totalCriteria = criteria.length;
+            const criteria = rankingData.map(r => r.key);
+            const totalCriteria = rankingData.length;
 
             // User-specific state for this interaction instance
             const userRatingsState = {
                 userId: cmd.user.id,
                 boxName: null,
-                ratings: {}, // Stores { criterionName: ratingValueString }
+                ratings: {}, // Stores { key: ratingValueString }
                 currentCriterionIndex: 0,
             };
 
             // Helper function for displaying a criterion question
             async function displayCriterionQuestion(cmpInteraction, state, hasExistingRatingInfo = false) {
                 const criterionIndex = state.currentCriterionIndex;
-                const criterion = criteria[criterionIndex];
+                const { key, display, description } = rankingData[criterionIndex];
                 const selectedBox = boxes.find(box => box.boxName === state.boxName);
 
                 if (!selectedBox) {
                     await cmpInteraction.update({ content: 'Error: Selected box not found. Please try again.', embeds: [], components: [] });
-                    // Collector will be stopped by the main logic if this returns and causes an error.
                     throw new Error("Selected box not found during displayCriterionQuestion");
                 }
 
@@ -160,33 +159,26 @@ module.exports = {
                     .setTitle(`Currently rating: ${selectedBox.boxName}`)
                     .setColor(0x00AE86)
                     .setURL(selectedBox.boxURL || null)
-                    .setFooter({ text: `Question ${criterionIndex + 1} of ${totalCriteria}` })
-                
-
-                
-                // if (hasExistingRatingInfo && criterionIndex === 0) {
-                //     embed.addFields(
-                //         { name: 'Note', value: 'You have rated this box before. Selecting a new rating will override it.' }
-                //     );
-                // }
+                    .setFooter({ text: `Question ${criterionIndex + 1} of ${totalCriteria}` });
 
                 let ratingsSoFarString = "";
-                for (const crit of criteria) {
-                    if (state.ratings[crit]) {
-                        ratingsSoFarString += `**${crit}**: ${getEmojiRatingFromNum(state.ratings[crit])}\n`; // getEmojiRatingFromNum(state.ratings[crit])
+                for (const { key: critKey, display: critLabel } of rankingData) {
+                    if (state.ratings[critKey]) {
+                        ratingsSoFarString += `**${critLabel}**: ${getEmojiRatingFromNum(state.ratings[critKey])}\n`;
                     }
                 }
 
                 if (ratingsSoFarString) {
-                    // embed.addFields({ name: 'Your Ratings So Far:', value: ratingsSoFarString.trim(), inline: false });
                     embed.setDescription(
-                        'Your Ratings So Far:\n'+
-                        ratingsSoFarString.trim() + "\n\n" + 
-                        `## Category: **${criterion}**`
-                    )
+                        'Your Ratings So Far:\n' +
+                        ratingsSoFarString.trim() + "\n\n" +
+                        `## Category: **${display}**\n${description}`
+                    );
+                } else {
+                    embed.setDescription(`## Category: **${display}**\n${description}`);
                 }
 
-                const ratingEmojis = [ "🙁", "😐", "🙂", "😀", "😁" ]
+                const ratingEmojis = [ "🙁", "😐", "🙂", "😀", "😁" ];
                 const ratingOptions = Array.from({ length: 5 }, (_, idx) => {
                     const ratingValue = idx + 1;
                     const stars = '⭐'.repeat(ratingValue);
@@ -198,15 +190,15 @@ module.exports = {
                 });
 
                 const ratingMenu = new StringSelectMenuBuilder()
-                    .setCustomId(`rate_criterion_${criterion.toLowerCase()}`)
-                    .setPlaceholder(`Rate ${criterion}` + (state.ratings[criterion] ? ` (Current: ${state.ratings[criterion]} ⭐)` : ''))
+                    .setCustomId(`rate_criterion_${key}`)
+                    .setPlaceholder(`Rate ${display}` + (state.ratings[key] ? ` (Current: ${state.ratings[key]} ⭐)` : ''))
                     .addOptions(ratingOptions);
 
                 const components = [new ActionRowBuilder().addComponents(ratingMenu)];
                 const actionRowButtons = new ActionRowBuilder();
 
                 if (criterionIndex > 0) {
-                     actionRowButtons.addComponents(
+                    actionRowButtons.addComponents(
                         new ButtonBuilder()
                             .setCustomId('previous_criterion')
                             .setLabel('Back')
@@ -219,7 +211,7 @@ module.exports = {
                         .setLabel('Cancel Rating')
                         .setStyle(ButtonStyle.Danger)
                 );
-                if(actionRowButtons.components.length > 0) components.push(actionRowButtons);
+                if (actionRowButtons.components.length > 0) components.push(actionRowButtons);
 
                 await cmpInteraction.update({
                     embeds: [embed],
@@ -297,16 +289,15 @@ module.exports = {
 
                     } else if (i.customId.startsWith('rate_criterion_')) {
                         if (!i.isStringSelectMenu()) return;
-                        const currentCriterionName = criteria[userRatingsState.currentCriterionIndex];
-                        const expectedCustomId = `rate_criterion_${currentCriterionName.toLowerCase()}`;
+                        const { key, display } = rankingData[userRatingsState.currentCriterionIndex];
+                        const expectedCustomId = `rate_criterion_${key}`;
 
                         if (i.customId !== expectedCustomId) {
-                            console.warn("Mismatched criterion selection.", i.customId, expectedCustomId);
-                            await i.reply({content: "There was an issue with your selection. Please try again or cancel.", ephemeral: true});
+                            await i.reply({ content: "There was an issue with your selection. Please try again or cancel.", ephemeral: true });
                             return;
                         }
 
-                        userRatingsState.ratings[currentCriterionName] = i.values[0];
+                        userRatingsState.ratings[key] = i.values[0];
                         userRatingsState.currentCriterionIndex++;
 
                         if (userRatingsState.currentCriterionIndex < totalCriteria) {
@@ -324,23 +315,23 @@ module.exports = {
                         }
                     } else if (i.customId === 'submit_all_ratings') {
                         if (!i.isButton()) return;
-                        const allRated = criteria.every(c => userRatingsState.ratings[c] !== undefined);
+                        const allRated = rankingData.every(c => userRatingsState.ratings[c.key] !== undefined);
                         if (!allRated) {
                             for (let k = 0; k < totalCriteria; k++) {
-                                if (!userRatingsState.ratings[criteria[k]]) {
+                                if (!userRatingsState.ratings[rankingData[k].key]) {
                                     userRatingsState.currentCriterionIndex = k;
-                                    await i.deferUpdate(); // Acknowledge interaction before calling display
-                                    await displayCriterionQuestion(i, userRatingsState); // Will perform i.update
-                                    await i.followUp({ content: `Please complete all ratings. You missed: **${criteria[k]}**.`, ephemeral: true });
+                                    await i.deferUpdate();
+                                    await displayCriterionQuestion(i, userRatingsState);
+                                    await i.followUp({ content: `Please complete all ratings. You missed: **${rankingData[k].display}**.`, ephemeral: true });
                                     return;
                                 }
                             }
                         }
 
                         const ratingsToSave = {};
-                        criteria.forEach(crit => {
-                            if (userRatingsState.ratings[crit]) {
-                                ratingsToSave[crit] = parseInt(userRatingsState.ratings[crit], 10);
+                        rankingData.forEach(({ key }) => {
+                            if (userRatingsState.ratings[key]) {
+                                ratingsToSave[key] = parseInt(userRatingsState.ratings[key], 10);
                             }
                         });
 
@@ -357,11 +348,11 @@ module.exports = {
                             // .setTimestamp();
                         
                         let summary = "";
-                        for(const crit of criteria){
-                            // if(ratingsToSave[crit]) summary += `**${crit}**: ${'⭐'.repeat(ratingsToSave[crit])}\n`;
-                            if(ratingsToSave[crit]) summary += `**${crit}**: ${getEmojiRatingFromNum(ratingsToSave[crit])}\n`;
+                        for (const { key, display } of rankingData) {
+                            if (ratingsToSave[key]) {
+                                summary += `**${display}**: ${getEmojiRatingFromNum(ratingsToSave[key])}\n`;
+                            }
                         }
-                        // if(summary) finalEmbed.addFields({name: "Your Ratings", value: summary.trim()});
 
                         await i.update({ embeds: [finalEmbed], components: [] });
                         collector.stop('submitted');

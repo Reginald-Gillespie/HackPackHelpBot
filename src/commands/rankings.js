@@ -8,20 +8,10 @@ const {
     ButtonStyle,
 } = require('discord.js');
 const { BoxData, BoxReviews } = require('../modules/database');
-const { getEmojiRatingFromNum } = require('./rate');
+const { getEmojiRatingFromNum, rankingData } = require('./rate');
 
-// Weights for different criteria when calculating overall rating
-const RATING_WEIGHTS = {
-    Overall: 1,
-    Hackability: 1,
-    Usability: 1,
-    Building: 1,
-    Design: 1,
-    CodeCleanliness: 1
-};
-
-// The list of all criteria used for ratings
-const CRITERIA = ['Hackability', 'Usability', 'Building', 'Design', 'CodeCleanliness'];
+const CRITERIA = rankingData.map(r => r.key);
+const RATING_WEIGHTS = Object.fromEntries(rankingData.map(r => [r.key, r.weight]))
 
 // Calculate the weighted average rating of a box or creator
 async function calculateAverageRatings(reviews) {
@@ -175,57 +165,6 @@ function createCreatorRankingEmbed(creatorName, creatorData) {
     embed.setDescription(ratingsDescription);
     
     return embed;
-}
-
-// Create a leaderboard embed for boxes or creators
-function createLeaderboardEmbed(items, type, page = 0, pageSize = 6, sortByCriterion = 'Overall') {
-    // Sort items by the specified criterion
-    items.sort((a, b) => {
-        const ratingA = type === 'box' 
-            ? (a.averageRatings[sortByCriterion] || 0) 
-            : (a.ratings[sortByCriterion] || 0);
-            
-        const ratingB = type === 'box' 
-            ? (b.averageRatings[sortByCriterion] || 0) 
-            : (b.ratings[sortByCriterion] || 0);
-            
-        return ratingB - ratingA; // Descending order
-    });
-
-    const totalPages = Math.ceil(items.length / pageSize);
-    const startIndex = page * pageSize;
-    const endIndex = Math.min(startIndex + pageSize, items.length);
-    const pageItems = items.slice(startIndex, endIndex);
-
-    const embed = new EmbedBuilder()
-        .setTitle(`${type === 'box' ? 'Box' : 'Creator'} Leaderboard - ${sortByCriterion}`)
-        .setColor(0x00AE86)
-        .setFooter({ text: `Page ${page + 1}/${totalPages} • ${items.length} total ${type === 'box' ? 'boxes' : 'creators'}` });
-
-    if (pageItems.length === 0) {
-        embed.setDescription(`No rated ${type === 'box' ? 'boxes' : 'creators'} found.`);
-        return { embed, totalPages };
-    }
-
-    let description = '';
-    
-    pageItems.forEach((item, index) => {
-        const position = startIndex + index + 1;
-        const name = type === 'box' ? item.boxName : item.creatorName;
-        const rating = type === 'box' 
-            ? item.averageRatings[sortByCriterion] 
-            : item.ratings[sortByCriterion];
-        const reviewCount = type === 'box' 
-            ? item.reviewCount 
-            : item.reviewCount;
-            
-        description += `**${position}. ${name}**\n` +
-            `${rating.toFixed(1)}\n${getEmojiRatingFromNum(rating)} (${reviewCount} review${reviewCount !== 1 ? 's' : ''})\n\n`;
-    });
-
-    embed.setDescription(description);
-    
-    return { embed, totalPages };
 }
 
 module.exports = {
