@@ -37,7 +37,7 @@ const boxReviewSchema = new mongoose.Schema({
     Overall: { type: Number },
     Hackability: { type: Number },
     Usability: { type: Number },
-    Building: { type: Number },
+    // Building: { type: Number },
     Design: { type: Number },
     CodeCleanliness: { type: Number },
 
