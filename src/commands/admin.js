@@ -1,6 +1,6 @@
 const { SlashCommandBuilder } = require('discord.js');
 const utils = require('../modules/utils');
-const { ConfigDB } = require('../modules/database');
+const { ConfigDB, dropAllReleventIndexes } = require('../modules/database');
 
 module.exports = {
     data: new SlashCommandBuilder().setName("admin").setDescription("Quick access admin options")
@@ -16,6 +16,7 @@ module.exports = {
                 { name: "Whitelist Tag", value: "Whitelist Tag" },
                 { name: "Blacklist Tag", value: "Blacklist Tag" },
                 { name: "Restart", value: "Restart" },
+                { name: "Drop Indexes", value: "Drop Indexes" },
             ).setRequired(true)
         )
         .addStringOption(option =>
@@ -110,6 +111,10 @@ module.exports = {
                 console.log("Restarting...")
                 await config.save();
                 process.exit(0);
+
+            case "Drop Indexes":
+                await dropAllReleventIndexes()
+                return cmd.reply({ content: "Done", ephemeral });
         }
 
         config.save();

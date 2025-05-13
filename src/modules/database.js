@@ -92,13 +92,18 @@ async function dropIndexes(Model) {
         console.log("Indexes after deletion:", indexes2.length);
     } catch {}
 }
+async function dropAllReleventIndexes() {
+    await dropIndexes(ConfigDB);
+    await dropIndexes(StoredMessages);
+    await dropIndexes(BoxData);
+    await dropIndexes(BoxReviews);
+}
 const connectedPromise = (async () => {
     await mongoose.connect(`${process.env.databaseURI}/${process.env.beta ? "StageHackPackBot" : "HackPackBot"}`)
     
     // Indecies can mess stuff up when deving
     if (process.env.beta) {
-        await dropIndexes(ConfigDB);
-        await dropIndexes(StoredMessages);
+        dropAllIndexes();
     };
 
     mongoose.connection.db.setProfilingLevel(
@@ -123,5 +128,6 @@ module.exports = {
     BoxData,
     BoxReviews,
 
-    connectedPromise
+    connectedPromise,
+    dropAllReleventIndexes
 }
