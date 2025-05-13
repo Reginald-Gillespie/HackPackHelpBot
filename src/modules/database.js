@@ -44,7 +44,7 @@ const boxReviewSchema = new mongoose.Schema({
     reviewDate: { type: Date, default: Date.now },
     textReview: { type: String, required: false }
 })
-helpMessageSchema.index({ boxName: 1, reviewer: 1 }, { unique: true });
+boxReviewSchema.index({ boxName: 1, reviewer: 1 }, { unique: true });
 const BoxReviews = mongoose.model("boxreviews", boxReviewSchema)
 
 
