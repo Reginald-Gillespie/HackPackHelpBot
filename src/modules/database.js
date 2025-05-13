@@ -14,6 +14,7 @@ const helpMessageSchema = new mongoose.Schema({
 helpMessageSchema.index({ category: 1, title: 1 }, { unique: true }); // Compound unique index preventing duplicates within categories
 const StoredMessages = mongoose.model("helpmessages", helpMessageSchema)
 
+
 const restartDataSchema = new mongoose.Schema({
     restartedAt: { type: Number, default: Date.now() },
     channelId: { type: String, default: "" },
@@ -37,18 +38,7 @@ const ConfigDB = mongoose.model("config", configSchema)
 
 
 
-// Make sure ConfigDB is initialized, since with our current config there should only ever be one of them.
-ConfigDB.findOne().then(async (config) => {
-    if (!config) {
-        // If no config exists, create one
-        const newConfig = new ConfigDB({});
-        await newConfig.save();
-    }
-});
-
-
-
-// Connect
+//#region Connect
 async function dropIndexes(Model) {
     try {
         const indexes = await Model.collection.indexes();
@@ -73,22 +63,15 @@ const connectedPromise = (async () => {
             : "slow_only"
     )
 
-    // Finally, make sure certian ones exist
-    let config = await ConfigDB.findOneAndUpdate(
-        { },
-        { },
-        {
-            upsert: true,
-            new: true,
-            setDefaultsOnInsert: true
+    // Finally, make sure certian ones exist and have all properties set
+    let config = await ConfigDB.findOneAndUpdate({ }, { }, {
+            upsert: true, new: true, setDefaultsOnInsert: true
         }
     );
     if (!config) config = new ConfigDB({});
     await config.save();
 })();
-
-
-
+//#endregion
 
 module.exports = {
     ConfigDB,
