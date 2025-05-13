@@ -32,7 +32,7 @@ const BoxData = mongoose.model("boxdata", boxDataSchema);
 // CodeCleanliness
 const boxReviewSchema = new mongoose.Schema({
     boxName: { type: String, required: true },
-    reviewer: { type: String, required: true, unique: true },
+    reviewer: { type: String, required: true },
 
     Overall: { type: Number },
     Hackability: { type: Number },
@@ -44,6 +44,7 @@ const boxReviewSchema = new mongoose.Schema({
     reviewDate: { type: Date, default: Date.now },
     textReview: { type: String, required: false }
 })
+helpMessageSchema.index({ boxName: 1, reviewer: 1 }, { unique: true });
 const BoxReviews = mongoose.model("boxreviews", boxReviewSchema)
 
 
