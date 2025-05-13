@@ -6,20 +6,12 @@ const {
     ButtonStyle,
 } = require('discord.js');
 const { BoxData, BoxReviews } = require('../modules/database');
-const { getEmojiRatingFromNum } = require('./rate');
+const { getEmojiRatingFromNum, rankingData } = require('./rate');
 
 // The list of all criteria used for ratings
-const CRITERIA = ['Overall', 'Hackability', 'Usability', 'Building', 'Design', 'CodeCleanliness'];
+const CRITERIA = rankingData.map(r => r.key);
+const RATING_WEIGHTS = Object.fromEntries(rankingData.map(r => [r.key, r.weight]))
 
-// Weights for different criteria when calculating overall rating
-// These can be adjusted to change the importance of each criterion
-const RATING_WEIGHTS = {
-    Hackability: 1,
-    Usability: 1,
-    Building: 1,
-    Design: 1,
-    CodeCleanliness: 1
-};
 
 // Calculate the weighted average rating of a box or creator
 async function calculateAverageRatings(reviews) {
