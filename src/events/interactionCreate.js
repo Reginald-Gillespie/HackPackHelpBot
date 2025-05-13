@@ -146,6 +146,19 @@ module.exports = {
 
                     cmd.reply({ content: `${isEditing ? "This" : "Your"} Help Message has been ${isEditing ? "edited" : "added"}, thanks!`, ephemeral: true })
                     break;
+            
+                // case "feedback_modal":
+                //     if (interaction.user.id !== cmd.user.id) {
+                //         return interaction.reply({ content: "This modal isn't for you!", ephemeral: true });
+                //     }
+
+                //     // grab the long review
+                //     const textReview = interaction.fields.getTextInputValue('textReviewInput');
+                //     userRatingsState.textReview = textReview;
+
+                //     // re-render the submit screen with feedback shown
+                //     await displaySubmitScreen(interaction, userRatingsState);
+                //     break;
             }
         } else if (cmd.isAutocomplete()) {
             const field = cmd.options.getFocused(true);

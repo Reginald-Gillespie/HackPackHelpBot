@@ -1,9 +1,6 @@
 Better render handling of flowcharts
 Create cache dir
 
-/rate
-- Open feedback modal button
-
 /admin
 - Update
 - Create new box / flowchart slots
