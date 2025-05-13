@@ -181,18 +181,19 @@ module.exports = {
                         .setRequired(true)
                         .setAutocomplete(true)
                 )
-        )
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('creator')
-                .setDescription('View ratings for a specific creator')
-                .addStringOption(option =>
-                    option.setName('creator_name')
-                        .setDescription('The name of the creator')
-                        .setRequired(true)
-                        .setAutocomplete(true)
-                )
         ),
+        // Disabling creator subcommand until there's more data to balance them out, giving them a chance to not be ruined by a disliked box.
+        // .addSubcommand(subcommand =>
+        //     subcommand
+        //         .setName('creator')
+        //         .setDescription('View ratings for a specific creator')
+        //         .addStringOption(option =>
+        //             option.setName('creator_name')
+        //                 .setDescription('The name of the creator')
+        //                 .setRequired(true)
+        //                 .setAutocomplete(true)
+        //         )
+        // ),
 
     async execute(interaction) {
         await interaction.deferReply();
