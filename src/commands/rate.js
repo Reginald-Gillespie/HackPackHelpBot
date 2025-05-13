@@ -36,11 +36,6 @@ const rankingData = [
         key: "Usability",
         description: "How would you rate the usefulness of this bot?",
         weight: 1
-    // }, {
-    //     display: "Building",
-    //     key: "Building",
-    //     description: "How easy was it to build this box? Where there too many hard points?",
-    //     weight: 1
     }, {
         display: "Design",
         key: "Design",
@@ -257,7 +252,6 @@ module.exports = {
 
                 const embed = new EmbedBuilder()
                     .setTitle(`Review & Submit: ${selectedBox.boxName}`)
-                    // .setDescription(`Please review your ratings before submitting.`)
                     .setColor(0x00AE86)
                     .setURL(selectedBox.boxURL || null);
 
@@ -305,7 +299,7 @@ module.exports = {
 
             const collector = initialMessage.createMessageComponentCollector({
                 filter: i => i.user.id === cmd.user.id,
-                time: 300000, // 5 minutes
+                time: 300000+2, // 10 minutes
             });
 
             collector.on('collect', async (i) => {
@@ -325,26 +319,28 @@ module.exports = {
                                         .setPlaceholder('What could this box have improved?')
                                         .setRequired(true)
                                         .setMaxLength(2000)
+                                        .setValue(userRatingsState.textReview || '') // Pre-fill with existing feedback if any
                                 )
                             );
                         await i.showModal(feedbackModal);
 
-                        // Add a modal listener 
-                        cmd.client.on('interactionCreate', async interaction => {
-                            if (!interaction.isModalSubmit()) return;
-                            if (interaction.customId !== 'feedback_modal') return;
-                            if (interaction.user.id !== cmd.user.id) {
-                                return interaction.reply({ content: "This modal isn't for you!", ephemeral: true });
-                            }
+                        // Use a Promise to wait for the modal submission
+                        try {
+                            const modalSubmission = await i.awaitModalSubmit({
+                                filter: (interaction) => interaction.customId === 'feedback_modal' && interaction.user.id === cmd.user.id,
+                                time: 120000 * 10 // 20 minute timeout
+                            });
 
                             // grab the long review
-                            const textReview = interaction.fields.getTextInputValue('textReviewInput');
+                            const textReview = modalSubmission.fields.getTextInputValue('textReviewInput');
                             userRatingsState.textReview = textReview;
 
                             // re-render the submit screen with feedback shown
-                            await displaySubmitScreen(interaction, userRatingsState);
-                        });
-
+                            await displaySubmitScreen(modalSubmission, userRatingsState);
+                        } catch (modalError) {
+                            console.error('Modal submission error or timeout:', modalError);
+                            // No need to do anything here, just continue with the existing state
+                        }
 
                         return;
                     } else if (i.customId === 'select_box_initial') {

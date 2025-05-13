@@ -206,25 +206,26 @@ module.exports = {
                             { name: 'Code Cleanliness', value: 'CodeCleanliness' }
                         )
                 )
-        )
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('creators')
-                .setDescription('View leaderboard of top rated creators')
-                .addStringOption(option =>
-                    option.setName('category')
-                        .setDescription('The rating category to sort by')
-                        .setRequired(false)
-                        .addChoices(
-                            { name: 'Overall', value: 'Overall' },
-                            { name: 'Hackability', value: 'Hackability' },
-                            { name: 'Usability', value: 'Usability' },
-                            { name: 'Building', value: 'Building' },
-                            { name: 'Design', value: 'Design' },
-                            { name: 'Code Cleanliness', value: 'CodeCleanliness' }
-                        )
-                )
         ),
+        // Disabling creator subcommand until there's more data to balance them out, giving them a chance to not be ruined by a disliked box.
+        // .addSubcommand(subcommand =>
+        //     subcommand
+        //         .setName('creators')
+        //         .setDescription('View leaderboard of top rated creators')
+        //         .addStringOption(option =>
+        //             option.setName('category')
+        //                 .setDescription('The rating category to sort by')
+        //                 .setRequired(false)
+        //                 .addChoices(
+        //                     { name: 'Overall', value: 'Overall' },
+        //                     { name: 'Hackability', value: 'Hackability' },
+        //                     { name: 'Usability', value: 'Usability' },
+        //                     { name: 'Building', value: 'Building' },
+        //                     { name: 'Design', value: 'Design' },
+        //                     { name: 'Code Cleanliness', value: 'CodeCleanliness' }
+        //                 )
+        //         )
+        // ),
 
     async execute(interaction) {
         await interaction.deferReply();
