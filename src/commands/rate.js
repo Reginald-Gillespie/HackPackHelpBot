@@ -36,11 +36,11 @@ const rankingData = [
         key: "Usability",
         description: "How would you rate the usefulness of this bot?",
         weight: 1
-    }, {
-        display: "Building",
-        key: "Building",
-        description: "How easy was it to build this box? Where there too many hard points?",
-        weight: 1
+    // }, {
+    //     display: "Building",
+    //     key: "Building",
+    //     description: "How easy was it to build this box? Where there too many hard points?",
+    //     weight: 1
     }, {
         display: "Design",
         key: "Design",
@@ -191,15 +191,31 @@ module.exports = {
                 }
 
                 const ratingEmojis = [ "🙁", "😐", "🙂", "😀", "😁" ];
-                const ratingOptions = Array.from({ length: 5 }, (_, idx) => {
-                    const ratingValue = idx + 1;
-                    const stars = '⭐'.repeat(ratingValue);
-                    const emoji = ratingEmojis[idx];
-                    return new StringSelectMenuOptionBuilder()
-                        .setLabel(`${stars} (${ratingValue})`)
-                        .setValue(String(ratingValue))
-                        .setEmoji(emoji);
-                });
+                // const ratingOptions = Array.from({ length: 5 }, (_, idx) => {
+                //     const ratingValue = idx + 1;
+                //     const stars = '⭐'.repeat(ratingValue);
+                //     const emoji = ratingEmojis[idx];
+                //     return new StringSelectMenuOptionBuilder()
+                //         .setLabel(`${stars} (${ratingValue})`)
+                //         .setValue(String(ratingValue))
+                //         .setEmoji(emoji);
+                // });
+                const ratingOptions = [
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel("No Rating")
+                        .setValue("none")
+                        .setEmoji("⛔"),
+                    ...Array.from({ length: 5 }, (_, idx) => {
+                        const ratingValue = idx + 1;
+                        const stars = '⭐'.repeat(ratingValue);
+                        const emoji = ratingEmojis[idx];
+                        return new StringSelectMenuOptionBuilder()
+                            .setLabel(`${stars} (${ratingValue})`)
+                            .setValue(String(ratingValue))
+                            .setEmoji(emoji);
+                    })
+                ];
+
 
                 const ratingMenu = new StringSelectMenuBuilder()
                     .setCustomId(`rate_criterion_${key}`)
@@ -247,7 +263,9 @@ module.exports = {
 
                 const ratingsSummaryFields = criteria.map(criterion => ({
                     name: criterion,
-                    value: state.ratings[criterion] ? `${state.ratings[criterion]} ${getEmojiRatingFromNum(state.ratings[criterion])}` : 'Not Rated',
+                    value: state.ratings[criterion]
+                        ? `${state.ratings[criterion]} ${getEmojiRatingFromNum(state.ratings[criterion])}`
+                        : 'Not Rated',
                     inline: true
                 }));
                 embed.addFields(ratingsSummaryFields);
@@ -361,7 +379,8 @@ module.exports = {
                             return;
                         }
 
-                        userRatingsState.ratings[key] = i.values[0];
+                        const selected = i.values[0];
+                        userRatingsState.ratings[key] = selected === "none" ? undefined : selected;
                         userRatingsState.currentCriterionIndex++;
 
                         if (userRatingsState.currentCriterionIndex < totalCriteria) {
@@ -379,22 +398,27 @@ module.exports = {
                         }
                     } else if (i.customId === 'submit_all_ratings') {
                         if (!i.isButton()) return;
-                        const allRated = rankingData.every(c => userRatingsState.ratings[c.key] !== undefined);
+                        const allRated = rankingData.some(c => userRatingsState.ratings[c.key] !== undefined);
                         if (!allRated) {
-                            for (let k = 0; k < totalCriteria; k++) {
-                                if (!userRatingsState.ratings[rankingData[k].key]) {
-                                    userRatingsState.currentCriterionIndex = k;
-                                    await i.deferUpdate();
-                                    await displayCriterionQuestion(i, userRatingsState);
-                                    await i.followUp({ content: `Please complete all ratings. You missed: **${rankingData[k].display}**.`, ephemeral: true });
-                                    return;
-                                }
-                            }
+                            await i.reply({ content: `You must rate at least one category to submit.`, ephemeral: true });
+                            return;
                         }
+
+                        // if (!allRated) {
+                        //     for (let k = 0; k < totalCriteria; k++) {
+                        //         if (!userRatingsState.ratings[rankingData[k].key]) {
+                        //             userRatingsState.currentCriterionIndex = k;
+                        //             await i.deferUpdate();
+                        //             await displayCriterionQuestion(i, userRatingsState);
+                        //             await i.followUp({ content: `Please complete all ratings. You missed: **${rankingData[k].display}**.`, ephemeral: true });
+                        //             return;
+                        //         }
+                        //     }
+                        // }
 
                         const ratingsToSave = {};
                         rankingData.forEach(({ key }) => {
-                            if (userRatingsState.ratings[key]) {
+                            if (userRatingsState.ratings[key] !== undefined) {
                                 ratingsToSave[key] = parseInt(userRatingsState.ratings[key], 10);
                             }
                         });
