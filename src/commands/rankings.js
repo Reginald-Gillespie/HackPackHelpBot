@@ -154,7 +154,7 @@ function createCreatorRankingEmbed(creatorName, creatorData) {
     
     // Add Overall rating first
     const overallRating = ratings.Overall.toFixed(1);
-    ratingsDescription += `## Overall: ${overallRating}\n${getEmojiRatingFromNum(ratings.Overall)}\n\n`;
+    ratingsDescription += `## Overall:\n${overallRating} ${getEmojiRatingFromNum(ratings.Overall)}\n\n`;
     
     // Add each criterion
     CRITERIA.forEach(criterion => {

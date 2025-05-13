@@ -41,7 +41,8 @@ const boxReviewSchema = new mongoose.Schema({
     Design: { type: Number },
     CodeCleanliness: { type: Number },
 
-    reviewDate: { type: Date, default: Date.now }
+    reviewDate: { type: Date, default: Date.now },
+    textReview: { type: String, required: false }
 })
 const BoxReviews = mongoose.model("boxreviews", boxReviewSchema)
 

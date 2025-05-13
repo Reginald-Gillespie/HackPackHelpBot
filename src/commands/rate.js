@@ -7,7 +7,9 @@ const {
     ButtonBuilder,
     ButtonStyle,
     ComponentType,
-    EmbedFooterOptions 
+    TextInputBuilder,
+    ModalBuilder,
+    TextInputStyle
 } = require('discord.js');
 const { BoxData, BoxReviews } = require('../modules/database'); // Assuming these are Mongoose models
 
@@ -240,8 +242,23 @@ module.exports = {
                 }));
                 embed.addFields(ratingsSummaryFields);
 
+                // add summary of feedback if already provided
+                if (state.textReview) {
+                    embed.addFields({
+                        name: "Feedback",
+                        value: state.textReview.length > 1024
+                            ? state.textReview.slice(0, 1021) + "…"
+                            : state.textReview
+                    });
+                }
+
                 const actionRow = new ActionRowBuilder()
                     .addComponents(
+                        new ButtonBuilder()
+                            .setCustomId('add_feedback')
+                            .setLabel('Add Feedback')
+                            .setStyle(ButtonStyle.Secondary)
+                            .setEmoji("✍️"),
                         new ButtonBuilder()
                             .setCustomId('submit_all_ratings')
                             .setLabel('Submit Ratings')
@@ -265,7 +282,44 @@ module.exports = {
 
             collector.on('collect', async (i) => {
                 try {
-                    if (i.customId === 'select_box_initial') {
+                    if (i.customId === 'add_feedback') {
+                        if (!i.isButton()) return;
+                        // Build and show the modal
+                        const feedbackModal = new ModalBuilder()
+                            .setCustomId('feedback_modal')
+                            .setTitle('Freeform Feedback')
+                            .addComponents(
+                                new ActionRowBuilder().addComponents(
+                                    new TextInputBuilder()
+                                        .setCustomId('textReviewInput')
+                                        .setLabel('Your review')
+                                        .setStyle(TextInputStyle.Paragraph)
+                                        .setPlaceholder('What could this box have improved?')
+                                        .setRequired(true)
+                                        .setMaxLength(2000)
+                                )
+                            );
+                        await i.showModal(feedbackModal);
+
+                        // Add a modal listener 
+                        cmd.client.on('interactionCreate', async interaction => {
+                            if (!interaction.isModalSubmit()) return;
+                            if (interaction.customId !== 'feedback_modal') return;
+                            if (interaction.user.id !== cmd.user.id) {
+                                return interaction.reply({ content: "This modal isn't for you!", ephemeral: true });
+                            }
+
+                            // grab the long review
+                            const textReview = interaction.fields.getTextInputValue('textReviewInput');
+                            userRatingsState.textReview = textReview;
+
+                            // re-render the submit screen with feedback shown
+                            await displaySubmitScreen(interaction, userRatingsState);
+                        });
+
+
+                        return;
+                    } else if (i.customId === 'select_box_initial') {
                         if (!i.isStringSelectMenu()) return;
                         userRatingsState.boxName = i.values[0];
                         userRatingsState.ratings = {};
@@ -334,6 +388,10 @@ module.exports = {
                                 ratingsToSave[key] = parseInt(userRatingsState.ratings[key], 10);
                             }
                         });
+
+                        if (userRatingsState.textReview) {
+                            ratingsToSave.textReview = userRatingsState.textReview;
+                        }
 
                         await BoxReviews.findOneAndUpdate(
                             { boxName: userRatingsState.boxName, reviewer: cmd.user.id },
