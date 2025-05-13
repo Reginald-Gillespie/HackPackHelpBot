@@ -6,6 +6,47 @@ mongoose.plugin(mongooseLeanDefaults)
 mongoose.plugin(mongooseLeanVirtuals)
 mongoose.set('setDefaultsOnInsert', false);
 
+// To store box data, which we can then use places like AI descriptions or leaderboards
+const boxDataSchema = new mongoose.Schema({
+    boxName: { type: String, required: true, unique: true }, // Box name when selecting and in URLs and such, like "turret"
+    displayName: { type: String, required: true },        // Box actual name, like "IR Turret"
+    creator: { type: String },   // Name, like "Dan Tompkins"
+    creatorId: { type: String }, // User ID, like "1230264421374373989"
+    boxEmoji: { type: String },  // Snowflake for the custom emoji related to this box
+    boxDescription: { type: String },
+    boxURL: { type: String, required: true }, // The CrunchLabs webpage for this box
+});
+const BoxData = mongoose.model("boxdata", boxDataSchema);
+// TODO: 
+//  image URLs for embed thumbnails
+//  bot number
+//  theme color (use on embeds)
+
+
+
+// Overall
+// Hackability
+// Usability
+// Building
+// Design
+// CodeCleanliness
+const boxReviewSchema = new mongoose.Schema({
+    boxName: { type: String, required: true },
+    reviewer: { type: String, required: true, unique: true },
+
+    Overall: { type: Number },
+    Hackability: { type: Number },
+    Usability: { type: Number },
+    Building: { type: Number },
+    Design: { type: Number },
+    CodeCleanliness: { type: Number },
+
+    reviewDate: { type: Date, default: Date.now }
+})
+const BoxReviews = mongoose.model("boxreviews", boxReviewSchema)
+
+
+
 const helpMessageSchema = new mongoose.Schema({
     category: { type: String, required: true },
     title: { type: String, required: true },
@@ -13,6 +54,7 @@ const helpMessageSchema = new mongoose.Schema({
 })
 helpMessageSchema.index({ category: 1, title: 1 }, { unique: true }); // Compound unique index preventing duplicates within categories
 const StoredMessages = mongoose.model("helpmessages", helpMessageSchema)
+
 
 
 const restartDataSchema = new mongoose.Schema({
@@ -76,6 +118,8 @@ const connectedPromise = (async () => {
 module.exports = {
     ConfigDB,
     StoredMessages,
+    BoxData,
+    BoxReviews,
 
     connectedPromise
 }

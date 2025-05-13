@@ -18,92 +18,94 @@ module.exports = {
                 await cmd.reply({ content: 'There was an error while executing this command!', ephemeral: true });
             }
         } else if (cmd.isButton()) {
-           //Button code, no changes required
-            const currentButtons = cmd.message.components[0];
-            const thisButton = utils.findButtonOfId(cmd.message.components, cmd.customId)
-            const jsonButton = currentButtons.components[0];
-            const context = JSON.parse(jsonButton.customId.split("|")[1])
-            const customId = cmd.customId.split("|")[0];
-            const interactionId = (cmd.message.embeds[1]?.footer || cmd.message.embeds[0]?.footer).text.split(" ")[1];
+            try { 
+                const currentButtons = cmd.message.components[0];
+                const thisButton = utils.findButtonOfId(cmd.message.components, cmd.customId)
+                const jsonButton = currentButtons.components[0];
+                const contextSTR = jsonButton.customId.split("|")[1];
+                const context = JSON.parse(contextSTR)
+                const customId = cmd.customId.split("|")[0];
+                const interactionId = (cmd.message.embeds[1]?.footer || cmd.message.embeds[0]?.footer).text.split(" ")[1];
 
-            if (cmd.user.id !== context.id) {
-                return cmd.reply({ content: "This flowchart is not for you, you can run /help to start your own", ephemeral: true })
-            }
+                if (cmd.user.id !== context.id) {
+                    return cmd.reply({ content: "This flowchart is not for you, you can run /help to start your own", ephemeral: true })
+                }
 
-            var [mermaidPath, error] = await utils.getPathToFlowchart(context.chart, true);
-            const mermaidJSON = require(mermaidPath)
+                var [mermaidPath, error] = await utils.getPathToFlowchart(context.chart, true);
+                const mermaidJSON = require(mermaidPath)
 
-            let questionData, answersArray;
+                let questionData, answersArray;
 
-            if (customId === "Back") {
-                const history = helpHistoryCache.get(context.id);
-                if (!history || !history.length > 1) return cmd.reply({ content: "There is no history to go back to. Please start a new command.", ephemeral: true })
-                if (history.slice(-1)[0][2] !== interactionId) return cmd.reply({ content: "There is no history to go back to. Please start a new command.", ephemeral: true })
+                if (customId === "Back") {
+                    const history = helpHistoryCache.get(context.id);
+                    if (!history || !history.length > 1) return cmd.reply({ content: "There is no history to go back to. Please start a new command.", ephemeral: true })
+                    if (history.slice(-1)[0][2] !== interactionId) return cmd.reply({ content: "There is no history to go back to. Please start a new command.", ephemeral: true })
 
-                history.pop();
-                let uid;
-                [questionData, answersArray, uid] = history.slice(-1)[0];
-            }
-            else {
-                [questionData, answersArray] = getQuestionAndAnswers(mermaidJSON, context.questionID, customId);
-                helpHistoryCache.get(context.id).push([questionData, answersArray, interactionId])
-            }
+                    history.pop();
+                    let uid;
+                    [questionData, answersArray, uid] = history.slice(-1)[0];
+                }
+                else {
+                    [questionData, answersArray] = getQuestionAndAnswers(mermaidJSON, context.questionID, customId);
+                    helpHistoryCache.get(context.id).push([questionData, answersArray, interactionId])
+                }
 
-            const message = await cmd.message.fetch();
-            const hasAnswerEmbed = message.embeds.length > 1;
-            const questionEmbed = message.embeds[hasAnswerEmbed ? 1 : 0];
-            let questionField = questionEmbed.fields[2];
-            const question = questionField.value;
-            let answerEmbed = hasAnswerEmbed ? message.embeds[0] : null;
+                const message = await cmd.message.fetch();
+                const hasAnswerEmbed = message.embeds.length > 1;
+                const questionEmbed = message.embeds[hasAnswerEmbed ? 1 : 0];
+                let questionField = questionEmbed.fields[2];
+                const question = questionField.value;
+                let answerEmbed = hasAnswerEmbed ? message.embeds[0] : null;
 
-            const buttons = [];
-            for (let i = 0; i < answersArray.length; i++) {
-                const answer = answersArray[i];
-                buttons.push(
+                const buttons = [];
+                for (let i = 0; i < answersArray.length; i++) {
+                    const answer = answersArray[i];
+                    buttons.push(
+                        new ButtonBuilder()
+                            .setCustomId("" + answer)
+                            .setLabel("" + answer)
+                            .setStyle(ButtonStyle.Primary)
+                    );
+                }
+
+                if (questionData?.questionID !== "Title") buttons.unshift(
                     new ButtonBuilder()
-                        .setCustomId("" + answer)
-                        .setLabel("" + answer)
-                        .setStyle(ButtonStyle.Primary)
-                );
-            }
+                        .setCustomId("Back")
+                        .setLabel("Back")
+                        .setStyle(ButtonStyle.Secondary)
+                )
+                if (buttons[0]) {
+                    buttons[0].data.custom_id += "|" + JSON.stringify({
+                        id: context.id,
+                        questionID: questionData?.questionID,
+                        chart: context.chart,
+                    })
+                }
+                const rows = [];
+                for (let i = 0; i < buttons.length; i += 5) {
+                    rows.push(new ActionRowBuilder().addComponents(buttons.slice(i, i + 5)));
+                }
 
-            if (questionData?.questionID !== "Title") buttons.unshift(
-                new ButtonBuilder()
-                    .setCustomId("Back")
-                    .setLabel("Back")
-                    .setStyle(ButtonStyle.Secondary)
-            )
-            if (buttons[0]) {
-                buttons[0].data.custom_id += "|" + JSON.stringify({
-                    id: context.id,
-                    questionID: questionData?.questionID,
-                    chart: context.chart,
-                })
-            }
-            const rows = [];
-            for (let i = 0; i < buttons.length; i += 5) {
-                rows.push(new ActionRowBuilder().addComponents(buttons.slice(i, i + 5)));
-            }
+                if (!answerEmbed) {
+                    answerEmbed = new EmbedBuilder()
+                        .setColor(0)
+                        .setTitle(`Recorded answers`)
+                        .setFields([])
+                }
+                answerEmbed.data.fields.push({ name: `Q: ${question}`, value: `> ${thisButton.data.label}` })
+                answerEmbed.data.fields = answerEmbed.data.fields.slice(-25);
+                questionField.value = postProcessForDiscord(questionData?.question, cmd.guild);
 
-            if (!answerEmbed) {
-                answerEmbed = new EmbedBuilder()
-                    .setColor(0)
-                    .setTitle(`Recorded answers`)
-                    .setFields([])
-            }
-            answerEmbed.data.fields.push({ name: `Q: ${question}`, value: `> ${thisButton.data.label}` })
-            answerEmbed.data.fields = answerEmbed.data.fields.slice(-25);
-            questionField.value = postProcessForDiscord(questionData?.question, cmd.guild);
+                questionEmbedBuild = EmbedBuilder.from(questionEmbed)
+                questionEmbedBuild.setThumbnail("attachment://flowchart.png");
 
-            questionEmbedBuild = EmbedBuilder.from(questionEmbed)
-            questionEmbedBuild.setThumbnail("attachment://flowchart.png");
-
-            await message.edit({
-                embeds: [answerEmbed, questionEmbedBuild],
-                components: rows,
-            });
-            await cmd.deferUpdate();
-            return;
+                await message.edit({
+                    embeds: [answerEmbed, questionEmbedBuild],
+                    components: rows,
+                });
+                await cmd.deferUpdate();
+                return;
+            } catch { } // if it doesn't parse right it ain't ours. TODO: look at ID smh.
         } else if (cmd.isModalSubmit()) {
             switch (cmd.customId) {
                 case "editModal":
@@ -176,8 +178,24 @@ module.exports = {
                     break;
 
                 case "subtopic":
-                    const options = subtopics.filter(subtopic => subtopic.startsWith(typedSoFar));
-                    cmd.respond(utils.arrayToAutocorrect(options))
+                    const allBoxes = subtopics.filter(subtopic => subtopic.startsWith(typedSoFar))
+                        .filter(subtopic => subtopic.toLowerCase().startsWith(typedSoFar.toLowerCase()))
+                        .slice(0, 25);
+                    cmd.respond(utils.arrayToAutocorrect(allBoxes))
+                    break;
+
+                case "box_name":
+                    const boxNames = (await utils.allRegisteredBoxnames())
+                        .filter(subtopic => subtopic.toLowerCase().startsWith(typedSoFar.toLowerCase()))
+                        .slice(0, 25);
+                    cmd.respond(utils.arrayToAutocorrect(boxNames))
+                    break;
+
+                case "creator_name":
+                    const creatorNames = (await utils.allRegisteredBoxnames("creator"))
+                        .filter(subtopic => subtopic.toLowerCase().startsWith(typedSoFar.toLowerCase()))
+                        .slice(0, 25);
+                    cmd.respond(utils.arrayToAutocorrect(creatorNames))
                     break;
 
                 case "chart":

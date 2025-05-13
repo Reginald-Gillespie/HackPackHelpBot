@@ -2,7 +2,7 @@ const Fuse = require('fuse.js');
 const { getChartOptions, getPathToFlowchart } = require("./flowcharter") //Moved from main file
 const { ComponentType } = require("discord.js");
 const { distance: levenshtein } = require('fastest-levenshtein');
-const { ConfigDB, StoredMessages } = require("./database")
+const { ConfigDB, StoredMessages, BoxData } = require("./database")
 
 const fuseOptions = {
     includeScore: true,
@@ -10,6 +10,16 @@ const fuseOptions = {
 };
 
 module.exports = {
+    async allRegisteredBoxnames(field="boxName") { 
+        // Field can be passed to get something other than the box name, in particular the creator
+        const registeredData = await BoxData.find()
+            .lean()
+            .distinct(field);
+        const boxNames = [...new Set(
+            registeredData
+        )];
+        return boxNames;
+    },
     isHelpRequest(message) {
         message = message.toLowerCase().replace("'", "");
         return (
