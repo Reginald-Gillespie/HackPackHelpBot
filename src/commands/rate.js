@@ -56,14 +56,24 @@ const rankingData = [
 
 function getEmojiRatingFromNum(rating) {
     // Provided a number 0-5, represent it with 5 emoji slots that most closely represent it
-    const stars = [
-        [ 0.0, "<:star0_4th:1371856725464060073>" ],
-        [ 0.25, "<:star1_4th:1371856712671428730>" ],
-        [ 0.5, "<:star2_4th:1371856698721042555>" ],
-        [ 0.75, "<:star3_4th:1371856690525245632>" ],
-        // [ 1.0, "<:star4_4th:1371856733969973310>" ],
-        [ 1.0, ":star:" ] // Needs to use the discord one to fit char lengths
-    ]
+    // Emojis are different per bot
+    const stars = process.env.beta
+        ? [
+            [ 0.0,  "<:star0_4th:1371856725464060073>" ],
+            [ 0.25, "<:star1_4th:1371856712671428730>" ],
+            [ 0.5,  "<:star2_4th:1371856698721042555>" ],
+            [ 0.75, "<:star3_4th:1371856690525245632>" ],
+            // [ 1.0, "<:star4_4th:1371856733969973310>" ],
+            [ 1.0, ":star:" ] // Needs to use the discord one to fit char lengths
+        ]
+        : [
+            [ 0.0,  "<:star0_4th:1371934029569458206>" ],
+            [ 0.25, "<:star1_4th:1371934039505637396>" ],
+            [ 0.5,  "<:star2_4th:1371934049416777946>" ],
+            [ 0.75, "<:star3_4th:1371934068706377891>" ],
+            // [ 1.0, "<:star4_4th:1371856733969973310>" ],
+            [ 1.0, ":star:" ] // Needs to use the discord one to fit char lengths
+        ]
 
     let ratingStr = [ ];
 
