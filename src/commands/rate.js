@@ -25,7 +25,7 @@ const rankingData = [
         display: "Overall",
         key: "Overall",
         description: "How would you rate this box overall?",
-        weight: 1
+        weight: 1.5
     }, {
         display: "Hackability",
         key: "Hackability",
@@ -45,7 +45,7 @@ const rankingData = [
         display: "Code Cleanliness",
         key: "CodeCleanliness",
         description: "How clean was the code? How easy was it to understand?",
-        weight: 1
+        weight: 1.3
     }
 ]
 
