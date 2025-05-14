@@ -6,7 +6,9 @@ const { connectedPromise } = require("./modules/database")
 
 const commands = [];
 const commandsPath = path.join(__dirname, 'commands');
-const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+const commandFiles = fs.readdirSync(commandsPath)
+    .filter(file => file.endsWith('.js'))
+    .filter(file => !file.includes("disabled"));
 
 const registerCommands = async () => {
     for (const file of commandFiles) {
@@ -15,6 +17,7 @@ const registerCommands = async () => {
 
         // Await command.data if it's a Promise
         const data = await Promise.resolve(command.data);
+        // console.log(data)
         commands.push(data.toJSON());
     }
 
@@ -23,12 +26,12 @@ const registerCommands = async () => {
     try {
         console.log('Started refreshing application (/) commands.');
 
-        await rest.put(
+        const re = await rest.put(
             Routes.applicationCommands(process.env.clientId),
             { body: commands },
         );
 
-        console.log('Successfully reloaded application (/) commands.');
+        console.log(`Successfully reloaded ${re.length} commands.`);
     } catch (error) {
         console.error(error);
     } finally {

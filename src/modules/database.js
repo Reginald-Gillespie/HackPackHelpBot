@@ -102,9 +102,9 @@ const connectedPromise = (async () => {
     await mongoose.connect(`${process.env.databaseURI}/${process.env.beta ? "StageHackPackBot" : "HackPackBot"}`)
     
     // Indecies can mess stuff up when deving
-    if (process.env.beta) {
-        dropAllIndexes();
-    };
+    // if (process.env.beta) {
+    //     dropAllIndexes();
+    // };
 
     mongoose.connection.db.setProfilingLevel(
         process.env.beta
