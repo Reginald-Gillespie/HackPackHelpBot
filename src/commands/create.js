@@ -3,7 +3,7 @@ const utils = require('../modules/utils');
 const { StoredMessages, ConfigDB } = require('../modules/database');
 
 module.exports = {
-    data: new SlashCommandBuilder().setName("create").setDescription("Create new Help Message to store in the bot")
+    data: new SlashCommandBuilder().setName("create").setDescription("Create new Help Message to store in the bot.")
         .addStringOption(option =>
             option.setName("subtopic").setDescription("The category this Help Message fits under").setAutocomplete(true).setRequired(true)
         ),
