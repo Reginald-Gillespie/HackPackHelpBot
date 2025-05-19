@@ -1,7 +1,6 @@
 const {
     SlashCommandBuilder,
     EmbedBuilder,
-    // InteractionResponseFlags // Can be removed if ephemeral: true is used consistently
 } = require('discord.js');
 const { BoxData, ConfigDB } = require('../modules/database');
 

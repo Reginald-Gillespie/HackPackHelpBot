@@ -6,6 +6,12 @@ mongoose.plugin(mongooseLeanDefaults)
 mongoose.plugin(mongooseLeanVirtuals)
 mongoose.set('setDefaultsOnInsert', false);
 
+const customResponseSchema = new mongoose.Schema({
+    trigger: { type: String, required: true },
+    response: { type: String, required: true }
+})
+const CustomResponses  = mongoose.model("customresponses", customResponseSchema);
+
 // To store box data, which we can then use places like AI descriptions or leaderboards
 const boxDataSchema = new mongoose.Schema({
     boxName: { type: String, required: true, unique: true }, // Box name when selecting and in URLs and such, like "turret"
@@ -23,13 +29,6 @@ const BoxData = mongoose.model("boxdata", boxDataSchema);
 //  theme color (use on embeds)
 
 
-
-// Overall
-// Hackability
-// Usability
-// Building
-// Design
-// CodeCleanliness
 const boxReviewSchema = new mongoose.Schema({
     boxName: { type: String, required: true },
     reviewer: { type: String, required: true },
@@ -127,6 +126,7 @@ module.exports = {
     StoredMessages,
     BoxData,
     BoxReviews,
+    CustomResponses,
 
     connectedPromise,
     dropAllReleventIndexes
