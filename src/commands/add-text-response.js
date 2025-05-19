@@ -4,6 +4,7 @@ const {
 } = require('discord.js');
 const LRUCache = require('lru-cache').LRUCache;
 const { CustomResponses } = require("../modules/database")
+const { isCreator } = require("../modules/utils")
 
 const CustomResponseCache = new LRUCache({ ttl: 1000 * 60 * 20 }); // 20 minute
 
@@ -25,6 +26,10 @@ module.exports = {
         const trigger = cmd.options.getString("trigger");
         const response = cmd.options.getString("response");
         const shouldDelete = cmd.options.getBoolean("delete");
+
+        if (!(await isCreator(cmd.user.id))) {
+            return cmd.reply(`Sorry, you can't use this command.`);
+        }
 
         CustomResponseCache.clear();
 
