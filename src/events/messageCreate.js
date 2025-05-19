@@ -6,8 +6,9 @@ const { ChannelType } = require("discord.js");
 const { GoogleGenerativeAI, FunctionCallingMode, SchemaType } = require("@google/generative-ai");
 const LRUCache = require("lru-cache").LRUCache;
 const ms = require("ms")
-const { ConfigDB } = require('../modules/database');
+const { ConfigDB, CustomResponses } = require('../modules/database');
 
+const { CustomResponseCache } = require("../commands/add-text-response")
 const markRobotPingsCache = new LRUCache({ ttl: ms("1h") }) // Store when pinged so we know when to clear if it moved to a new channel. TODO: move to mark robot js file
 const repeatQuestionCache = new LRUCache({ ttl: ms("1h") }) // Track for an hour
 
@@ -20,6 +21,20 @@ module.exports = {
         const config = await ConfigDB.findOne({})
             .lean({ defaults: true})
             .select("AIPings admins dupeNotifs");
+
+        // Check for custom responses:
+        // Populate cache
+        if (!CustomResponseCache.has("triggers")) {
+            const triggers = await CustomResponses.find({}).lean().distinct("trigger");
+            CustomResponseCache.set("triggers", triggers);
+        }
+        const triggers = CustomResponseCache.get("triggers");
+        for (const trigger of triggers) {
+            if (message.content?.toLowerCase().startsWith(trigger.toLowerCase())) {
+                const response = await CustomResponses.findOne({ trigger }).lean().distinct("response")
+                message.reply(response[0]);
+            }
+        }
 
         // Mark Robot
         let repliedMessage = message.referenceData;
