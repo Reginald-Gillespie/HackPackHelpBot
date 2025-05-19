@@ -7,7 +7,7 @@ mongoose.plugin(mongooseLeanVirtuals)
 mongoose.set('setDefaultsOnInsert', false);
 
 const customResponseSchema = new mongoose.Schema({
-    trigger: { type: String, required: true },
+    trigger: { type: String, required: true, unique: true },
     response: { type: String, required: true }
 })
 const CustomResponses  = mongoose.model("customresponses", customResponseSchema);
