@@ -6,11 +6,19 @@ mongoose.plugin(mongooseLeanDefaults)
 mongoose.plugin(mongooseLeanVirtuals)
 mongoose.set('setDefaultsOnInsert', false);
 
+const factionSchema = new mongoose.Schema({
+  name: { type: String, required: true, unique: true },
+  roleId: { type: String, required: true },
+  emoji: { type: String, required: true }
+});
+const Factions = mongoose.model('factions', factionSchema);
+
+
 const customResponseSchema = new mongoose.Schema({
     trigger: { type: String, required: true, unique: true },
     response: { type: String, required: true }
 })
-const CustomResponses  = mongoose.model("customresponses", customResponseSchema);
+const CustomResponses = mongoose.model("customresponses", customResponseSchema);
 
 // To store box data, which we can then use places like AI descriptions or leaderboards
 const boxDataSchema = new mongoose.Schema({
@@ -96,6 +104,8 @@ async function dropAllReleventIndexes() {
     await dropIndexes(StoredMessages);
     await dropIndexes(BoxData);
     await dropIndexes(BoxReviews);
+    await dropIndexes(CustomResponses);
+    await dropIndexes(Factions);
 }
 const connectedPromise = (async () => {
     await mongoose.connect(`${process.env.databaseURI}/${process.env.beta ? "StageHackPackBot" : "HackPackBot"}`)
@@ -127,6 +137,7 @@ module.exports = {
     BoxData,
     BoxReviews,
     CustomResponses,
+    Factions,
 
     connectedPromise,
     dropAllReleventIndexes
