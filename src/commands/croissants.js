@@ -1,5 +1,5 @@
 // commands/croissants.js
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { Factions } = require('../modules/database');
 
 module.exports = {
@@ -11,7 +11,7 @@ module.exports = {
                 .setName('stats')
                 .setDescription('Show faction stats')
         ),
-    
+
     /** @param {import('discord.js').ChatInputCommandInteraction} interaction */
     async execute(interaction) {
         const subcommand = interaction.options.getSubcommand();
@@ -24,21 +24,32 @@ module.exports = {
                 return interaction.reply({ content: 'No factions found in the database.', ephemeral: true });
             }
 
-            // Update stats for all roles... might be a better way but best I know
             await guild.members.fetch();
             await guild.roles.fetch();
 
-            const stats = await Promise.all(
+            const stats = (await Promise.all(
                 factions.map(async (faction) => {
                     const role = await guild.roles.fetch(faction.roleId);
-                    // const role = guild.roles.cache.get(faction.roleId);
-                    if (!role) return `${faction.emoji} **${faction.name}**: Role not found`;
-                    return `${faction.emoji} **${faction.name}**: ${role.members.size} members`;
+                    if (!role) return null;
+                    return [faction.emoji, faction.name.trim(), role.members.size];
                 })
-            );
+            )).filter(Boolean);
+
+            const embed = new EmbedBuilder()
+                .setTitle('🥐 Faction Stats')
+                .setColor('#D2B48C') // Light brown
+
+            for (const stat of stats) {
+                const [emoji, name, size] = stat;
+                embed.addFields({
+                    name: `${emoji} ${name}`,
+                    value: `${size} member${size==1?"":"s"}`,
+                    inline: true
+                });
+            }
 
             await interaction.reply({
-                content: `**Faction Stats:**\n${stats.join('\n')}`,
+                embeds: [embed],
                 ephemeral: false
             });
         }
