@@ -12,6 +12,7 @@ module.exports = {
                 .setDescription('Show faction stats')
         ),
     
+    /** @param {import('discord.js').ChatInputCommandInteraction} interaction */
     async execute(interaction) {
         const subcommand = interaction.options.getSubcommand();
 
@@ -23,9 +24,14 @@ module.exports = {
                 return interaction.reply({ content: 'No factions found in the database.', ephemeral: true });
             }
 
+            // Update stats for all roles... might be a better way but best I know
+            await guild.members.fetch();
+            await guild.roles.fetch();
+
             const stats = await Promise.all(
                 factions.map(async (faction) => {
-                    const role = guild.roles.cache.get(faction.roleId);
+                    const role = await guild.roles.fetch(faction.roleId);
+                    // const role = guild.roles.cache.get(faction.roleId);
                     if (!role) return `${faction.emoji} **${faction.name}**: Role not found`;
                     return `${faction.emoji} **${faction.name}**: ${role.members.size} members`;
                 })

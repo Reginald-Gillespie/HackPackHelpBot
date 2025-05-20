@@ -9,7 +9,8 @@ const client = global.client = new Client({
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildMessageReactions
+        GatewayIntentBits.GuildMessageReactions,
+        GatewayIntentBits.GuildMembers,
     ],
     partials: Object.keys(Partials).map(a => Partials[a])
 });
