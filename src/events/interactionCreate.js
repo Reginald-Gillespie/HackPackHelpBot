@@ -3,7 +3,7 @@ const { Events, EmbedBuilder, AttachmentBuilder, ButtonBuilder, ButtonStyle, Act
 const { postProcessForDiscord, getQuestionAndAnswers } = require("../modules/mermaidParse")
 const Fuse = require('fuse.js');
 const { helpHistoryCache } = require("../commands/help")
-const { ConfigDB } = require('../modules/database');
+const { ConfigDB, Factions } = require('../modules/database');
 
 module.exports = {
     name: Events.InteractionCreate,
@@ -215,6 +215,15 @@ module.exports = {
                     const chartOptions = utils.getChartOptions();
                     const matching = utils.sortByMatch(chartOptions, typedSoFar);
                     cmd.respond(utils.arrayToAutocorrect(matching))
+                    break;
+
+                case "faction":
+                    const allFactionNames = await Factions.find().distinct("name");
+                    cmd.respond(
+                        utils.arrayToAutocorrect(
+                            utils.sortByMatch(allFactionNames, typedSoFar)
+                        )
+                    )
                     break;
             }
         }
