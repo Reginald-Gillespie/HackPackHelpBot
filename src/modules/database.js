@@ -22,6 +22,7 @@ const CustomResponses = mongoose.model("customresponses", customResponseSchema);
 
 // To store box data, which we can then use places like AI descriptions or leaderboards
 const boxDataSchema = new mongoose.Schema({
+    // Data about the box
     boxName: { type: String, required: true, unique: true }, // Box name when selecting and in URLs and such, like "turret"
     displayName: { type: String, required: true },        // Box actual name, like "IR Turret"
     creator: { type: String },   // Name, like "Dan Tompkins"
@@ -29,6 +30,12 @@ const boxDataSchema = new mongoose.Schema({
     boxEmoji: { type: String },  // Snowflake for the custom emoji related to this box
     boxDescription: { type: String },
     boxURL: { type: String, required: true }, // The CrunchLabs webpage for this box
+    // Data about the discord side
+    themeColor: { type: String }, // String for hex color
+    hacksChannel: { type: String }, // Form-style channel where people post modifications 
+    featuredHacksChannel: { type: String }, // Channel featured hacks of all boxes, the box each is for is distinguished via a tag.
+    featuredHacksTag: { type: String },
+    roleId: { type: String }, // A discord role that indicates you have this box.
 });
 const BoxData = mongoose.model("boxdata", boxDataSchema);
 // TODO: 
