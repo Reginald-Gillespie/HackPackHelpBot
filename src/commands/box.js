@@ -1,5 +1,10 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const BoxData = require('../modules/database'); 
+const { BoxData } = require('../modules/database');
+const NodeCache = require("node-cache");
+const ms = require("ms")
+
+// It takes a long time to collect forum channel data, so we need to cache it.
+const statsCache = new NodeCache({ stdTTL: ms("24h") /1000 })
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -15,22 +20,9 @@ module.exports = {
                         .setRequired(true)
                         .setAutocomplete(true))),
 
-    // async autocomplete(interaction) {
-    //     const focusedValue = interaction.options.getFocused();
-    //     const boxes = await BoxData.find({});
-    //     const filtered = boxes.filter(box =>
-    //         box.boxName.toLowerCase().includes(focusedValue.toLowerCase()) ||
-    //         box.displayName.toLowerCase().includes(focusedValue.toLowerCase())
-    //     ).slice(0, 25);
-
-    //     await interaction.respond(
-    //         filtered.map(box => ({ name: box.displayName, value: box.boxName }))
-    //     );
-    // },
-
     async execute(interaction) {
         const subcommand = interaction.options.getSubcommand();
-
+        
         if (subcommand === 'stats') {
             await this.handleStats(interaction);
         }
@@ -38,13 +30,13 @@ module.exports = {
 
     async handleStats(interaction) {
         const boxName = interaction.options.getString('box_name');
-
+        
         try {
             // Find the box data
             const box = await BoxData.findOne({ boxName: boxName });
             if (!box) {
                 return await interaction.reply({
-                    content: `❌ Box "${boxName}" not found.`,
+                    content: `Box "${boxName}" not found.`,
                     ephemeral: true
                 });
             }
@@ -63,7 +55,7 @@ module.exports = {
             // Create embed
             const embed = new EmbedBuilder()
                 .setTitle(displayTitle)
-                .setColor(box.themeColor || '#0099ff');
+                .setColor(box.themeColor || '#da9921');
 
             if (box.boxDescription) {
                 embed.setDescription(box.boxDescription);
@@ -83,12 +75,13 @@ module.exports = {
             // Role statistics
             if (box.roleId) {
                 try {
+                    await interaction.guild.members.fetch();
                     const role = await interaction.guild.roles.fetch(box.roleId);
                     if (role) {
-                        embed.addFields({
-                            name: '👥 Role Members',
-                            value: `${role.members.size} members have the ${role.name} role`,
-                            inline: true
+                        embed.addFields({ 
+                            name: '👥 Role Members', 
+                            value: `${role.members.size} members have the ${role.name} role`, 
+                            inline: true 
                         });
                     }
                 } catch (error) {
@@ -99,18 +92,38 @@ module.exports = {
             // Channel statistics
             let statsFields = [];
 
-            // Hacks channel stats
+            // Hacks channel stats (forum channel)
             if (box.hacksChannel) {
                 try {
                     const hacksChannel = await interaction.client.channels.fetch(box.hacksChannel);
-                    if (hacksChannel && hacksChannel.isTextBased()) {
-                        // Count unique users who have posted in the hacks channel
-                        const messages = await hacksChannel.messages.fetch({ limit: 100 });
-                        const uniqueUsers = new Set(messages.map(msg => msg.author.id));
+                    if (hacksChannel && hacksChannel.type === 15) { // Forum channel type
 
+                        const hacksCountKey = `${box.hacksChannel}-count`;
+                        const hacksUsersKey = `${box.hacksChannel}-users`;
+
+                        if (!statsCache.has(hacksCountKey) || !statsCache.has(hacksUsersKey)) {
+                            // Get all threads in the forum
+                            const threads = await hacksChannel.threads.fetchActive();
+                            const archivedThreads = await hacksChannel.threads.fetchArchived({ limit: 100 });
+                            
+                            // Combine active and archived threads
+                            const allThreads = new Map([...threads.threads, ...archivedThreads.threads]);
+                            
+                            // Count unique thread creators
+                            const uniqueUsers = new Set();
+                            allThreads.forEach(thread => {
+                                if (thread.ownerId) {
+                                    uniqueUsers.add(thread.ownerId);
+                                }
+                            });
+
+                            statsCache.set(hacksCountKey, allThreads.size)
+                            statsCache.set(hacksUsersKey, uniqueUsers.size)
+                        }
+                        
                         statsFields.push({
-                            name: '🔧 Hacks Channel',
-                            value: `${uniqueUsers.size} unique users have posted hacks\n<#${box.hacksChannel}>`,
+                            name: 'Hacks Channel',
+                            value: `${statsCache.get(hacksCountKey)} hacks by ${statsCache.get(hacksUsersKey)} users\n<#${box.hacksChannel}>`,
                             inline: true
                         });
                     }
@@ -118,7 +131,7 @@ module.exports = {
                     console.error('Error fetching hacks channel:', error);
                     if (box.hacksChannel) {
                         statsFields.push({
-                            name: '🔧 Hacks Channel',
+                            name: '🔧Hacks Channel',
                             value: `<#${box.hacksChannel}>`,
                             inline: true
                         });
@@ -126,24 +139,36 @@ module.exports = {
                 }
             }
 
-            // Featured hacks stats
+            // Featured hacks stats (forum channel with specific tag)
             if (box.featuredHacksChannel && box.featuredHacksTag) {
                 try {
                     const featuredChannel = await interaction.client.channels.fetch(box.featuredHacksChannel);
-                    if (featuredChannel && featuredChannel.isTextBased()) {
-                        // Count messages with the specific tag for this box
-                        const messages = await featuredChannel.messages.fetch({ limit: 100 });
-                        const taggedMessages = messages.filter(msg =>
-                            msg.content.includes(box.featuredHacksTag) ||
-                            (msg.embeds.length > 0 && msg.embeds.some(embed =>
-                                embed.description?.includes(box.featuredHacksTag) ||
-                                embed.title?.includes(box.featuredHacksTag)
-                            ))
-                        );
+                    if (featuredChannel && featuredChannel.type === 15) { // Forum channel type
 
+                        const featuredHacksCountKey = `${box.featuredHacksChannel}>${box.featuredHacksTag}-count`;
+
+                        if (!statsCache.has(featuredHacksCountKey)) {
+                            // Get all threads in the forum
+                            const threads = await featuredChannel.threads.fetchActive();
+                            const archivedThreads = await featuredChannel.threads.fetchArchived({ limit: 100 });
+                            
+                            // Combine active and archived threads
+                            const allThreads = new Map([...threads.threads, ...archivedThreads.threads]);
+                            
+                            // Filter threads that have the specific tag
+                            const taggedThreads = [];
+                            allThreads.forEach(thread => {
+                                if (thread.appliedTags && thread.appliedTags.includes(box.featuredHacksTag)) {
+                                    taggedThreads.push(thread);
+                                }
+                            });
+
+                            statsCache.set(featuredHacksCountKey, taggedThreads.length);
+                        }
+                        
                         statsFields.push({
-                            name: '⭐ Featured Hacks',
-                            value: `${taggedMessages.size} featured hacks with tag \`${box.featuredHacksTag}\`\n<#${box.featuredHacksChannel}>`,
+                            name: '🏆 Featured Hacks',
+                            value: `${statsCache.get(featuredHacksCountKey)} featured hacks\n<#${box.featuredHacksChannel}>`,
                             inline: true
                         });
                     }
@@ -151,7 +176,7 @@ module.exports = {
                     console.error('Error fetching featured hacks channel:', error);
                     if (box.featuredHacksChannel) {
                         statsFields.push({
-                            name: '⭐ Featured Hacks',
+                            name: '🏆 Featured Hacks',
                             value: `<#${box.featuredHacksChannel}>`,
                             inline: true
                         });
@@ -166,10 +191,10 @@ module.exports = {
 
             // Add box URL if available
             if (box.boxURL) {
-                embed.addFields({
-                    name: '🔗 CrunchLabs Page',
-                    value: `[View on CrunchLabs](${box.boxURL})`,
-                    inline: false
+                embed.addFields({ 
+                    name: '🔗 CrunchLabs Page', 
+                    value: `[View on CrunchLabs](${box.boxURL})`, 
+                    inline: false 
                 });
             }
 
@@ -181,10 +206,10 @@ module.exports = {
 
         } catch (error) {
             console.error('Error in box stats command:', error);
-            const errorMessage = interaction.deferred ?
+            const errorMessage = interaction.deferred ? 
                 { content: '❌ An error occurred while fetching box statistics.' } :
                 { content: '❌ An error occurred while fetching box statistics.', ephemeral: true };
-
+            
             if (interaction.deferred) {
                 await interaction.editReply(errorMessage);
             } else {
