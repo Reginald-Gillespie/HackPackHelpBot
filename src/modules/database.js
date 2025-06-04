@@ -7,11 +7,21 @@ mongoose.plugin(mongooseLeanVirtuals)
 mongoose.set('setDefaultsOnInsert', false);
 
 const factionSchema = new mongoose.Schema({
-  name: { type: String, required: true, unique: true },
-  roleId: { type: String, required: true },
-  emoji: { type: String, required: true }
+    name: { type: String, required: true, unique: true },
+    roleId: { type: String, required: true },
+    emoji: { type: String, required: true },
+    starboardChannel: { type: String },
+    starboardThreshold: { type: Number },
+    themeColor: { type: String }
 });
 const Factions = mongoose.model('factions', factionSchema);
+
+const starboardMessageSchema = new mongoose.Schema({
+    id: { type: String, required: true },
+    emoji: { type: String, required: true },
+});
+starboardMessageSchema.index({ id: 1, emoji: 1 }, { unique: true }); // Prevent duplicates
+const StarboardMessage = mongoose.model('starboardmessage', starboardMessageSchema);
 
 
 const customResponseSchema = new mongoose.Schema({
@@ -83,14 +93,14 @@ const configSchema = new mongoose.Schema({
     dupeNotifs: { type: Boolean, default: false },
     AIAutoHelp: { type: String, default: "" }, // Which server to allow
     restartData: restartDataSchema,
-    
+
     autoTagger: { type: Boolean, default: false },
-    allowedTags: [ String ],
+    allowedTags: [String],
 
-    admins: [ String ],
-    creators: [ String ],
+    admins: [String],
+    creators: [String],
 
-    allowedHelpMessageCategories: [ String ],
+    allowedHelpMessageCategories: [String],
 })
 const ConfigDB = mongoose.model("config", configSchema)
 
@@ -104,7 +114,7 @@ async function dropIndexes(Model) {
         await Model.collection.dropIndexes();
         const indexes2 = await Model.collection.indexes();
         console.log("Indexes after deletion:", indexes2.length);
-    } catch {}
+    } catch { }
 }
 async function dropAllReleventIndexes() {
     await dropIndexes(ConfigDB);
@@ -116,7 +126,7 @@ async function dropAllReleventIndexes() {
 }
 const connectedPromise = (async () => {
     await mongoose.connect(`${process.env.databaseURI}/${process.env.beta ? "StageHackPackBot" : "HackPackBot"}`)
-    
+
     // Indecies can mess stuff up when deving
     // if (process.env.beta) {
     //     dropAllIndexes();
@@ -129,9 +139,9 @@ const connectedPromise = (async () => {
     )
 
     // Finally, make sure certian ones exist and have all properties set
-    let config = await ConfigDB.findOneAndUpdate({ }, { }, {
-            upsert: true, new: true, setDefaultsOnInsert: true
-        }
+    let config = await ConfigDB.findOneAndUpdate({}, {}, {
+        upsert: true, new: true, setDefaultsOnInsert: true
+    }
     );
     if (!config) config = new ConfigDB({});
     await config.save();
@@ -145,6 +155,7 @@ module.exports = {
     BoxReviews,
     CustomResponses,
     Factions,
+    StarboardMessage,
 
     connectedPromise,
     dropAllReleventIndexes
