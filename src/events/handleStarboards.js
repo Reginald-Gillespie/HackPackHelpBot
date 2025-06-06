@@ -16,8 +16,11 @@ module.exports = {
      * @param {import('discord.js').User} user 
      * */
     async execute(reaction, user) {
-        if (reaction.partial) await reaction.fetch();
-        if (reaction.message.partial) await reaction.message.fetch();
+        // Fetch partials in parallel
+        await Promise.all([
+            reaction.partial ? reaction.fetch() : null,
+            reaction.message?.partial ? reaction.message.fetch() : null
+        ]);
 
         // See if this emoji is part of a starboard faction
         const faction = await Factions.findOne({
@@ -36,7 +39,7 @@ module.exports = {
         const isOnCooldown = !isPartOfFaction || (await StarboardCooldown.updateOne( // Only bother setting cooldown if part of the faction
             { userId: user.id }, 
             { $setOnInsert: { 
-                expireAt: Date.now() + ms("1h") 
+                expiresAt: Date.now() + ms("5s") 
             } }, 
             { upsert: true }
         )).upsertedCount == 0;
@@ -45,6 +48,9 @@ module.exports = {
             await reaction.remove().catch(e=>null);
             return;
         }
+
+        // There's a bit of a race condition here, somoene could react at the same time as someone else and this could be counted before their reactions are removed.
+        // I can't think of any good solution atm, and it's not a super critical issue so we'll leave it as is.
 
         // See if enough users in this faction reacted
         // await guild.members.fetch(); // Make sure role cache is up to date. This could present an issue on reaction spam
