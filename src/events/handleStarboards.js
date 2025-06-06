@@ -45,7 +45,9 @@ module.exports = {
         )).upsertedCount == 0;
 
         if (!isPartOfFaction || isOnCooldown) {
-            await reaction.remove().catch(e=>null);
+            await reaction.users.remove(user.id).catch(e => {
+                // debugger;
+            });
             return;
         }
 
