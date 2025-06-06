@@ -19,10 +19,17 @@ const Factions = mongoose.model('factions', factionSchema);
 const starboardMessageSchema = new mongoose.Schema({
     id: { type: String, required: true },
     emoji: { type: String, required: true },
+    finalStar: { type: String, required: true }
 });
 starboardMessageSchema.index({ id: 1, emoji: 1 }, { unique: true }); // Prevent duplicates
 const StarboardMessage = mongoose.model('starboardmessage', starboardMessageSchema);
 
+const starboardCooldownSchema = new mongoose.Schema({
+    userId: { type: String, required: true },
+    expiresAt: { type: Date, required: true }
+});
+starboardCooldownSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+const StarboardCooldown = mongoose.model('starboardmessage', starboardMessageSchema);
 
 const customResponseSchema = new mongoose.Schema({
     trigger: { type: String, required: true, unique: true },
@@ -156,6 +163,7 @@ module.exports = {
     CustomResponses,
     Factions,
     StarboardMessage,
+    StarboardCooldown,
 
     connectedPromise,
     dropAllReleventIndexes
