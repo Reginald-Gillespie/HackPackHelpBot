@@ -6,6 +6,8 @@ mongoose.plugin(mongooseLeanDefaults)
 mongoose.plugin(mongooseLeanVirtuals)
 mongoose.set('setDefaultsOnInsert', false);
 
+
+
 const factionSchema = new mongoose.Schema({
     name: { type: String, required: true, unique: true },
     roleId: { type: String, required: true },
@@ -16,26 +18,34 @@ const factionSchema = new mongoose.Schema({
 });
 const Factions = mongoose.model('factions', factionSchema);
 
+
+
 const starboardMessageSchema = new mongoose.Schema({
     id: { type: String, required: true },
     emoji: { type: String, required: true },
-    finalStar: { type: String, required: true }
+    finalStar: { type: String, required: true } // who was the last to star
 });
 starboardMessageSchema.index({ id: 1, emoji: 1 }, { unique: true }); // Prevent duplicates
 const StarboardMessage = mongoose.model('starboardmessage', starboardMessageSchema);
+
+
 
 const starboardCooldownSchema = new mongoose.Schema({
     userId: { type: String, required: true },
     expiresAt: { type: Date, required: true }
 });
 starboardCooldownSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
-const StarboardCooldown = mongoose.model('starboardmessage', starboardMessageSchema);
+const StarboardCooldown = mongoose.model('cooldown', starboardCooldownSchema);
+
+
 
 const customResponseSchema = new mongoose.Schema({
     trigger: { type: String, required: true, unique: true },
     response: { type: String, required: true }
 })
 const CustomResponses = mongoose.model("customresponses", customResponseSchema);
+
+
 
 // To store box data, which we can then use places like AI descriptions or leaderboards
 const boxDataSchema = new mongoose.Schema({
