@@ -39,7 +39,7 @@ module.exports = {
         const isOnCooldown = !isPartOfFaction || (await StarboardCooldown.updateOne( // Only bother setting cooldown if part of the faction
             { userId: user.id }, 
             { $setOnInsert: { 
-                expiresAt: Date.now() + ms("5s") 
+                expiresAt: Date.now() + ms("1h") 
             } }, 
             { upsert: true }
         )).upsertedCount == 0;
