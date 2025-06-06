@@ -1,9 +1,12 @@
 const { Events, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
-const { Factions, StarboardMessage } = require("../modules/database");
+const { Factions, StarboardMessage, StarboardCooldown } = require("../modules/database");
+const ms = require("ms");
 
 // Starboard handler for the croissant war factions.
 // The general idea is that only users with their faction's role can starboard messages 
 //   into their faction's starboard channel. 
+// Only users who are part of the faction may use the faction's emoji.
+// Using the faction's emoji has a 1 hour cooldown.
 
 module.exports = {
     name: Events.MessageReactionAdd,
@@ -21,8 +24,26 @@ module.exports = {
             emoji: reaction.emoji.toString()
         }).lean();
         
+        // Only continue if this faction is setup with a starboard
         if (!faction || !faction.starboardChannel || !faction.starboardThreshold) {
-            return
+            return;
+        }
+
+        // Check if this user is allowed to react with this
+        const guildMember = await reaction.message.guild.members.fetch(user.id).catch(() => null);
+        const isPartOfFaction = guildMember.roles.cache.has(faction.roleId);
+
+        const isOnCooldown = !isPartOfFaction || (await StarboardCooldown.updateOne( // Only bother setting cooldown if part of the faction
+            { userId: user.id }, 
+            { $setOnInsert: { 
+                expireAt: Date.now() + ms("1h") 
+            } }, 
+            { upsert: true }
+        )).upsertedCount == 0;
+
+        if (!isPartOfFaction || isOnCooldown) {
+            await reaction.remove().catch(e=>null);
+            return;
         }
 
         // See if enough users in this faction reacted
@@ -43,8 +64,13 @@ module.exports = {
             emoji: reaction.emoji.toString()
         }
         const result = await StarboardMessage.updateOne(
-            starboardMessage,
-            { $setOnInsert: starboardMessage },
+            starboardMessage, 
+            { 
+                $setOnInsert: { 
+                    ...starboardMessage, 
+                    finalStar: user.id
+                }
+            },
             { upsert: true }
         );
         const wasCreated = result.upsertedCount > 0;
