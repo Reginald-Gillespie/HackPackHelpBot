@@ -1,4 +1,4 @@
-const { Events, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
+const { Events, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionsBitField } = require("discord.js");
 const { Factions, StarboardMessage, StarboardCooldown } = require("../modules/database");
 const ms = require("ms");
 
@@ -29,6 +29,14 @@ module.exports = {
         
         // Only continue if this faction is setup with a starboard
         if (!faction || !faction.starboardChannel || !faction.starboardThreshold) {
+            return;
+        }
+
+        // Check if the bot has permission to manage messages (remove reactions) in the channel
+        const botMember = await reaction.message.guild.members.fetchMe();
+        const botPermissions = reaction.message.channel.permissionsFor(botMember);
+        if (!botPermissions || !botPermissions.has(PermissionsBitField.Flags.ManageMessages)) {
+            // If the bot can't remove reactions, don't starboard
             return;
         }
 
