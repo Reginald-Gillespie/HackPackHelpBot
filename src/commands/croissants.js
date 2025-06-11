@@ -1,6 +1,7 @@
 // commands/croissants.js
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { Factions } = require('../modules/database');
+const { StarboardMessage } = require('../modules/database');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -37,27 +38,45 @@ module.exports = {
                 return interaction.reply({ content: 'No factions found in the database.', ephemeral: true });
             }
 
-            // Load cache for acurate member counts
             await guild.members.fetch();
             await guild.roles.fetch();
 
-            const stats = (await Promise.all(
-                factions.map(async (faction) => {
-                    const role = await guild.roles.fetch(faction.roleId);
-                    if (!role) return null;
-                    return [faction.emoji, faction.name.trim(), role.members.size];
-                })
-            )).filter(Boolean);
+            // Map emoji to faction info
+            const factionMap = new Map(); // emoji => { name, roleId }
+            const factionStats = new Map(); // emoji => { name, emoji, memberCount, starCount }
 
+            for (const faction of factions) {
+                const role = await guild.roles.fetch(faction.roleId);
+                if (!role) continue;
+
+                factionMap.set(faction.emoji, { name: faction.name.trim(), roleId: faction.roleId });
+                factionStats.set(faction.emoji, {
+                    name: faction.name.trim(),
+                    emoji: faction.emoji,
+                    memberCount: role.members.size,
+                    starCount: 0
+                });
+            }
+
+            // Fetch all starboard messages and count stars per faction emoji
+            const starMsgs = await StarboardMessage.find();
+
+            for (const msg of starMsgs) {
+                const emoji = msg.emoji;
+                if (factionStats.has(emoji)) {
+                    factionStats.get(emoji).starCount++;
+                }
+            }
+
+            // Build embed
             const embed = new EmbedBuilder()
                 .setTitle('🥐 Faction Stats')
-                .setColor('#D2B48C') // Light brown
+                .setColor('#D2B48C');
 
-            for (const stat of stats) {
-                const [emoji, name, size] = stat;
+            for (const { name, emoji, memberCount, starCount } of factionStats.values()) {
                 embed.addFields({
                     name: `${emoji} ${name}`,
-                    value: `${size} member${size == 1 ? "" : "s"}`,
+                    value: `${memberCount} member${memberCount === 1 ? '' : 's'}\n:pushpin: ${starCount} starboard${starCount === 1 ? '' : 's'}`,
                     inline: true
                 });
             }
