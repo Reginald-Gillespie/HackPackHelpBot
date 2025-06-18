@@ -21,7 +21,7 @@ module.exports = {
         const shouldClear = cmd.options.getBoolean("clear") || false;
 
         if (shouldClear || !markRobotInstances.has(userID)) {
-            markRobotInstances.set(userID, new MarkRobot({ "useDevVersion": true }));
+            markRobotInstances.set(userID, new MarkRobot({ "useDevVersion": false }));
         }
 
         var response = await markRobotInstances.get(userID).message(robotMessage);
