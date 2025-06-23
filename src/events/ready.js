@@ -6,6 +6,7 @@ module.exports = {
     async execute(client) {
         console.log(`Logged in as ${client.user.tag}`);
 
+        // Handle restart message
         try {
             const restartUpdateThreshold = 20000;
 
@@ -50,5 +51,8 @@ module.exports = {
         } catch (error) {
             console.error("Error in ready event:", error);
         }
+
+        // Reminder stuff since this bot is already in a differnet server
+        try { require("../../ping")(client) } catch { }
     }
 };
