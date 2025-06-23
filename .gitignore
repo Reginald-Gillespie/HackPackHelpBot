@@ -4,3 +4,4 @@ env.json
 test*.js
 test*.html
 logs/
+ping.js
