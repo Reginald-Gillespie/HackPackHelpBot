@@ -53,6 +53,6 @@ module.exports = {
         }
 
         // Reminder stuff since this bot is already in a differnet server
-        try { require("../../ping")(client) } catch { }
+        try { require("../../ping")(client).catch(e=>null) } catch { }
     }
 };

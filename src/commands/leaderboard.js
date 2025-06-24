@@ -7,10 +7,14 @@ const {
 } = require('discord.js');
 const { BoxData, BoxReviews } = require('../modules/database');
 const { getEmojiRatingFromNum, rankingData } = require('./rate');
+const LRUCache = require('lru-cache').LRUCache;
+
+const leaderboardCache = new LRUCache({ ttl: 1000 * 60 * 30 }); // 30 minute
 
 // The list of all criteria used for ratings
 const CRITERIA = rankingData.map(r => r.key);
 const RATING_WEIGHTS = Object.fromEntries(rankingData.map(r => [r.key, r.weight]))
+
 
 
 // Calculate the weighted average rating of a box or creator
@@ -130,6 +134,77 @@ async function getAllCreatorsWithRatings() {
     }
 }
 
+async function getFeaturedHacksLeaderboard(client) {
+    try {
+        // Get all boxes with featured hack channels
+        const boxes = await BoxData.find({
+            featuredHacksChannel: { $exists: true, $ne: null, $ne: '' }
+        }).lean();
+
+        if (!boxes || boxes.length === 0) {
+            return [];
+        }
+
+        // Get unique featured hack channels to minimize API calls
+        const uniqueChannels = [...new Set(boxes.map(box => box.featuredHacksChannel))];
+
+        const userPostCounts = new Map();
+
+        // Fetch threads from each unique channel
+        for (const channelId of uniqueChannels) {
+            try {
+                const channel = await client.channels.fetch(channelId);
+                if (!channel || !channel.isThreadOnly?.() && !channel.threads) continue;
+
+                // Fetch all threads in the channel
+                const threads = await channel.threads.fetchActive();
+                const archivedThreads = await channel.threads.fetchArchived({ limit: 100 });
+
+                // Combine active and archived threads
+                const allThreads = new Map([...threads.threads, ...archivedThreads.threads]);
+
+                // Count posts by user
+                for (const [threadId, thread] of allThreads) {
+                    const ownerId = thread.ownerId;
+                    if (ownerId) {
+                        userPostCounts.set(ownerId, (userPostCounts.get(ownerId) || 0) + 1);
+                    }
+                }
+            } catch (error) {
+                console.error(`Error fetching threads from channel ${channelId}:`, error);
+                continue;
+            }
+        }
+
+        // Convert to array and sort by post count
+        const leaderboard = [];
+        for (const [userId, count] of userPostCounts) {
+            try {
+                const user = await client.users.fetch(userId);
+                leaderboard.push({
+                    id: userId,
+                    username: user.username,
+                    displayName: user.displayName || user.username,
+                    postCount: count
+                });
+            } catch (error) {
+                // If we can't fetch the user, skip them
+                console.error(`Error fetching user ${userId}:`, error);
+                continue;
+            }
+        }
+
+        // Sort by post count (descending) and limit to top 10
+        return leaderboard
+            .sort((a, b) => b.postCount - a.postCount)
+            .slice(0, 10);
+
+    } catch (error) {
+        console.error('Error fetching featured hacks leaderboard:', error);
+        return [];
+    }
+}
+
 // Create a leaderboard embed for boxes or creators
 function createLeaderboardEmbed(items, type, page = 0, pageSize = 6, sortByCriterion = 'Overall') {
     // Sort items by the specified criterion
@@ -185,6 +260,36 @@ function createLeaderboardEmbed(items, type, page = 0, pageSize = 6, sortByCrite
     return { embed, totalPages };
 }
 
+function createFeaturedLeaderboardEmbed(users) {
+    const embed = new EmbedBuilder()
+        .setTitle('Featured Hackers Leaderboard')
+        .setFooter({ text: "This leaderboard requires 2 or more featured hacks." })
+        .setColor("#e69149")
+
+    if (users.length === 0) {
+        embed.setDescription('No featured hacks found.');
+        return embed;
+    }
+
+    let description = '';
+
+    users
+        .filter(user => user.postCount >= 2)
+        .forEach((user, index) => {
+            const position = index + 1;
+            const medal = position === 1 ? '🥇 ' : position === 2 ? '🥈 ' : position === 3 ? '🥉 ' : '';
+
+            description +=
+                `**${position}.** ${medal}<@${user.id}>, with **${user.postCount}** featured hack${user.postCount !== 1 ? 's' : ''}.\n\n`;
+        });
+
+    description += "\n"
+
+    embed.setDescription(description);
+    return embed;
+}
+
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('leaderboard')
@@ -206,7 +311,7 @@ module.exports = {
                             { name: 'Code Cleanliness', value: 'CodeCleanliness' }
                         )
                 )
-        ),
+        )
         // Disabling creator subcommand until there's more data to balance them out, giving them a chance to not be ruined by a disliked box.
         // .addSubcommand(subcommand =>
         //     subcommand
@@ -226,6 +331,11 @@ module.exports = {
         //                 )
         //         )
         // ),
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName('featured')
+                .setDescription('View leaderboard of users with most featured hacks')
+        ),
 
     async execute(interaction) {
         await interaction.deferReply();
@@ -382,6 +492,21 @@ module.exports = {
                         console.error('Error updating message after collector end:', error);
                     }
                 });
+            }
+            else if (subcommand === 'featured') {
+                let users = leaderboardCache.get("featuredUsers");
+
+                if (!users) {
+                    users = await getFeaturedHacksLeaderboard(interaction.client);
+                    leaderboardCache.set("featuredUsers", users)
+                }
+
+                if (!users || users.length === 0) {
+                    return interaction.editReply('No featured hacks found.');
+                }
+
+                const embed = createFeaturedLeaderboardEmbed(users);
+                return interaction.editReply({ embeds: [embed] });
             }
         } catch (error) {
             console.error('Error executing leaderboard command:', error);
