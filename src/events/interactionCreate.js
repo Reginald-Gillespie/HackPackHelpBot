@@ -3,10 +3,12 @@ const { Events, EmbedBuilder, AttachmentBuilder, ButtonBuilder, ButtonStyle, Act
 const { postProcessForDiscord, getQuestionAndAnswers } = require("../modules/mermaidParse")
 const Fuse = require('fuse.js');
 const { helpHistoryCache } = require("../commands/help")
-const { ConfigDB, Factions } = require('../modules/database');
+const { ConfigDB, Factions, IssueTrackerDB } = require('../modules/database');
 
 module.exports = {
     name: Events.InteractionCreate,
+    
+    /** @param {import('discord.js').Interaction} cmd */
     async execute(cmd, client) {
         if (cmd.isCommand()) {
             const command = client.commands.get(cmd.commandName);
@@ -225,6 +227,19 @@ module.exports = {
                         )
                     )
                     break;
+
+                case "issue":
+                case "from":
+                    const allIssues = await IssueTrackerDB.distinct('issue');
+                    const sortedIssues = utils.sortByMatch(allIssues, field.value);
+
+                    const choices = sortedIssues.slice(0, 25).map(issue => ({
+                        name: issue.length > 100 ? issue.substring(0, 97) + '...' : issue,
+                        value: issue
+                    }));
+
+                    await cmd.respond(choices);
+
             }
         }
     }
