@@ -5,7 +5,7 @@ const {
     ButtonBuilder,
     ButtonStyle,
 } = require('discord.js');
-const { BoxData, BoxReviews } = require('../modules/database');
+const { BoxData, BoxReviews, IssueTrackerDB, ConfigDB } = require('../modules/database');
 const { getEmojiRatingFromNum, rankingData } = require('./rate');
 const LRUCache = require('lru-cache').LRUCache;
 
@@ -335,8 +335,14 @@ module.exports = {
             subcommand
                 .setName('featured')
                 .setDescription('View leaderboard of users with most featured hacks')
+        )
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName('issues')
+                .setDescription('Display issue tracker leaderboard')
         ),
 
+    /** @param {import('discord.js').ChatInputCommandInteraction} interaction */
     async execute(interaction) {
         await interaction.deferReply();
 
@@ -508,6 +514,57 @@ module.exports = {
                 const embed = createFeaturedLeaderboardEmbed(users);
                 return interaction.editReply({ embeds: [embed] });
             }
+            else if (subcommand === 'issues') {
+                const stats = await IssueTrackerDB.aggregate([
+                    { $lookup: {
+                        from: 'configs',
+                        let: { userID: '$userID' },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: {
+                                        $or: [
+                                            { $in: ['$$userID', '$creators'] },
+                                            { $in: ['$$userID', '$admins'] }
+                                        ]
+                                    }
+                                }
+                            }
+                        ],
+                        as: 'config'
+                    } },
+                    { $match: {
+                        config: { $ne: [] }
+                    } },
+                    { $group: {
+                        _id: '$issue',
+                        count: { $sum: 1 },
+                        lastSeen: { $max: '$timestamp' }
+                    } },
+                    { $sort: { count: -1 } },
+                    { $limit: 15 }
+                ]);
+
+                if (stats.length === 0) {
+                    await interaction.followUp({
+                        content: 'No issue data available from trusted users.',
+                        ephemeral: true
+                    });
+                    return;
+                }
+
+                const leaderboardText = stats.map((stat, index) => {
+                    const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
+                    const lastSeenDate = new Date(stat.lastSeen).toLocaleDateString();
+                    return `${medal} **${stat._id}** - ${stat.count} time${stat.count > 1 ? 's' : ''} (${lastSeenDate})`;
+                }).join('\n');
+
+                await interaction.followUp({
+                    content: `**🏆 Most Common Issues Leaderboard**\n\n${leaderboardText}`,
+                    ephemeral: false
+                });
+            }
+
         } catch (error) {
             console.error('Error executing leaderboard command:', error);
             return interaction.editReply('There was an error executing the leaderboard command.');

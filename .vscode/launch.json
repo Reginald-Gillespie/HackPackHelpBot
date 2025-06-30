@@ -4,6 +4,16 @@
         {
             "type": "node",
             "request": "launch",
+            "name": "Launch Dev",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "program": "${workspaceFolder}/src/index.js",
+            "args": ["--dev"]
+        },
+        {
+            "type": "node",
+            "request": "launch",
             "name": "Launch Index",
             "skipFiles": [
                 "<node_internals>/**"

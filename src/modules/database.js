@@ -7,6 +7,13 @@ mongoose.plugin(mongooseLeanVirtuals)
 mongoose.set('setDefaultsOnInsert', false);
 
 
+const issueTrackerSchema = new mongoose.Schema({
+    issue: { type: String, required: true },
+    userID: { type: String, required: true },
+    timestamp: { type: Date, default: Date.now }
+});
+const IssueTrackerDB = mongoose.model("issuetracker", issueTrackerSchema);
+
 
 const factionSchema = new mongoose.Schema({
     name: { type: String, required: true, unique: true },
@@ -174,6 +181,7 @@ module.exports = {
     Factions,
     StarboardMessage,
     StarboardCooldown,
+    IssueTrackerDB,
 
     connectedPromise,
     dropAllReleventIndexes
