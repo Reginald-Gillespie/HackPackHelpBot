@@ -197,7 +197,7 @@ class AutoReplyAI {
         this.helpMessageList = [];
         this.aiForceTrigger = "!ai ";
         this.aiNoCacheTrigger = "!nocache ";
-        this.model = "gemini-2.0-flash";
+        this.model = "gemini-2.5-flash";
         this.genAI = new GoogleGenerativeAI(process.env.GeminiKey);
         this.stage1RequiredConfidence = 3;  // How sure stage1 is that there is a matching FAQ (this will be rejudged by stage2 with extra context, so low is fine)
         this.stage2MessageCount = 8;        // How much context to pull in
