@@ -37,10 +37,12 @@ fs.readdirSync(eventsPath).filter(file => file.endsWith('.js')).forEach(file => 
 });
 
 connectedPromise.then(() => {
-        client.login(process.env.token).then(async _ => {
-            // Once we have a sucessful login, then you can register the exception handlers to not crash out.
-            const handleException = (e) => console.log(e);
-            process.on('unhandledRejection', handleException);
-            process.on('unhandledException', handleException);
-        })
+    client.login(process.env.token).then(async _ => {
+        // Once we have a sucessful login, then you can register the exception handlers to not crash out.
+        const handleException = (e) => console.error(e);
+        process.on('unhandledRejection', handleException);
+        process.on('unhandledException', handleException);
+        process.on('uncaughtException', handleException);
+        process.on('uncaughtRejection', handleException);
     })
+})

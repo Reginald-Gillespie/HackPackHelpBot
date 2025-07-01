@@ -19,7 +19,7 @@ module.exports = {
         // Fetch partials in parallel
         await Promise.all([
             reaction.partial ? reaction.fetch() : null,
-            reaction.message?.partial ? reaction.message.fetch() : null
+            reaction.message?.partial ? reaction.message.fetch().catch(e=>null) : null
         ]);
 
         // See if this emoji is part of a starboard faction

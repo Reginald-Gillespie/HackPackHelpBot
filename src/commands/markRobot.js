@@ -16,7 +16,9 @@ module.exports = {
     async execute(cmd) {
         await cmd.deferReply({ ephemeral: true });
 
-        const userID = cmd.member.user.id;
+        const userID = cmd?.member?.user?.id;
+        if (!userID) return; // Edge case that can crash it
+
         const robotMessage = cmd.options.getString("message");
         const shouldClear = cmd.options.getBoolean("clear") || false;
 
