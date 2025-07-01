@@ -31,6 +31,8 @@ module.exports = {
 
         const guild = interaction.guild;
 
+        if (!guild.members) return; // Edge case that can crash it
+
         if (subcommand === 'stats') {
             const factions = await Factions.find();
 

@@ -5,12 +5,10 @@ module.exports = {
     name: Events.MessageReactionAdd,
     async execute(reaction, user) {
         if (reaction.partial) {
-            try {
-                await reaction.fetch();
-            } catch (error) {
+            await reaction.fetch().catch(e => {
                 console.error('Error fetching reaction:', error);
                 return;
-            }
+            });
         }
 
         if (['❌', '👎', ":x:", ":thumbsdown:"].includes(reaction.emoji.name)) {

@@ -55,7 +55,7 @@ module.exports = {
                     helpHistoryCache.get(context.id).push([questionData, answersArray, interactionId])
                 }
 
-                const message = await cmd.message.fetch();
+                const message = await cmd.message.fetch().catch(e=>null);
                 const hasAnswerEmbed = message.embeds.length > 1;
                 const questionEmbed = message.embeds[hasAnswerEmbed ? 1 : 0];
                 let questionField = questionEmbed.fields[2];
