@@ -8,7 +8,10 @@ const { ConfigDB, Factions, IssueTrackerDB, FixerDB } = require('../modules/data
 module.exports = {
     name: Events.InteractionCreate,
     
-    /** @param {import('discord.js').Interaction} cmd */
+    /** 
+     * @param {import('discord.js').Interaction} cmd 
+     * @param {import('discord.js').Client} client 
+     * */
     async execute(cmd, client) {
         if (cmd.isCommand()) {
             const command = client.commands.get(cmd.commandName);
@@ -170,6 +173,8 @@ module.exports = {
             const subtopics = config.allowedHelpMessageCategories;
 
             switch (field.name) {
+                // Broad field names that all autocomplete the same.
+
                 case "title":
                     // Use getSubcommand() safely:
                     var subtopic = cmd.options.getSubcommand(false);
@@ -250,6 +255,13 @@ module.exports = {
                     }));
 
                     await cmd.respond(mistakeChoices);
+
+                    
+                // If none of these handlers caught it, see if the command has a command-specific handler
+                default:
+                    client?.commands
+                        ?.get(cmd.commandName)
+                        ?.autocomplete(cmd, client);
             }
         }
     }
