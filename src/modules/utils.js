@@ -68,6 +68,10 @@ module.exports = {
         const config = await ConfigDB.findOne({});
         return config.creators?.includes(userID) || config.admins?.includes(userID)
     },
+    async isAdmin(userID) {
+        const config = await ConfigDB.findOne({});
+        return config.admins?.includes(userID)
+    },
     sortByMatch(items, text) {
         if (!text) return items;
         const fuse = new Fuse(items.map(title => ({ title })), fuseOptions);
