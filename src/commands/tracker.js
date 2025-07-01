@@ -320,7 +320,7 @@ module.exports = {
                 }
                 if (amount == null){
                 await fixerDB.deleteOne(existing);
-                interaction.reply({
+                interaction.editReply({
                     content: `sucsessfully deleted \`${mistakeText}\` for box \`${boxText}\``,
                     ephemeral: true
                 })
