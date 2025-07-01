@@ -141,7 +141,7 @@ module.exports = {
                     return;
                 }
 
-                await interaction.deferReply({ ephemeral: true })
+                await interaction.deferReply({ ephemeral: false })
 
                 const result = await FixerDB.findOneAndUpdate(
                     { mistake: mistakeText, box: boxText },
