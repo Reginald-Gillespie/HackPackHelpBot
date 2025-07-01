@@ -20,6 +20,22 @@ module.exports = {
         )];
         return boxNames;
     },
+    async getSubtopicCategories() {
+        // Returns array of all subtopics and/or boxes that you can create help messages for.
+
+        // Baseline categories on top of boxes
+        const baselineFAQCategories = await ConfigDB.findOne().distinct("baselineFAQCategories")
+
+        // All boxes - each one gets it's own category; Code is jank to efficiently get them in order.
+        const allBoxNames = (await BoxData.find({})
+                .sort({ _id: 1 })
+                .select("boxName")
+                .lean()
+            )
+            .map(b => b.boxName);
+
+        return [ ...baselineFAQCategories, ...allBoxNames ]
+    },
     isHelpRequest(message) {
         message = message.toLowerCase().replace("'", "");
         return (

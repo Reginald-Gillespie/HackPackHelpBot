@@ -126,7 +126,7 @@ module.exports = {
                     const subtopic = cmd.fields.getTextInputValue(subtopicFieldID);
 
                     const config = await ConfigDB.findOne({});
-                    const subtopics = config.allowedHelpMessageCategories;
+                    const subtopics = await utils.getSubtopicCategories();
 
                     const formerSubtopic = subtopicFieldID.split("-").slice(1).join("-") || subtopic;
                     const formerTitle = titleFieldID.split("-").slice(1).join("-") || title;
@@ -170,7 +170,7 @@ module.exports = {
             const typedSoFar = field.value;
 
             const config = await ConfigDB.findOne({});
-            const subtopics = config.allowedHelpMessageCategories;
+            const subtopics = await utils.getSubtopicCategories();
 
             switch (field.name) {
                 // Broad field names that all autocomplete the same.

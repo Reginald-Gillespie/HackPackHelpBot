@@ -6,7 +6,7 @@ module.exports = {
     // Auto expand lookup commands into each one
     data: (async () => {
         const config = await ConfigDB.findOne({});
-        const subtopics = config.allowedHelpMessageCategories;
+        const subtopics = await utils.getSubtopicCategories();
 
         const subtopicDescriptions = {};
         subtopics.forEach(subtopic => {

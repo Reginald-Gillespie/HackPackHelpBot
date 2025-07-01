@@ -134,6 +134,7 @@ const configSchema = new mongoose.Schema({
     creators: [String],
 
     allowedHelpMessageCategories: [String],
+    baselineFAQCategories: [String],
 })
 const ConfigDB = mongoose.model("config", configSchema)
 
