@@ -4,6 +4,7 @@ const { ConfigDB, dropAllReleventIndexes } = require('../modules/database');
 
 const ADMIN_COMMANDS = {
     "whitelist-id": {
+        requiresAdmin: true,
         name: "Whitelist ID",
         description: "Add a user ID to the creators whitelist",
         inputType: "user_id",
@@ -19,6 +20,7 @@ const ADMIN_COMMANDS = {
         }
     },
     "unwhitelist-id": {
+        requiresAdmin: true,
         name: "Unwhitelist ID",
         description: "Remove a user ID from the creators whitelist",
         inputType: "user_id",
@@ -67,6 +69,7 @@ const ADMIN_COMMANDS = {
         }
     },
     "view-admins": {
+        requiresAdmin: true,
         name: "View Admins",
         description: "View all admin users",
         inputType: "none",
@@ -154,6 +157,7 @@ const ADMIN_COMMANDS = {
         }
     },
     "restart": {
+        requiresAdmin: true,
         name: "Restart",
         description: "Restart the bot",
         inputType: "none",
@@ -178,6 +182,7 @@ const ADMIN_COMMANDS = {
         }
     },
     "drop-indexes": {
+        requiresAdmin: true,
         name: "Drop Indexes",
         description: "Drop all relevant database indexes",
         inputType: "none",
