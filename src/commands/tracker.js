@@ -1,6 +1,6 @@
 const { SlashCommandBuilder } = require('discord.js');
 const utils = require('../modules/utils');
-const { ConfigDB, IssueTrackerDB, fixerDB} = require('../modules/database');
+const { ConfigDB, IssueTrackerDB, fixerDB } = require('../modules/database');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -47,62 +47,62 @@ module.exports = {
                         .setDescription('Add a mistake fixer made during a live builds')
                         .addStringOption(string =>
                             string
-                            .setName('box')
-                            .setDescription('Name of the box that fixer messed up on')
-                            .setRequired(true))
+                                .setName('box')
+                                .setDescription('Name of the box that fixer messed up on')
+                                .setRequired(true))
                         .addStringOption(string =>
                             string
-                            .setName('mistake')
-                            .setDescription('Name of the mistake that fixer made')
-                            .setRequired(true)))
+                                .setName('mistake')
+                                .setDescription('Name of the mistake that fixer made')
+                                .setRequired(true)))
                 .addSubcommand(subcommand =>
                     subcommand
-                    .setName('delete')
-                    .setDescription('Delete a mistake from the database (Admin only)')
-                    .addStringOption(string =>
-                        string
-                        .setName('box')
-                        .setDescription('box of the mistake that needs to be deleted')
-                        .setRequired(true))
-                    .addStringOption(string =>
-                        string
-                        .setName('mistake')
-                        .setDescription('name of the mistake that needs to be deleted')
-                        .setRequired(true))
-                    .addStringOption(string =>
-                        string
-                        .setName('amount')
-                        .setDescription('amount of the mistake to delete (leave blank for all)')
-                        .setRequired(false)))
+                        .setName('delete')
+                        .setDescription('Delete a mistake from the database (Admin only)')
+                        .addStringOption(string =>
+                            string
+                                .setName('box')
+                                .setDescription('box of the mistake that needs to be deleted')
+                                .setRequired(true))
+                        .addStringOption(string =>
+                            string
+                                .setName('mistake')
+                                .setDescription('name of the mistake that needs to be deleted')
+                                .setRequired(true))
+                        .addStringOption(string =>
+                            string
+                                .setName('amount')
+                                .setDescription('amount of the mistake to delete (leave blank for all)')
+                                .setRequired(false)))
                 .addSubcommand(subcommand =>
                     subcommand
-                    .setName('stats')
-                    .setDescription('All mistakes fixer has made on a box')
-                    .addStringOption(string =>
-                        string
-                        .setName('box')
-                        .setDescription('Name of the box you want to see stats of')
-                        .setRequired(true)
-                    )
+                        .setName('stats')
+                        .setDescription('All mistakes fixer has made on a box')
+                        .addStringOption(string =>
+                            string
+                                .setName('box')
+                                .setDescription('Name of the box you want to see stats of')
+                                .setRequired(true)
+                        )
                 )
-            ),
+        ),
 
     async autocomplete(interaction) {
         const focusedOption = interaction.options.getFocused(true);
-        
+
         if (focusedOption.name === 'issue' || focusedOption.name === 'from') {
             const allIssues = await IssueTrackerDB.distinct('issue');
             const sortedIssues = utils.sortByMatch(allIssues, focusedOption.value);
-            
+
             const choices = sortedIssues.slice(0, 25).map(issue => ({
                 name: issue.length > 100 ? issue.substring(0, 97) + '...' : issue,
                 value: issue
             }));
-            
+
             await interaction.respond(choices);
         }
     },
-    
+
     /** @param {import('discord.js').ChatInputCommandInteraction} interaction */
     async execute(interaction) {
         const subcommand = interaction.options.getSubcommand();
@@ -112,19 +112,19 @@ module.exports = {
         const isTrusted = config.creators?.includes(userID) || config.admins?.includes(userID);
         const isAdmin = config.admins?.includes(userID);
         const boxes = [
-        "turret",
-        "domino",
-        "label",
-        "sandy",
-        "laser",
-        "balance",
-        "dealr",
-        "plant"
-    ];
+            "turret",
+            "domino",
+            "label",
+            "sandy",
+            "laser",
+            "balance",
+            "dealr",
+            "plant"
+        ];
 
         if (subcommand === 'add' && subcommandgroup !== 'fixer') {
             const issue = interaction.options.getString('issue');
-            
+
             // Save to database
             const newEntry = new IssueTrackerDB({
                 issue: issue,
@@ -185,10 +185,11 @@ module.exports = {
                     $group: {
                         _id: '$issue',
                         count: { $sum: 1 },
-                    firstSeen: { $min: '$timestamp' },
-                    lastSeen: { $max: '$timestamp' },
-                    contributors: { $addToSet: '$userID' }
-                } }
+                        firstSeen: { $min: '$timestamp' },
+                        lastSeen: { $max: '$timestamp' },
+                        contributors: { $addToSet: '$userID' }
+                    }
+                }
             ]);
 
             if (stats.length === 0) {
@@ -245,58 +246,58 @@ module.exports = {
 
             if (subcommand === 'add') {
 
-    if (!isTrusted) {
-        await interaction.reply({
-            content: 'Only trusted users can add mistakes. Try asking a trusted user to add the mistake!',
-            ephemeral: true
-        });
-        return;
-    }
-    
-    const boxText = interaction.options.getString('box');
-    const mistakeText = interaction.options.getString('mistake');
+                if (!isTrusted) {
+                    await interaction.reply({
+                        content: 'Only trusted users can add mistakes. Try asking a trusted user to add the mistake!',
+                        ephemeral: true
+                    });
+                    return;
+                }
 
-    if (!boxes.includes(boxText)) {
-        interaction.reply({
-            content: `\`${boxText}\` is not a valid box. Please spesify one of these valid boxes: \`turret, domino, label, sandy, laser, balance, dealr, or plant\``,
-            ephemeral: true
-        })
-        return;
-    }
+                const boxText = interaction.options.getString('box');
+                const mistakeText = interaction.options.getString('mistake');
 
-        await interaction.deferReply({ ephemeral:true })
+                if (!boxes.includes(boxText)) {
+                    interaction.reply({
+                        content: `\`${boxText}\` is not a valid box. Please spesify one of these valid boxes: \`turret, domino, label, sandy, laser, balance, dealr, or plant\``,
+                        ephemeral: true
+                    })
+                    return;
+                }
 
-    const existing = await fixerDB.findOne({
-        mistake: mistakeText,
-        box: boxText
-    });
+                await interaction.deferReply({ ephemeral: true })
 
-    if (!existing) {
-
-        const newEntry = new fixerDB({
-            mistake: mistakeText,
-            box: boxText,
-            count: 1
-        });
-        await newEntry.save();
-        
-        await interaction.editReply({ 
-            content: `Added \`${mistakeText}\` to box \`${boxText}\`.  <@187446096258269185> made a mistake!`
-        });
-
-    } else {
-        existing.count += 1;
-        await existing.save();
-
-                await interaction.editReply({
-                    content: `incremented count from \`${mistakeText}\` on box \`${boxText}\`. Total: \`${existing.count}\`.  <@187446096258269185> made a mistake!`
+                const existing = await fixerDB.findOne({
+                    mistake: mistakeText,
+                    box: boxText
                 });
-    }
+
+                if (!existing) {
+
+                    const newEntry = new fixerDB({
+                        mistake: mistakeText,
+                        box: boxText,
+                        count: 1
+                    });
+                    await newEntry.save();
+
+                    await interaction.editReply({
+                        content: `Added \`${mistakeText}\` to box \`${boxText}\`.  <@187446096258269185> made a mistake!`
+                    });
+
+                } else {
+                    existing.count += 1;
+                    await existing.save();
+
+                    await interaction.editReply({
+                        content: `incremented count from \`${mistakeText}\` on box \`${boxText}\`. Total: \`${existing.count}\`.  <@187446096258269185> made a mistake!`
+                    });
+                }
             } else if (subcommand === 'delete') {
                 if (!isAdmin) {
                     interaction.reply({
-                        content:'This command is for admins only',
-                        ephemeral:true
+                        content: 'This command is for admins only',
+                        ephemeral: true
                     })
                     return;
                 }
@@ -305,7 +306,7 @@ module.exports = {
                 const mistakeText = interaction.options.getString('mistake');
                 const amount = interaction.options.getString('amount');
 
-                await interaction.deferReply({ ephemeral:true });
+                await interaction.deferReply({ ephemeral: true });
 
                 const existing = await fixerDB.findOne({
                     mistake: mistakeText,
@@ -314,24 +315,24 @@ module.exports = {
                 if (!existing) {
                     interaction.editReply({
                         content: `Could not find \`${mistakeText}\` for box \`${boxText}\` make sure you are using one of the following box names; \`turret, domino, label, sandy, laser, balance, dealr, or plant.\``,
-                        ephemeral:true
+                        ephemeral: true
                     })
                     return;
                 }
-                if (amount == null){
-                await fixerDB.deleteOne(existing);
-                interaction.editReply({
-                    content: `sucsessfully deleted \`${mistakeText}\` for box \`${boxText}\``,
-                    ephemeral: true
-                })
+                if (amount == null) {
+                    await fixerDB.deleteOne(existing);
+                    interaction.editReply({
+                        content: `sucsessfully deleted \`${mistakeText}\` for box \`${boxText}\``,
+                        ephemeral: true
+                    })
                 } else if (Number(existing.count) <= amount) {
                     await fixerDB.deleteOne(existing);
                     interaction.editReply({
-                    content: `sucsessfully deleted \`${mistakeText}\` for box \`${boxText}\``,
-                    ephemeral: true
+                        content: `sucsessfully deleted \`${mistakeText}\` for box \`${boxText}\``,
+                        ephemeral: true
                     })
 
-                    
+
                 } else {
                     let DBcount = Number(amount);
 
@@ -339,21 +340,21 @@ module.exports = {
                     existing.save();
                     interaction.editReply({
                         content: `Deleted \`${amount}\` of \`${mistakeText}\` for box \`${boxText}\``,
-                        ephemeral:true
+                        ephemeral: true
                     })
                     return;
                 }
-                
+
             } else if (subcommand === 'stats') {
                 const boxText = interaction.options.getString('box')
-                
+
                 if (boxes.includes(boxText)) {
 
                     await interaction.deferReply();
 
                     const mistakes = await fixerDB.find({
                         box: boxText
-                    }).sort({count: -1});
+                    }).sort({ count: -1 });
 
                     let message = `All mistakes fixer made for box \`${boxText}\` \n`
 
@@ -361,16 +362,16 @@ module.exports = {
                         if (mistake.count == 1) {
                             message += `${index + 1}.   \`${mistake.mistake}\` happened 1 time \n`
                         } else {
-                             message += `${index + 1}.   \`${mistake.mistake}\` happened ${mistake.count} times \n`
+                            message += `${index + 1}.   \`${mistake.mistake}\` happened ${mistake.count} times \n`
                         }
-                        
-                });
-                    
+
+                    });
+
                     interaction.editReply({
                         content: message,
-                        ephemeral:false
+                        ephemeral: false
                     });
-                    
+
                 } else {
                     interaction.reply({
                         content: `\`${boxText}\` is not a valid box. Please spesify one of these valid boxes: \`turret, domino, label, sandy, laser, balance, dealr, or plant\``,
@@ -379,6 +380,6 @@ module.exports = {
                     return;
                 }
             }
-        } 
+        }
     }
 }
