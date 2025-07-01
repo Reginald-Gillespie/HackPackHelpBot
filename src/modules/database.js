@@ -15,6 +15,15 @@ const issueTrackerSchema = new mongoose.Schema({
 const IssueTrackerDB = mongoose.model("issuetracker", issueTrackerSchema);
 
 
+const fixerSchema = new mongoose.Schema({
+    mistake: { type: String, required: true },
+    box: { type: String, required: true },
+    count: { type: Number, required: true, default: 0 },
+    timestamp: { type: Date, default: Date.now }
+});
+const FixerDB = mongoose.model("fixer", fixerSchema);
+
+
 const factionSchema = new mongoose.Schema({
     name: { type: String, required: true, unique: true },
     roleId: { type: String, required: true },
@@ -182,6 +191,7 @@ module.exports = {
     StarboardMessage,
     StarboardCooldown,
     IssueTrackerDB,
+    FixerDB,
 
     connectedPromise,
     dropAllReleventIndexes

@@ -3,7 +3,7 @@ const { Events, EmbedBuilder, AttachmentBuilder, ButtonBuilder, ButtonStyle, Act
 const { postProcessForDiscord, getQuestionAndAnswers } = require("../modules/mermaidParse")
 const Fuse = require('fuse.js');
 const { helpHistoryCache } = require("../commands/help")
-const { ConfigDB, Factions, IssueTrackerDB } = require('../modules/database');
+const { ConfigDB, Factions, IssueTrackerDB, FixerDB } = require('../modules/database');
 
 module.exports = {
     name: Events.InteractionCreate,
@@ -240,6 +240,16 @@ module.exports = {
 
                     await cmd.respond(choices);
 
+                case "mistake": 
+                    const allMistakes = await FixerDB.distinct('mistake');
+                    const sortedMistakes = utils.sortByMatch(allMistakes, field.value);
+
+                    const mistakeChoices = sortedMistakes.slice(0, 25).map(issue => ({
+                        name: issue.length > 100 ? issue.substring(0, 97) + '...' : issue,
+                        value: issue
+                    }));
+
+                    await cmd.respond(mistakeChoices);
             }
         }
     }
