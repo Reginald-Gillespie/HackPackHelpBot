@@ -8,19 +8,24 @@ const NodeCache = require("node-cache");
 const { isHelpRequest, getHelpMessageBySubjectTitle } = require('../modules/utils');
 const tripleBacktick = '```'
 const { ChannelType, PermissionsBitField } = require("discord.js")
-const { ConfigDB, StoredMessages } = require('../modules/database');
+const { ConfigDB, StoredMessages, BoxData } = require('../modules/database');
 
 
 // Per-box information given to the AI.
 const subtopicInfoMap = {
-    "turret": "This is the IR Turret. This box uses an IR remote to control a 3 axis turret that shoots foam darts.",
-    "domino-robot": "This is the Domino Robot. This box is a simple line(black/white tape)-following robot that lays down dominos. It uses two IR object sensors to stay centered over the line",
-    "label": "This is the Label Maker. This box moves a pen up and down on a Y motor, and rolls take with the X motor to draw letters.",
-    "sandy": "This is the Sand Garden. This box is a small zen sand garden using two stepper motors to move arms moving a magnetic ball in patterns.",
-    "laser-tag": "This is the IR Laser Tag. This box has two IR laser tag guns, each connected to a pair of goggles with receivers that dim when you are shot.",
-    "balance": "This is the Balance Bot. This is a classic bot that balances on two wheels.",
-    "ide": "This is the coding IDE. These boxes use ae custom branded online IDE (which in turn uses a branded Arduino Create Agent to allow the browser to connect to the arduino) to code the projects. Some people prefer other IDEs like the Arduino IDE, but these take more setup work and are only advised when the user requests it. A lot of users may refer to coding as \"Hacking\", as this is the language the product is advertised with."
+    "IDE": "This is the coding IDE. These boxes use ae custom branded online IDE (which in turn uses a branded Arduino Create Agent to allow the browser to connect to the arduino) to code the projects. Some people prefer other IDEs like the Arduino IDE, but these take more setup work and are only advised when the user requests it. A lot of users may refer to coding as \"Hacking\", as this is the language the product is advertised with."
+    // Box subtopic info is loaded async
+};
+async function loadSubtopicInfo() {
+    const allBoxes = await BoxData.find({})
+        .select("boxName boxDescription")
+        .lean();
+
+    allBoxes.forEach(({ boxName, boxDescription }) => {
+        subtopicInfoMap[boxName] = boxDescription;
+    })
 }
+loadSubtopicInfo();
 
 // Setup AI data
 const stage1SystemPrompt = 
@@ -34,15 +39,9 @@ const stage1SystemPrompt =
 - Do not extrapolate meaning too far, better to miss a vague question than answer something unrelated.
 
 For more context, you are helping answer questions about Arduino subscription box projects, including:
-- IR Turret. This box uses an IR remote to control a 3 axis turret that shoots foam darts.
-- Domino Robot. This box is a simple line-following robot that lays down dominos.
-- Label Maker. This box moves a pen up and down on a Y motor, and rolls take with the X motor to draw letters.
-- Sandy Garden. This box is a small zen sand garden using two stepper motors to move arms moving a magnetic ball in patterns.
-- IR Laser Tag. This box has two IR laser tag guns, each connected to a pair of goggles with receivers that dim when you are shot.
-- Balance Bot. This is a classic bot that balances on two wheels.
+{allSubtopicInfo}
 
 Other categories:
-- IDE. These boxes use are using a custom branded online IDE to code them. Some people prefer other IDEs like the Arduino IDE, but these take more setup work. A lot of users may refer to coding as "Hacking", as this is the language the product is advertised with.
 - General. A category for anything that doesn't fit elsewhere.
 
 The user is currently asking their question in the thread: {channelInfo}
@@ -58,9 +57,9 @@ You are an advanced AI assistant called 'Hack Pack Lookup' designed tailor FAQs 
 Your job consists of 4 tasks:
 1. Process whether you think the FAQ can reliably be used as the primary source to answer the questions, and whether it is helpful in this context.
     1.1. You will be provided recent messages in this thread, use these to judge how helpful the FAQ will be.
-    1.2. If user is helping another user, or currently is being helped by another user, the FAQ is *NOT RELEVENT* to them. 
-    1.3. FAQs are only relevent when you can use the information in them as the primary source to fully help the user. Even if you can answer the question yourself without the FAQ, the FAQ relevence is low.
-2. Evaluate how relevent the FAQ provided is related to and answers the question of the user. 
+    1.2. If user is helping another user, or currently is being helped by another user, the FAQ is *NOT RELEVANT* to them. 
+    1.3. FAQs are only relevant when you can use the information in them as the primary source to fully help the user. Even if you can answer the question yourself without the FAQ, the FAQ relevence is low.
+2. Evaluate how relevant the FAQ provided is related to and answers the question of the user. 
 3. Tailor the information in the FAQ to the user, filling in details where needed, removing details when they do not apply to the user. This is the central part of your response, containing the response text. Using basic Markdown here is acceptable.
 4. Rate how confident you are that your tailored response was relevant to the user, is helpful in this conversation, and does not get in the way of users helping each other.
 
@@ -73,7 +72,7 @@ These boxes use ae custom branded online IDE to code them. (Some people prefer o
 The selected FAQ is related to the category \`{subtopic}\`, here's some additional information about this category:
 {subtopicInfo}
 
-The following FAQ response was automatically selected by AI based on the title only. It may or may not be relevent.
+The following FAQ response was automatically selected by AI based on the title only. It may or may not be relevant.
 The title is "{FAQTitle}", and the content is as follows: 
 ${tripleBacktick}
 {FAQ}
@@ -328,8 +327,7 @@ class AutoReplyAI {
         let compiledSystemPrompt = stage1SystemPrompt;
         // Build FAQs into the prompt
         const faqs = [];
-        let index = 1;
-        const config = await ConfigDB.findOne({});
+        // const config = await ConfigDB.findOne({});
 
         // Build subtopics
         const allMessages = await StoredMessages.find({})
@@ -342,9 +340,16 @@ class AutoReplyAI {
             faqs.push(`${index}. ${faq.title} | (${faq.category})`);
         });
 
+        const subtopicInfo = Object.entries(subtopicInfoMap)
+            .map(([box, description]) => 
+                `- ${box}: ${description}\n`
+            )
+            .join("")
+
         compiledSystemPrompt = compiledSystemPrompt
             .replace("{FAQs}", faqs.join("\n"))
             .replace("{channelInfo}", this.getChannelInfo(discordMessage))
+            .replace("{allSubtopicInfo}", subtopicInfo)
 
         return this.genAI.getGenerativeModel({
             model: this.model,
