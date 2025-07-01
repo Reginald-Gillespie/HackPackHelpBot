@@ -16,7 +16,7 @@ module.exports = {
         const config = await ConfigDB.findOne({});
 
         const createSubtopic = cmd.options.getString("subtopic");
-        const subtopics = config.allowedHelpMessageCategories;
+        const subtopics = await utils.getSubtopicCategories();
         if (!subtopics.includes(createSubtopic)) {
             return cmd.reply({ content: "That is not a valid subtopic.", ephemeral: true });
         }

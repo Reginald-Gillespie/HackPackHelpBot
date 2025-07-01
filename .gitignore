@@ -5,3 +5,5 @@ test*.js
 test*.html
 logs/
 ping.js
+notes.md
+DBBackup
