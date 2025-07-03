@@ -1,11 +1,26 @@
 require("./setEnvs")
 const mongoose = require("mongoose");
 const mongooseLeanVirtuals = require('mongoose-lean-virtuals');
+const { stringify } = require("uuid");
 const mongooseLeanDefaults = require('mongoose-lean-defaults').default;
 mongoose.plugin(mongooseLeanDefaults)
 mongoose.plugin(mongooseLeanVirtuals)
 mongoose.set('setDefaultsOnInsert', false);
 
+
+const croissantEmojiSchema = new mongoose.Schema({
+    emoji: {type: String, required: true},
+    name: {type: String, required: true}
+})
+const CroissantEmojiDB = mongoose.model("croissantEmojis", croissantEmojiSchema)
+
+const croissantMessagesSchema = new mongoose.Schema({
+    userID: { type: String, required: true},
+    type: { type: String, required: true},
+    count: { type: Number, required: true},
+    timestamp: { type: Date, default: Date.now }
+})
+const CroissantMessagesDB = mongoose.model("croissantmessages", croissantMessagesSchema);
 
 const issueTrackerSchema = new mongoose.Schema({
     issue: { type: String, required: true },
@@ -193,6 +208,8 @@ module.exports = {
     StarboardCooldown,
     IssueTrackerDB,
     FixerDB,
+    CroissantMessagesDB,
+    CroissantEmojiDB,
 
     connectedPromise,
     dropAllReleventIndexes
