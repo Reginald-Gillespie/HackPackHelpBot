@@ -1,0 +1,27 @@
+{
+    "coreTools": [
+        "ReadFileTool", 
+        "ReadManyFilesTool",
+        "GlobTool",
+        "GrepTool", 
+        "LSTool",
+        "WebSearchTool"
+        // "WebFetchTool",
+        // "ShellTool"
+        // "MemoryTool",
+    ],
+    // I'd like to implement an MCP server for discord actions (fetching messages, reacting, searching for keywords?) but don't have time right now. 
+    // "mcpServers": {
+    //     "discordTools": {
+    //         "note": "The server is handled by the node process, so no server start command is needed here",
+    //         "command": "test",
+    //         "trust": true
+    //     }
+    // },
+    "checkpointing": false,
+    "autoAccept": true,
+
+    "hideTips": true,
+    "usageStatisticsEnabled": false,
+    "telemetry": { "enabled": false }
+}
