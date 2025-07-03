@@ -119,7 +119,7 @@ module.exports = {
             await interaction.reply({
                 embeds: [embed],
                 ephemeral: false,
-                allowedMentions: []
+                allowedMentions: { parse: [] }
             });
         }
     }
