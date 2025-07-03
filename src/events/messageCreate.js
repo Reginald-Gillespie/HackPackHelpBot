@@ -1,5 +1,5 @@
 const { Events } = require("discord.js");
-const { AutoReplyAI, AutoTaggerAI } = require('../modules/autoReplyAI');
+const { AutoReplyAI, AutoTaggerAI, formatAIResponse } = require('../modules/autoReplyAI');
 const utils = require('../modules/utils');
 const MarkRobot = require('../modules/markRobot');
 const { ChannelType } = require("discord.js");
@@ -70,7 +70,8 @@ module.exports = {
                     markRobot: new MarkRobot()
                 };
 
-            const robotsReply = await userHistory.markRobot.message(messageContentForRobot, repliedToMessage, repliedToAuthor)
+            let robotsReply = await userHistory.markRobot.message(messageContentForRobot, repliedToMessage, repliedToAuthor);
+            robotsReply = formatAIResponse(robotsReply, "-# ⚠️ This response was written by Mark Robot from the [CrunchLabs IDE](<https://ide.crunchlabs.com>) and may be incorrect.")
 
             markRobotPingsCache.set(message.author.id, userHistory)
             message.reply(robotsReply);
