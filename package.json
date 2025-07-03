@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "src/index.js",
   "scripts": {
+  "gemini": "gemini",
     "start": "node ."
   },
   "author": "",
@@ -28,5 +29,8 @@
     "puppeteer": "^24.8.2",
     "socket.io-client": "^4.8.1",
     "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "@google/gemini-cli": "^0.1.9"
   }
 }

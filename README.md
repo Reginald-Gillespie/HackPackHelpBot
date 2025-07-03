@@ -18,15 +18,15 @@ Then run `./Modules/registerCommands.js` once to search through the help files a
 
 ## Features
 
-`/lookup <topic>`: Lookup saved messages under various categories.
+**Commands**
+- `/lookup <topic>`: Lookup saved messages under various categories.
+- `/flowchart`: Pull up custom flowcharts for debugging.
+- `/help`: Walk a user through a flowchart step-by-step
+- And more
 
-`/flowchart`: Pull up custom flowcharts for debuggin.
-
-`/help`: Walk a user through a flowchart step-by-step
-
-Pinging this bot replies with Mark Robot.
-
-This bot tries to use Gemini to answer questions based on loaded help messages, and replies if it believes the answer is helpful. 
+**Other**
+- Pinging the bot replies with Mark Robot from https://ide.crunchlabs.com/
+- If the bot detects a question it can answer based on the FAQs, it will reply using a two stage AI.
 
 ---
 
