@@ -4,6 +4,7 @@ const os = require('os');
 const fs = require("fs");
 const fse = require('fs-extra');
 const path = require('path');
+const { spawn } = require('child_process');
 const NodeCache = require("node-cache");
 const simpleGit = require('simple-git');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
@@ -67,6 +68,12 @@ class AdvancedAIAgent {
         this.geminiPath = path.join(process.cwd(), "./node_modules/.bin/gemini");
         this.advancedAgentPath = "./GeminiAgent";
         this.AdvancedAIContext;
+        this.faqTitle = 
+            "Prompt Advanced Agent - "+
+            "This Agent knows little about specific Hack Pack issues, "+
+            "but it is very good at general factual engineering questions, research, and coding."+
+            "It has access to source code for all Hack Pack Boxes."+
+            "If the question only matches this or if it starts with !ai strongly consider using this module."
 
         // Build the GeminiAgent dir, but async so it doesn't impact start time
         this.loaded = false;
@@ -74,6 +81,7 @@ class AdvancedAIAgent {
 
             // Load stuff
             this.AdvancedAIContext = await fs.promises.readFile(path.join(__dirname, "../assets/AdvancedAIContext.txt"))
+            this.AdvancedAIContext = this.AdvancedAIContext?.toString()?.trim() || false;
 
             // Setup Advanced Dir
             await fs.promises.mkdir(this.advancedAgentPath, { recursive: true });
@@ -113,19 +121,24 @@ class AdvancedAIAgent {
     }
 
     async prompt(message) {
+        message = message.content;
+
         if (!this.loaded) await this.loadPromise;
 
         // Tack on some contextual information to the prompt
         if (this.AdvancedAIContext) {
             message = 
                 "```\n" + 
-                this.AdvancedAIContext +
+                this.AdvancedAIContext + "\n" +
                 "```\n" +
-                "\n"
+                "\n"+
+                message
         }
 
         return new Promise((resolve, reject) => {
-            const child = spawn(geminiPath, ['--prompt', message]);
+            const child = spawn(this.geminiPath, ['--prompt', message], {
+                cwd: this.advancedAgentPath,
+            });
             child.stdin.end();
 
             let output = '';
@@ -134,8 +147,10 @@ class AdvancedAIAgent {
             child.on('error', reject);
             child.on('close', code => {
                 // Postprocess output
-                output = output.replace("Data collection is disabled.")
+                output = output.replaceAll("Data collection is disabled.", "")
                 output = output.trim()
+
+                console.log("Advanced Agent response: ", output);
 
                 code === 0 ? resolve(output.trim()) : reject(new Error(`Exited with code ${code}`));
             });
@@ -202,7 +217,7 @@ class AutoReplyAI {
                 // Don't reply to this user in this channel after triggering for an hour
                 if (messageHasForceTrigger) {
                     this.autoAICache.del(aiDontRepeatCacheKey)
-                    discordMessage.content = discordMessage.content.substring(this.aiForceTrigger.length)
+                    // discordMessage.content = discordMessage.content.substring(this.aiForceTrigger.length)
                 }
                 else {
                     this.autoAICache.set(aiDontRepeatCacheKey, true)
@@ -241,16 +256,6 @@ class AutoReplyAI {
         }
     }
 
-    async getFaqByNum(num) {
-        const selectedHelpMessageTitle = this.helpMessageList[num];
-        if (!selectedHelpMessageTitle) return false;
-
-        const helpMessage = await getHelpMessageBySubjectTitle(selectedHelpMessageTitle.subtopic, selectedHelpMessageTitle.title);
-        if (!helpMessage) return false;
-
-        return { message: helpMessage, FAQTitle: selectedHelpMessageTitle.title, subtopic: selectedHelpMessageTitle.subtopic };
-    }
-
     // Stage 1:
     // Select relevant FAQ from list of titles and user message
     async buildStage1Model(discordMessage) {
@@ -263,6 +268,12 @@ class AutoReplyAI {
         const allMessages = await StoredMessages.find({})
             .lean()
             .sort({ category: 1 }) // Group categories for AI
+
+        // Insert an FAQ to allow free replies using the AdvancedAgent
+        allMessages.push({
+            title: this.generalAgent.faqTitle,
+            category: "other"
+        })
 
         allMessages.forEach((faq, i) => {
             const index = i + 1;
@@ -291,6 +302,30 @@ class AutoReplyAI {
         });
     }
 
+    async getFaqByNum(num, discordMessage) {
+        const selectedHelpMessageTitle = this.helpMessageList[num];
+        if (!selectedHelpMessageTitle) return false;
+
+        if (discordMessage && selectedHelpMessageTitle.title == this.generalAgent.faqTitle) {
+            // Advanced AI was called, prompt it instead
+            const message = await this.generalAgent.prompt(discordMessage)
+            return {
+                message: message, 
+                FAQTitle: selectedHelpMessageTitle.title, 
+                subtopic: selectedHelpMessageTitle.subtopic
+            };
+        }
+
+        const helpMessage = await getHelpMessageBySubjectTitle(selectedHelpMessageTitle.subtopic, selectedHelpMessageTitle.title);
+        if (!helpMessage) return false;
+
+        return { 
+            message: helpMessage, 
+            FAQTitle: selectedHelpMessageTitle.title, 
+            subtopic: selectedHelpMessageTitle.subtopic
+        };
+    }
+
     async stage1AIHandler(discordMessage) {
         const geminiSession = (await this.buildStage1Model(discordMessage)).startChat();
         const result = await geminiSession.sendMessage(discordMessage.content);
@@ -311,7 +346,7 @@ class AutoReplyAI {
             isNaN(confidence) || confidence < this.stage1RequiredConfidence
         ) return false;
 
-        const { message, FAQTitle, subtopic } = await this.getFaqByNum(responseNumber);
+        const { message, FAQTitle, subtopic } = await this.getFaqByNum(responseNumber, discordMessage);
         if (!message) return false;
         
         return { FAQ: message, FAQTitle, subtopic };
