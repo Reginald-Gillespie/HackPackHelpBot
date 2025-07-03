@@ -78,7 +78,7 @@ module.exports = {
         }
 
         // Auto Reply AI
-        AutoReplyAI.messageHandler(message);
+        AutoReplyAI.messageHandler(message, await utils.isCreator(message.author?.id));
 
         // Auto Tag AI
         AutoTaggerAI.messageHandler(message);

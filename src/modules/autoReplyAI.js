@@ -179,7 +179,9 @@ class AutoReplyAI {
     }
 
     // Entrypoint
-    async messageHandler(discordMessage) {
+    async messageHandler(discordMessage, trusted=false) {
+        // Trusted users are more likely to trigger higher power AI, for example.
+
         try {
             const messageHasForceTrigger = discordMessage.content.toLowerCase().startsWith(this.aiForceTrigger);
             const messageHasNoCacheTrigger = discordMessage.content.toLowerCase().startsWith(this.aiNoCacheTrigger);
@@ -219,16 +221,16 @@ class AutoReplyAI {
                 // Don't reply to this user in this channel after triggering for an hour
                 if (messageHasForceTrigger) {
                     this.autoAICache.del(aiDontRepeatCacheKey)
-                    // discordMessage.content = discordMessage.content.substring(this.aiForceTrigger.length)
+                    if (!trusted) discordMessage.content = discordMessage.content.substring(this.aiForceTrigger.length)
                 }
                 else {
                     this.autoAICache.set(aiDontRepeatCacheKey, true)
                 }
 
                 // Ignore the cache spam prevention for dev testing
-                if (messageHasNoCacheTrigger)
+                if (messageHasNoCacheTrigger) {
                     discordMessage.content = discordMessage.content.substring(this.aiNoCacheTrigger.length)
-
+                }
                 
                 console.log(`=`.repeat(50)+`\n`)
 
