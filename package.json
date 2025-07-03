@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "src/index.js",
   "scripts": {
-  "gemini": "gemini",
+    "gemini": "gemini",
     "start": "node ."
   },
   "author": "",
@@ -15,6 +15,7 @@
     "discord-api-types": "^0.38.11",
     "discord.js": "^14.14.1",
     "fastest-levenshtein": "^1.0.16",
+    "fs-extra": "^11.3.0",
     "fuse.js": "^7.1.0",
     "hackpackhelpbot": "file:",
     "js-levenshtein": "^1.1.6",
@@ -27,6 +28,7 @@
     "node-cache": "^5.1.2",
     "node-fetch": "^3.3.2",
     "puppeteer": "^24.8.2",
+    "simple-git": "^3.28.0",
     "socket.io-client": "^4.8.1",
     "uuid": "^11.1.0"
   },

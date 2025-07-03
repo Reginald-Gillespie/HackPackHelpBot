@@ -1,13 +1,17 @@
 // Class to handle discord AutoReplies using multistage LLM calling for finetuned results.
 
+const os = require('os');
 const fs = require("fs");
+const fse = require('fs-extra');
 const path = require('path');
 const NodeCache = require("node-cache");
+const simpleGit = require('simple-git');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { ConfigDB, StoredMessages } = require('../modules/database');
 const { ChannelType, PermissionsBitField } = require("discord.js")
 const { isHelpRequest, getHelpMessageBySubjectTitle } = require('../modules/utils');
 
+const git = simpleGit();
 
 // Import AI data
 const stage1SystemPrompt = fs.readFileSync(path.join(__dirname, '../assets/stage1SystemPrompt.txt'), 'utf-8');
@@ -51,15 +55,106 @@ function formatAIResponse(text) {
     )
 }
 
+class AdvancedAIAgent {
+    // This AI agent is powered by Gemini CLI. It is used less often, but it has capabilities including:
+    // - More powerful AI models
+    // - Googling
+    // - Reading files
+    // - Access to Hack Pack code
+    // - Memory (currently disabled)
+
+    constructor() {
+        this.geminiPath = path.join(process.cwd(), "./node_modules/.bin/gemini");
+        this.advancedAgentPath = "./GeminiAgent";
+        this.AdvancedAIContext;
+
+        // Build the GeminiAgent dir, but async so it doesn't impact start time
+        this.loaded = false;
+        this.loadPromise = new Promise(async (resolve, reject) => {
+
+            // Load stuff
+            this.AdvancedAIContext = await fs.promises.readFile(path.join(__dirname, "../assets/AdvancedAIContext.txt"))
+
+            // Setup Advanced Dir
+            await fs.promises.mkdir(this.advancedAgentPath, { recursive: true });
+            const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'HackPackCode-'));
+
+            // Clone Hack Pack code into this folder
+            await git.clone(
+                'https://github.com/Reginald-Gillespie/HackPackCode.git', 
+                tempDir,
+                ['--depth=1']
+            )
+
+            // Extract the "Code" folder
+            await fse.move(
+                path.join(tempDir, "Code"),
+                path.join(this.advancedAgentPath),
+                { overwrite: true }
+            );
+
+            // Write config files
+            await fs.promises.mkdir(
+                path.join(this.advancedAgentPath, ".gemini"), 
+                { recursive: true }
+            );
+            await fs.promises.copyFile(
+                path.join(__dirname, "../assets/GeminiCLIConfig.jsonc"),
+                path.join(this.advancedAgentPath, ".gemini", "settings.json")
+            )
+            await fs.promises.copyFile(
+                path.join(__dirname, "../assets/GeminiENV.env"),
+                path.join(this.advancedAgentPath, ".gemini", ".env")
+            )
+
+            resolve();
+        })
+
+    }
+
+    async prompt(message) {
+        if (!this.loaded) await this.loadPromise;
+
+        // Tack on some contextual information to the prompt
+        if (this.AdvancedAIContext) {
+            message = 
+                "```\n" + 
+                this.AdvancedAIContext +
+                "```\n" +
+                "\n"
+        }
+
+        return new Promise((resolve, reject) => {
+            const child = spawn(geminiPath, ['--prompt', message]);
+            child.stdin.end();
+
+            let output = '';
+            child.stdout.on('data', chunk => output += chunk.toString());
+            child.stderr.on('data', err => reject(new Error(err.toString())));
+            child.on('error', reject);
+            child.on('close', code => {
+                // Postprocess output
+                output = output.replace("Data collection is disabled.")
+                output = output.trim()
+
+                code === 0 ? resolve(output.trim()) : reject(new Error(`Exited with code ${code}`));
+            });
+        });
+    }
+}
+
 // Replying to help messages
 class AutoReplyAI {
     constructor() {
-        this.autoAICache = new NodeCache({ stdTTL: 3600, checkperiod: 600 }); // Used to only check posted questions that are "out of the blue" not in a long convo
-        this.helpMessageList = [];
         this.aiForceTrigger = "!ai ";
         this.aiNoCacheTrigger = "!nocache ";
         this.model = "gemini-2.5-flash";
+
+        this.autoAICache = new NodeCache({ stdTTL: 3600, checkperiod: 600 }); // Used to only check posted questions that are "out of the blue" not in a long convo
         this.genAI = new GoogleGenerativeAI(process.env.GeminiKey);
+        this.generalAgent = new AdvancedAIAgent();
+
+        this.helpMessageList = [];
         this.stage1RequiredConfidence = 3;  // How sure stage1 is that there is a matching FAQ (this will be rejudged by stage2 with extra context, so low is fine)
         this.stage2MessageCount = 8;        // How much context to pull in
         this.stage2PrecisionThreshold = 4;  // How related the FAQ that stage 1 gave was - arguably this is the most important number as it chooses how much the fixed FAQ will be used 

@@ -1,10 +1,15 @@
+# Not for github
 node_modules
-env.json
 .vscode
-test*.js
-test*.html
-logs/
-ping.js
+env.json
 Notes.md
+test*.html
+test*.*js
+ping.js
+
+# Database backup and logs
 DBBackup
+logs/
+
+# Files for hte AdvancedAIAgent
 GeminiAgent
