@@ -37,7 +37,9 @@ function getChannelInfo(discordMessage) {
     return channelName;
 }
 
-function formatAIResponse(text) {
+function formatAIResponse(text, 
+    disclaimer="-# ⚠️ This response was written by AI and may be incorrect."
+) {
     //// Postprocess
     // It sometimes makes the link and link text the same, fix that
     text = text.replace(/\[(.*?)\]\((.*?)\)/g, (match, text, url) => {
@@ -52,7 +54,7 @@ function formatAIResponse(text) {
         ("> " + text.split("\n").join("\n> ")) + // Format like a quote
         '\n' +
         // '```\n' +
-        `\n-# ⚠️ This response was written by AI and may be incorrect.`
+        `\n${disclaimer}`
     )
 }
 
@@ -509,5 +511,6 @@ class AutoTaggerAI {
 
 module.exports = {
     AutoReplyAI: new AutoReplyAI(),
-    AutoTaggerAI: new AutoTaggerAI()
+    AutoTaggerAI: new AutoTaggerAI(),
+    formatAIResponse
 };
