@@ -75,8 +75,14 @@ module.exports = {
 
             markRobotPingsCache.set(message.author.id, userHistory)
 
-            message.reply(robotsReplyChunks[0]);
-            for (const chunk of robotsReplyChunks.slice(1)) await message.channel.send(chunk);
+            // Send Mark Robot's reply
+            await message.reply({ 
+                content: robotsReplyChunks[0], 
+                allowedMentions: { users: [discordMessage.author.id] } 
+            });
+            for (const chunk of robotsReplyChunks.slice(1)) {
+                await message.channel.send({ content: chunk, allowedMentions: { parse: [] } });
+            }
         }
 
         // Auto Reply AI
