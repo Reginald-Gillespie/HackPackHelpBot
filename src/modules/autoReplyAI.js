@@ -48,107 +48,107 @@ function getChannelInfo(discordMessage) {
  * @param {string} disclaimer - Disclaimer to append at end.
  * @returns {string[]} Array of quoted chunks.
  */
-function formatAIResponse(text, disclaimer = "-# ⚠️ This response was written by AI and may be incorrect.") {
-  // Append disclaimer
-  text = text + "\n\n" + disclaimer;
+function formatAIResponse(text, disclaimer = "-# ⚠️ This response was written by <@724416180097384498>'s AI and may be incorrect.") {
+    // Append disclaimer
+    text = text + "\n\n" + disclaimer;
 
-  const MAX_CHARS = 2000;
-  const SAFE_BREAK = 1500; // start new chunk if current exceeds this
+    const MAX_CHARS = 2000;
+    const SAFE_BREAK = 1500; // start new chunk if current exceeds this
 
-  // Split into code blocks and non-code blocks
-  const parts = text.split(/(```[\s\S]*?```)/g);
+    // Split into code blocks and non-code blocks
+    const parts = text.split(/(```[\s\S]*?```)/g);
 
-  const chunks = [];
-  let current = "";
+    const chunks = [];
+    let current = "";
 
-  // Helper to push current chunk and reset
-  const flushCurrent = () => {
-    if (current) {
-      chunks.push(current.trimEnd());
-      current = "";
-    }
-  };
-
-  // Process a block (either code or plain)
-  const processBlock = (block) => {
-    const isCode = block.startsWith("```") && block.endsWith("```");
-    const lines = block.split("\n");
-
-    if (isCode) {
-      // Treat entire code block as one unit if it fits
-      const wrapped = lines.map(line => "> " + line).join("\n");
-      if ((current + "\n" + wrapped).length <= MAX_CHARS) {
-        current += (current ? "\n" : "") + wrapped;
-      } else {
-        // Doesn't fit: flush current and put code block in its own chunk
-        flushCurrent();
-        if (wrapped.length <= MAX_CHARS) {
-          current = wrapped;
-          flushCurrent();
-        } else {
-          // Code block itself is too long: break by lines
-          for (const line of lines) {
-            const qLine = "> " + line;
-            if ((current + "\n" + qLine).length > MAX_CHARS) {
-              flushCurrent();
-            }
-            current += (current ? "\n" : "") + qLine;
-          }
-          flushCurrent();
+    // Helper to push current chunk and reset
+    const flushCurrent = () => {
+        if (current) {
+            chunks.push(current.trimEnd());
+            current = "";
         }
-      }
-    } else {
-      // Plain text: break by lines, then words if needed
-      for (let line of lines) {
-        const qLine = "> " + line;
-        if (qLine.length > MAX_CHARS) {
-          // break into words
-          const words = line.split(" ");
-          let buffer = "> ";
-          for (const w of words) {
-            if ((buffer + w + " ").length > MAX_CHARS) {
-              // commit buffer
-              if ((current + "\n" + buffer.trimEnd()).length > MAX_CHARS) {
+    };
+
+    // Process a block (either code or plain)
+    const processBlock = (block) => {
+        const isCode = block.startsWith("```") && block.endsWith("```");
+        const lines = block.split("\n");
+
+        if (isCode) {
+            // Treat entire code block as one unit if it fits
+            const wrapped = lines.map(line => "> " + line).join("\n");
+            if ((current + "\n" + wrapped).length <= MAX_CHARS) {
+                current += (current ? "\n" : "") + wrapped;
+            } else {
+                // Doesn't fit: flush current and put code block in its own chunk
                 flushCurrent();
-              }
-              current += (current ? "\n" : "") + buffer.trimEnd();
-              buffer = "> ";
+                if (wrapped.length <= MAX_CHARS) {
+                    current = wrapped;
+                    flushCurrent();
+                } else {
+                    // Code block itself is too long: break by lines
+                    for (const line of lines) {
+                        const qLine = "> " + line;
+                        if ((current + "\n" + qLine).length > MAX_CHARS) {
+                            flushCurrent();
+                        }
+                        current += (current ? "\n" : "") + qLine;
+                    }
+                    flushCurrent();
+                }
             }
-            buffer += w + " ";
-          }
-          // leftover buffer
-          if (buffer.trim() !== ">") {
-            if ((current + "\n" + buffer.trimEnd()).length > MAX_CHARS) {
-              flushCurrent();
-            }
-            current += (current ? "\n" : "") + buffer.trimEnd();
-          }
         } else {
-          // normal line
-          if ((current + "\n" + qLine).length > MAX_CHARS) {
-            flushCurrent();
-          }
-          current += (current ? "\n" : "") + qLine;
-        }
+            // Plain text: break by lines, then words if needed
+            for (let line of lines) {
+                const qLine = "> " + line;
+                if (qLine.length > MAX_CHARS) {
+                    // break into words
+                    const words = line.split(" ");
+                    let buffer = "> ";
+                    for (const w of words) {
+                        if ((buffer + w + " ").length > MAX_CHARS) {
+                            // commit buffer
+                            if ((current + "\n" + buffer.trimEnd()).length > MAX_CHARS) {
+                                flushCurrent();
+                            }
+                            current += (current ? "\n" : "") + buffer.trimEnd();
+                            buffer = "> ";
+                        }
+                        buffer += w + " ";
+                    }
+                    // leftover buffer
+                    if (buffer.trim() !== ">") {
+                        if ((current + "\n" + buffer.trimEnd()).length > MAX_CHARS) {
+                            flushCurrent();
+                        }
+                        current += (current ? "\n" : "") + buffer.trimEnd();
+                    }
+                } else {
+                    // normal line
+                    if ((current + "\n" + qLine).length > MAX_CHARS) {
+                        flushCurrent();
+                    }
+                    current += (current ? "\n" : "") + qLine;
+                }
 
-        // if too big, preemptively flush to avoid overshoot
-        if (current.length > SAFE_BREAK) {
-          flushCurrent();
+                // if too big, preemptively flush to avoid overshoot
+                if (current.length > SAFE_BREAK) {
+                    flushCurrent();
+                }
+            }
         }
-      }
+    };
+
+    // Iterate parts
+    for (const part of parts) {
+        if (!part) continue;
+        processBlock(part);
     }
-  };
 
-  // Iterate parts
-  for (const part of parts) {
-    if (!part) continue;
-    processBlock(part);
-  }
+    // flush final
+    flushCurrent();
 
-  // flush final
-  flushCurrent();
-
-  return chunks;
+    return chunks;
 }
 
 
@@ -348,8 +348,13 @@ class AutoReplyAI {
                 // If we've come this far, we have a response the AI is confident in
                 // Reply
                 const messageChunks = formatAIResponse(stage2Out.tailored_response);
-                discordMessage.reply(messageChunks[0]);
-                for (const chunk of messageChunks.slice(1)) await discordMessage.channel.send(chunk);
+                await discordMessage.reply({ 
+                    content: messageChunks[0],
+                    allowedMentions: { users: [discordMessage.author.id] }
+                });
+                for (const chunk of messageChunks.slice(1)) {
+                    await discordMessage.channel.send({ content: chunk, allowedMentions: { parse: [] } });
+                }
 
                 console.log(`=`.repeat(50)+`\n`)
             }
