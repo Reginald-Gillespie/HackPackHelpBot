@@ -168,7 +168,13 @@ const ADMIN_COMMANDS = {
                 await cmd.reply({ content: "Restarting...", ephemeral: true });
                 config.restartData = null; // Don't try to update ephemeral messages
             } else {
-                const message = await cmd.reply({ content: "Restarting...", ephemeral: false, fetchReply: true });
+                const message = await cmd.reply({ 
+                    content: "Restarting...", 
+                    ephemeral: false, 
+                    fetchReply: true, 
+                    allowedMentions: { parse: [] } 
+                });
+                
                 config.restartData = {
                     restartedAt: Date.now(),
                     channelId: cmd.channel.id,

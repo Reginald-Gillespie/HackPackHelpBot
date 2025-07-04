@@ -32,7 +32,10 @@ module.exports = {
         for (const trigger of triggers) {
             if (message.content?.toLowerCase().startsWith(trigger.toLowerCase())) {
                 const response = await CustomResponses.findOne({ trigger }).lean().distinct("response")
-                message.reply(response[0]);
+                message.reply({ 
+                    content: response[0],
+                    allowedMentions: { parse: [] } 
+                });
             }
         }
 
@@ -78,7 +81,7 @@ module.exports = {
             // Send Mark Robot's reply
             await message.reply({ 
                 content: robotsReplyChunks[0], 
-                allowedMentions: { users: [discordMessage.author.id] } 
+                allowedMentions: { users: [message.author.id] } 
             });
             for (const chunk of robotsReplyChunks.slice(1)) {
                 await message.channel.send({ content: chunk, allowedMentions: { parse: [] } });
@@ -130,7 +133,10 @@ module.exports = {
                 const originalChannel = await client.channels.fetch(originalChannelId);
                 const originalMessage = await originalChannel.messages.fetch(existingQuestion.originalLink.split('/').pop());
                 if (originalMessage) {
-                    message.reply(`-# <:info:1330047959806771210> This appears to be a duplicate question. The original question was asked here ${existingQuestion.originalLink}`);
+                    message.reply({ 
+                        content: `-# <:info:1330047959806771210> This appears to be a duplicate question. The original question was asked here ${existingQuestion.originalLink}`, 
+                        allowedMentions: { parse: [] }
+                    });
                 }
             } catch (error) {
                 existingQuestion.repeats = 1;

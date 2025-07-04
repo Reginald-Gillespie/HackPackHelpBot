@@ -213,7 +213,10 @@ module.exports = {
             if (interaction.deferred) {
                 await interaction.editReply(errorMessage);
             } else {
-                await interaction.reply(errorMessage);
+                await interaction.reply({ 
+                    ...errorMessage, 
+                    allowedMentions: { parse: [] } 
+                });
             }
         }
     }

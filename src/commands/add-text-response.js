@@ -28,7 +28,10 @@ module.exports = {
         const shouldDelete = cmd.options.getBoolean("delete");
 
         if (!(await isCreator(cmd.user.id))) {
-            return cmd.reply(`Sorry, you can't use this command.`);
+            return cmd.reply({ 
+                content: `Sorry, you can't use this command.`, 
+                allowedMentions: { parse: [] } 
+            });
         }
 
         CustomResponseCache.clear();
@@ -38,10 +41,13 @@ module.exports = {
             const result = await CustomResponses.deleteOne({
                 trigger: trigger
             })
-            
+
             if (result.deletedCount) {
-                await cmd.reply(`Removed custom response.`);
-            } 
+                await cmd.reply({ 
+                    content: `Removed custom response.`, 
+                    allowedMentions: { parse: [] }
+                });
+            }
             else {
                 await cmd.reply({
                     content: `No custom response found for that trigger`,
@@ -52,7 +58,10 @@ module.exports = {
         }
 
         if (!response) {
-            await cmd.reply("You must provide a response unless deleting.");
+            await cmd.reply({ content: 
+                "You must provide a response unless deleting.", 
+                allowedMentions: { parse: [] } 
+            });
             return;
         }
 
@@ -62,6 +71,9 @@ module.exports = {
             { upsert: true }
         );
 
-        await cmd.reply(`Added custom response for trigger: \`${trigger}\``);
+        await cmd.reply({ 
+            content: `Added custom response for trigger: \`${trigger}\``, 
+            allowedMentions: { parse: [] }
+        });
     }
 }
