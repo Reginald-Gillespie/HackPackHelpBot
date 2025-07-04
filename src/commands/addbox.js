@@ -218,7 +218,11 @@ module.exports = {
             if (interaction.replied || interaction.deferred) {
                 await interaction.followUp(replyPayload);
             } else {
-                await interaction.reply(replyPayload);
+                await interaction.reply({ 
+                    ...replyPayload, 
+                    allowedMentions: 
+                    { parse: [] } 
+                });
             }
         }
     }
