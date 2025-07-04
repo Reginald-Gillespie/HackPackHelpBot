@@ -37,110 +37,122 @@ function getChannelInfo(discordMessage) {
     return channelName;
 }
 
-/** 
- * AI message post-processor.
- * @returns {[String]} 
+
+//#region PostProcessor
+
+/**
+ * AI message post-processor that splits into ≦2000-char quoted chunks,
+ * preserving code blocks when possible.
+ *
+ * @param {string} text - The AI-generated text.
+ * @param {string} disclaimer - Disclaimer to append at end.
+ * @returns {string[]} Array of quoted chunks.
  */
-function formatAIResponse(text, 
-    disclaimer="-# ⚠️ This response was written by AI and may be incorrect."
-) {
-    // It sometimes makes the link and link text the same, fix that
-    text = text.replace(/\[(.*?)\]\((.*?)\)/g, (match, text, url) => {
-        return text === url ? url : match;
-    });
+function formatAIResponse(text, disclaimer = "-# ⚠️ This response was written by AI and may be incorrect.") {
+  // Append disclaimer
+  text = text + "\n\n" + disclaimer;
 
-    // Testing long messages
-    text = text.repeat(Math.max(1, Math.ceil(3000 / text.length)));
+  const MAX_CHARS = 2000;
+  const SAFE_BREAK = 1500; // start new chunk if current exceeds this
 
-    // Add disclaimer text first
-    text += `\n\n${disclaimer}`;
+  // Split into code blocks and non-code blocks
+  const parts = text.split(/(```[\s\S]*?```)/g);
 
-    // Process into 2000 char chunks
-    const chunks = [];
-    let currentChunk = "";
-    const lines = text.split("\n");
-    
-    for (const line of lines) {
-        const quotedLine = "> " + line;
-        
-        // If adding this line would exceed 2000 chars, start a new chunk
-        if (currentChunk && (currentChunk + "\n" + quotedLine).length > 2000) {
-            chunks.push(currentChunk.trimEnd());
-            currentChunk = "";
-        }
-        
-        // If the line itself is too long, break it into smaller pieces
-        if (quotedLine.length > 2000) {
-            const words = line.split(" ");
-            let currentLine = "> ";
-            
-            for (const word of words) {
-                // If adding this word would exceed 2000 chars
-                if ((currentLine + word + " ").length > 2000) {
-                    // If we have content in currentLine, add it to chunk
-                    if (currentLine.length > 2) {
-                        if (currentChunk) {
-                            currentChunk += "\n" + currentLine.trimEnd();
-                        } else {
-                            currentChunk = currentLine.trimEnd();
-                        }
-                    }
-                    
-                    // If current chunk is getting full, start new chunk
-                    if (currentChunk.length > 1500) {
-                        chunks.push(currentChunk.trimEnd());
-                        currentChunk = "";
-                    }
-                    
-                    // Handle extremely long words that exceed 2000 chars
-                    if (word.length > 1995) { // 1995 to account for "> "
-                        let wordChunks = [];
-                        for (let i = 0; i < word.length; i += 1995) {
-                            wordChunks.push(word.slice(i, i + 1995));
-                        }
-                        
-                        for (let i = 0; i < wordChunks.length; i++) {
-                            const chunk = "> " + wordChunks[i];
-                            if (currentChunk && (currentChunk + "\n" + chunk).length > 2000) {
-                                chunks.push(currentChunk.trimEnd());
-                                currentChunk = chunk;
-                            } else {
-                                currentChunk = currentChunk ? currentChunk + "\n" + chunk : chunk;
-                            }
-                        }
-                    } else {
-                        currentLine = "> " + word + " ";
-                    }
-                } else {
-                    currentLine += word + " ";
-                }
-            }
-            
-            // Add any remaining content from the broken line
-            if (currentLine.length > 2) {
-                if (currentChunk) {
-                    currentChunk += "\n" + currentLine.trimEnd();
-                } else {
-                    currentChunk = currentLine.trimEnd();
-                }
-            }
+  const chunks = [];
+  let current = "";
+
+  // Helper to push current chunk and reset
+  const flushCurrent = () => {
+    if (current) {
+      chunks.push(current.trimEnd());
+      current = "";
+    }
+  };
+
+  // Process a block (either code or plain)
+  const processBlock = (block) => {
+    const isCode = block.startsWith("```") && block.endsWith("```");
+    const lines = block.split("\n");
+
+    if (isCode) {
+      // Treat entire code block as one unit if it fits
+      const wrapped = lines.map(line => "> " + line).join("\n");
+      if ((current + "\n" + wrapped).length <= MAX_CHARS) {
+        current += (current ? "\n" : "") + wrapped;
+      } else {
+        // Doesn't fit: flush current and put code block in its own chunk
+        flushCurrent();
+        if (wrapped.length <= MAX_CHARS) {
+          current = wrapped;
+          flushCurrent();
         } else {
-            // Normal line that fits
-            if (currentChunk) {
-                currentChunk += "\n" + quotedLine;
-            } else {
-                currentChunk = quotedLine;
+          // Code block itself is too long: break by lines
+          for (const line of lines) {
+            const qLine = "> " + line;
+            if ((current + "\n" + qLine).length > MAX_CHARS) {
+              flushCurrent();
             }
+            current += (current ? "\n" : "") + qLine;
+          }
+          flushCurrent();
         }
+      }
+    } else {
+      // Plain text: break by lines, then words if needed
+      for (let line of lines) {
+        const qLine = "> " + line;
+        if (qLine.length > MAX_CHARS) {
+          // break into words
+          const words = line.split(" ");
+          let buffer = "> ";
+          for (const w of words) {
+            if ((buffer + w + " ").length > MAX_CHARS) {
+              // commit buffer
+              if ((current + "\n" + buffer.trimEnd()).length > MAX_CHARS) {
+                flushCurrent();
+              }
+              current += (current ? "\n" : "") + buffer.trimEnd();
+              buffer = "> ";
+            }
+            buffer += w + " ";
+          }
+          // leftover buffer
+          if (buffer.trim() !== ">") {
+            if ((current + "\n" + buffer.trimEnd()).length > MAX_CHARS) {
+              flushCurrent();
+            }
+            current += (current ? "\n" : "") + buffer.trimEnd();
+          }
+        } else {
+          // normal line
+          if ((current + "\n" + qLine).length > MAX_CHARS) {
+            flushCurrent();
+          }
+          current += (current ? "\n" : "") + qLine;
+        }
+
+        // if too big, preemptively flush to avoid overshoot
+        if (current.length > SAFE_BREAK) {
+          flushCurrent();
+        }
+      }
     }
-    
-    // Add any remaining content
-    if (currentChunk) {
-        chunks.push(currentChunk.trimEnd());
-    }
-    
-    return chunks;
+  };
+
+  // Iterate parts
+  for (const part of parts) {
+    if (!part) continue;
+    processBlock(part);
+  }
+
+  // flush final
+  flushCurrent();
+
+  return chunks;
 }
+
+
+//#endregion PostProcessor
 
 class AdvancedAIAgent {
     // This AI agent is powered by Gemini CLI. It is used less often, but it has capabilities including:
@@ -236,7 +248,7 @@ class AdvancedAIAgent {
                 output = output.replaceAll("Data collection is disabled.", "")
                 output = output.trim()
 
-                console.log("Advanced Agent response: ", output);
+                console.log("Advanced Agent response:\n", output);
 
                 code === 0 ? resolve(output.trim()) : reject(new Error(`Exited with code ${code}`));
             });
