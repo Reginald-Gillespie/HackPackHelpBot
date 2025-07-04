@@ -71,10 +71,12 @@ module.exports = {
                 };
 
             let robotsReply = await userHistory.markRobot.message(messageContentForRobot, repliedToMessage, repliedToAuthor);
-            robotsReply = formatAIResponse(robotsReply, "-# ⚠️ This response was written by Mark Robot from the [CrunchLabs IDE](<https://ide.crunchlabs.com>) and may be incorrect.")
+            const robotsReplyChunks = formatAIResponse(robotsReply, "-# ⚠️ This response was written by Mark Robot from the [CrunchLabs IDE](<https://ide.crunchlabs.com>) and may be incorrect.")
 
             markRobotPingsCache.set(message.author.id, userHistory)
-            message.reply(robotsReply);
+
+            message.reply(robotsReplyChunks[0]);
+            for (const chunk of robotsReplyChunks.slice(1)) await message.channel.send(chunk);
         }
 
         // Auto Reply AI
