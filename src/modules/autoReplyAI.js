@@ -37,25 +37,109 @@ function getChannelInfo(discordMessage) {
     return channelName;
 }
 
+/** 
+ * AI message post-processor.
+ * @returns {[String]} 
+ */
 function formatAIResponse(text, 
     disclaimer="-# ⚠️ This response was written by AI and may be incorrect."
 ) {
-    //// Postprocess
     // It sometimes makes the link and link text the same, fix that
     text = text.replace(/\[(.*?)\]\((.*?)\)/g, (match, text, url) => {
         return text === url ? url : match;
     });
 
-    return (
-        // '=== I have attempted to automatically answer your question ===\n' +
-        // '\n' +
-        // '```\n' +
-        // text.replaceAll("```", "\\`\\`\\`") +
-        ("> " + text.split("\n").join("\n> ")) + // Format like a quote
-        '\n' +
-        // '```\n' +
-        `\n${disclaimer}`
-    )
+    // Testing long messages
+    text = text.repeat(Math.max(1, Math.ceil(3000 / text.length)));
+
+    // Add disclaimer text first
+    text += `\n\n${disclaimer}`;
+
+    // Process into 2000 char chunks
+    const chunks = [];
+    let currentChunk = "";
+    const lines = text.split("\n");
+    
+    for (const line of lines) {
+        const quotedLine = "> " + line;
+        
+        // If adding this line would exceed 2000 chars, start a new chunk
+        if (currentChunk && (currentChunk + "\n" + quotedLine).length > 2000) {
+            chunks.push(currentChunk.trimEnd());
+            currentChunk = "";
+        }
+        
+        // If the line itself is too long, break it into smaller pieces
+        if (quotedLine.length > 2000) {
+            const words = line.split(" ");
+            let currentLine = "> ";
+            
+            for (const word of words) {
+                // If adding this word would exceed 2000 chars
+                if ((currentLine + word + " ").length > 2000) {
+                    // If we have content in currentLine, add it to chunk
+                    if (currentLine.length > 2) {
+                        if (currentChunk) {
+                            currentChunk += "\n" + currentLine.trimEnd();
+                        } else {
+                            currentChunk = currentLine.trimEnd();
+                        }
+                    }
+                    
+                    // If current chunk is getting full, start new chunk
+                    if (currentChunk.length > 1500) {
+                        chunks.push(currentChunk.trimEnd());
+                        currentChunk = "";
+                    }
+                    
+                    // Handle extremely long words that exceed 2000 chars
+                    if (word.length > 1995) { // 1995 to account for "> "
+                        let wordChunks = [];
+                        for (let i = 0; i < word.length; i += 1995) {
+                            wordChunks.push(word.slice(i, i + 1995));
+                        }
+                        
+                        for (let i = 0; i < wordChunks.length; i++) {
+                            const chunk = "> " + wordChunks[i];
+                            if (currentChunk && (currentChunk + "\n" + chunk).length > 2000) {
+                                chunks.push(currentChunk.trimEnd());
+                                currentChunk = chunk;
+                            } else {
+                                currentChunk = currentChunk ? currentChunk + "\n" + chunk : chunk;
+                            }
+                        }
+                    } else {
+                        currentLine = "> " + word + " ";
+                    }
+                } else {
+                    currentLine += word + " ";
+                }
+            }
+            
+            // Add any remaining content from the broken line
+            if (currentLine.length > 2) {
+                if (currentChunk) {
+                    currentChunk += "\n" + currentLine.trimEnd();
+                } else {
+                    currentChunk = currentLine.trimEnd();
+                }
+            }
+        } else {
+            // Normal line that fits
+            if (currentChunk) {
+                currentChunk += "\n" + quotedLine;
+            } else {
+                currentChunk = quotedLine;
+            }
+        }
+    }
+    
+    // Add any remaining content
+    if (currentChunk) {
+        chunks.push(currentChunk.trimEnd());
+    }
+    
+    return chunks;
 }
 
 class AdvancedAIAgent {
@@ -178,9 +262,13 @@ class AutoReplyAI {
         this.stage2ConfidenceThreshold = 4; // How confident in the final answer stage2 must be.
     }
 
-    // Entrypoint
+    /**
+     * Entrypoint 
+     * @param {import('discord.js').Message} discordMessage 
+     * */
     async messageHandler(discordMessage, trusted=false) {
         // Trusted users are more likely to trigger higher power AI, for example.
+        if (!discordMessage.channel.isSendable()) return;
 
         try {
             const messageHasForceTrigger = discordMessage.content.toLowerCase().startsWith(this.aiForceTrigger);
@@ -246,10 +334,10 @@ class AutoReplyAI {
                 if (!stage2Out) return false;
 
                 // If we've come this far, we have a response the AI is confident in
-                let response = stage2Out.tailored_response;
-                response = formatAIResponse(response);
-
-                discordMessage.reply(response);
+                // Reply
+                const messageChunks = formatAIResponse(stage2Out.tailored_response);
+                discordMessage.reply(messageChunks[0]);
+                for (const chunk of messageChunks.slice(1)) await discordMessage.channel.send(chunk);
 
                 console.log(`=`.repeat(50)+`\n`)
             }
