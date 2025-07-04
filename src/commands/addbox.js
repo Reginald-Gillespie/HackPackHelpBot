@@ -220,8 +220,7 @@ module.exports = {
             } else {
                 await interaction.reply({ 
                     ...replyPayload, 
-                    allowedMentions: 
-                    { parse: [] } 
+                    allowedMentions: { parse: [] }
                 });
             }
         }

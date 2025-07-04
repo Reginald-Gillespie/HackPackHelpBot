@@ -271,7 +271,8 @@ module.exports = {
             if (isTrusted) {
                 await interaction.reply({
                     content: `-# Issue recorded: ${issue}`,
-                    ephemeral: false
+                    ephemeral: false,
+                    allowedMentions: { parse: [] }
                 });
             } else {
                 await interaction.reply({
@@ -344,7 +345,8 @@ module.exports = {
                     `📊 **Total Occurrences:** ${stat.count}\n` +
                     `📅 **First Seen:** ${firstSeenDate}\n` +
                     `🕒 **Last Seen:** ${lastSeenDate}`,
-                ephemeral: false
+                ephemeral: false,
+                allowedMentions: { parse: [] }
             });
         } 
         
@@ -373,7 +375,8 @@ module.exports = {
             } else {
                 await interaction.reply({
                     content: `Successfully renamed ${result.modifiedCount} entries from "${fromIssue}" to "${toIssue}"`,
-                    ephemeral: false
+                    ephemeral: false,
+                    allowedMentions: { parse: [] }
                 });
             }
         }

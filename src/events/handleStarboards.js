@@ -126,7 +126,10 @@ module.exports = {
 
             const channel = message.guild.channels.cache.get(faction.starboardChannel);
             if (channel && channel.isTextBased()) {
-                await channel.send({ embeds: [embed], components }).catch(e => {
+                await channel.send({ 
+                    embeds: [embed], 
+                    components 
+                }).catch(e => {
                     debugger;
                 });
             }

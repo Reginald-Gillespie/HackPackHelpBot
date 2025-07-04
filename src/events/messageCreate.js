@@ -84,7 +84,10 @@ module.exports = {
                 allowedMentions: { users: [message.author.id] } 
             });
             for (const chunk of robotsReplyChunks.slice(1)) {
-                await message.channel.send({ content: chunk, allowedMentions: { parse: [] } });
+                await message.channel.send({ 
+                    content: chunk, 
+                    allowedMentions: { parse: [] } 
+                });
             }
         }
 

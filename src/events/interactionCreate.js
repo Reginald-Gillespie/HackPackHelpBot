@@ -149,7 +149,10 @@ module.exports = {
                     if (isEditing) utils.editHelpMessage(subtopic, title, message, formerTitle, formerSubtopic)
                     else utils.appendHelpMessage(subtopic, title, message);
 
-                    cmd.reply({ content: `${isEditing ? "This" : "Your"} Help Message has been ${isEditing ? "edited" : "added"}, thanks!`, ephemeral: true })
+                    cmd.reply({ 
+                        content: `${isEditing ? "This" : "Your"} Help Message has been ${isEditing ? "edited" : "added"}, thanks!`, 
+                        ephemeral: true
+                    })
                     break;
             
                 // case "feedback_modal":

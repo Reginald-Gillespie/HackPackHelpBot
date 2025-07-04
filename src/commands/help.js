@@ -104,7 +104,8 @@ module.exports = {
             content: `<@${who.id}>`,
             embeds: [embed],
             components: rows,
-            files: [flowchartAttachment]
+            files: [flowchartAttachment], 
+            allowedMentions: { users: [ who.id ] }
         });
     }
 };

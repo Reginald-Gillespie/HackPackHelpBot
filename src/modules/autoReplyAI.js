@@ -353,7 +353,10 @@ class AutoReplyAI {
                     allowedMentions: { users: [discordMessage.author.id] }
                 });
                 for (const chunk of messageChunks.slice(1)) {
-                    await discordMessage.channel.send({ content: chunk, allowedMentions: { parse: [] } });
+                    await discordMessage.channel.send({ 
+                        content: chunk, 
+                        allowedMentions: { parse: [] } 
+                    });
                 }
 
                 console.log(`=`.repeat(50)+`\n`)
@@ -603,10 +606,11 @@ class AutoTaggerAI {
 
                     if (tagsToApply.length > 0) {
                         await message.channel.setAppliedTags(tagsToApply.map(tag => tag.id));
-                        
-                        message.channel.send(
-                            `-# No tags were applied, so I added \`${tagsToApply.map(tag => tag.name).join("`, `")}\``
-                        )
+
+                        message.channel.send({
+                            content: `-# No tags were applied, so I added \`${tagsToApply.map(tag => tag.name).join("`, `")}\``,
+                            allowedMentions: { parse: [] }
+                        })
                     }
 
                 }
