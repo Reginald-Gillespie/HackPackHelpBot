@@ -35,9 +35,17 @@ module.exports = {
 
         // Check if a message was actually found:
         if (reply === "No content found for this query") {
-            cmd.reply({ content: "No help message found for that title.", ephemeral: true });
+            cmd.reply({ 
+                content: "No help message found for that title.", 
+                ephemeral: true,
+                allowedMentions: { parse: [] }
+            });
         } else {
-            cmd.reply({ content: reply, ephemeral: !isVisible });
+            cmd.reply({ 
+                content: reply, 
+                ephemeral: !isVisible,
+                allowedMentions: { parse: [] }
+            });
         }
     }
 };

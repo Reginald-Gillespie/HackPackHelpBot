@@ -327,6 +327,7 @@ module.exports = {
         ) {
             return cmd.reply({
                 content: `This command requires input: ${commandConfig.inputDescription}`,
+                allowedMentions: { parse: [] },
                 ephemeral: true
             });
         }
