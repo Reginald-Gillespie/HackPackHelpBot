@@ -16,6 +16,9 @@ module.exports = {
      * @param {import('discord.js').User} user 
      * */
     async execute(reaction, user) {
+        return; // Hard pause starboard since the event is over
+
+
         // Fetch partials in parallel
         await Promise.all([
             reaction.partial ? reaction.fetch() : null,
