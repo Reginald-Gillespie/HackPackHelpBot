@@ -6,9 +6,12 @@ const { ChannelType } = require("discord.js");
 const { GoogleGenerativeAI, FunctionCallingMode, SchemaType } = require("@google/generative-ai");
 const LRUCache = require("lru-cache").LRUCache;
 const ms = require("ms")
-const { ConfigDB, CustomResponses } = require('../modules/database');
+const { ConfigDB, CustomResponses, CroissantMessagesDB, CroissantEmojiDB } = require('../modules/database');
 
-const { CustomResponseCache } = require("../commands/add-text-response")
+const { CustomResponseCache } = require("../commands/add-text-response");
+const { default: mongoose } = require("mongoose");
+const { count } = require("mathjs");
+const croissants = require("../commands/croissants");
 const markRobotPingsCache = new LRUCache({ ttl: ms("1h") }) // Store when pinged so we know when to clear if it moved to a new channel. TODO: move to mark robot js file
 const repeatQuestionCache = new LRUCache({ ttl: ms("1h") }) // Track for an hour
 
@@ -17,6 +20,17 @@ module.exports = {
     async execute(message, client) {
         if (message.author.bot) return;
 
+        const allEmojis = (await CroissantEmojiDB.find().lean()).map(e => e.emoji).filter(emojis => message.content.includes(emojis));
+        if (allEmojis.length !== 0) {
+            const user = message.author.id;
+            for(const emoji of allEmojis){
+                await CroissantMessagesDB.findOneAndUpdate(
+                    {userID: user, type: emoji},
+                    {$inc: { count: 1 }},
+                    {upsert: true, new:true, setDefaultsOnInsert: true}
+                )
+            }
+        }
         // TODO: optimize with cache since this is run on every message
         const config = await ConfigDB.findOne({})
             .lean({ defaults: true})

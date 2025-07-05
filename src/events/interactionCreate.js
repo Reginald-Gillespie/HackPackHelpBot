@@ -3,7 +3,7 @@ const { Events, EmbedBuilder, AttachmentBuilder, ButtonBuilder, ButtonStyle, Act
 const { postProcessForDiscord, getQuestionAndAnswers } = require("../modules/mermaidParse")
 const Fuse = require('fuse.js');
 const { helpHistoryCache } = require("../commands/help")
-const { ConfigDB, Factions, IssueTrackerDB, FixerDB } = require('../modules/database');
+const { ConfigDB, Factions, IssueTrackerDB, FixerDB, CroissantEmojiDB } = require('../modules/database');
 
 module.exports = {
     name: Events.InteractionCreate,
@@ -259,12 +259,41 @@ module.exports = {
 
                     await cmd.respond(mistakeChoices);
 
+                case "emoji-name":
+                    const allText = await CroissantEmojiDB.distinct('name');
+                    const sortedText = utils.sortByMatch(allText, field.value);
+
+                    const textChoices = sortedText.slice(0, 25).map(issue => ({
+                        name: issue.length > 100 ? issue.substring(0, 97) + '...' : issue,
+                        value: issue
+                    }));
+
+                        
+                    await cmd.respond(textChoices);
+                    break;
                     
+                    case "emoji":
+                    const allText2 = await CroissantEmojiDB.distinct('emoji');
+                    const sortedText2 = utils.sortByMatch(allText2, field.value);
+
+                    const textChoices2 = sortedText2.slice(0, 25).map(issue => ({
+                        name: issue.length > 100 ? issue.substring(0, 97) + '...' : issue,
+                        value: issue
+                    }));
+
+                        
+                    await cmd.respond(textChoices2);
+                    break;
                 // If none of these handlers caught it, see if the command has a command-specific handler
                 default:
-                    client?.commands
+                    try {
+                        client?.commands
                         ?.get(cmd.commandName)
                         ?.autocomplete(cmd, client);
+                    } catch (error) {
+                        console.log(error);
+                    }
+                    
             }
         }
     }
