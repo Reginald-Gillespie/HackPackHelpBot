@@ -1,25 +1,41 @@
-// Helper module to manage flowcharts
+// This file returns the filepath to the requested flowcharts, 
+//   rendering them if we haven't already saved the current version as an image.
 
 const fs = require("fs");
 const CryptoJS = require("crypto-js");
 const puppeteer = require('puppeteer');
 const path = require('path');
-const process = require('process');
+const stripJsonComments = require('strip-json-comments');
 
+// Import parse function from CrunchLabs' OSS charts
+require('esbuild-register'); // tsx import support
+const { default: getMermaidFromJSON } = require('../Flowcharts/hackpack-flowcharts/utils/parseMermaid');
 
-// This file returns the filepath to the requested flowcharts, 
-//   rendering them if we haven't already saved the current version as an image.
+function JSONCparse(content) {
+    const jsonWithoutComments = stripJsonComments(content);
+    return JSON.parse(jsonWithoutComments);
+}
 
 function hash(data) {
     return CryptoJS.MD5(data).toString();
 }
 
 function getChartOptions() {
-    let files = fs.readdirSync(path.join(__dirname, "../Flowcharts"));
-    files = files
-        .filter(filename => filename.toLowerCase().endsWith(".json"))
-        .map(filename => filename.slice(0, -5))
-    return files
+    const directoryPath = path.join(__dirname, "../Flowcharts/hackpack-flowcharts/flowcharts");
+    const files = fs.readdirSync(directoryPath)
+        .filter(filename => filename.toLowerCase().endsWith(".json") || filename.toLowerCase().endsWith(".jsonc"));
+
+    const chartOptions = files.map(filename => {
+        const filePath = path.join(directoryPath, filename);
+        const fileContent = JSONCparse(fs.readFileSync(filePath).toString());
+        return {
+            path: filePath,
+            filename: filename.slice(0, filename.lastIndexOf('.')),
+            title: fileContent.title || "Untitled"
+        };
+    });
+
+    return chartOptions;
 }
 
 async function renderHTML(html, overrideCache=false) {
@@ -55,111 +71,58 @@ async function renderHTML(html, overrideCache=false) {
     return fileLoc;
 }
 
-async function getMermaidFromJSON(chart) {
-    try {
-        const chartJSON = require(chart);
-
-        // Start at the start of the chart, always labeled "Title"
-        let queue = ["Title"];
-        let done = new Set();
-        let builtChart = ""; // Start building the nodes part of the chart
-        let round = 0;
-        while (queue.length > 0) {
-            // console.log(`Round ${round++}`);
-            if (round > 100) { // Emergency crash
-                process.exit(1);
-            }
-
-            let batch = new Set();
-            queue.forEach(nodeName => {
-                const node = chartJSON[nodeName];
-                if (node) {
-                    // Define node content
-                    let escapedContent = node.question
-                    escapedContent = escapedContent.replaceAll('"', "#quot;")
-                    escapedContent = escapedContent.replaceAll('@', "\\@")
-
-                    builtChart += `${nodeName}["${escapedContent}"]\n`;
-
-                    // Link node to each answer
-                    node.answers?.forEach(answerObject => {
-                        const nextNodeName = answerObject.nextStep;
-                        const arrow = answerObject.customArrow || node.customArrow || "-->";
-                        if (answerObject.answer)
-                            builtChart += `${nodeName} ${arrow} |${answerObject.answer}| ${nextNodeName}\n`;
-                        else
-                            builtChart += `${nodeName} ${arrow} ${nextNodeName}\n`; // Dummy answer for spacing
-                        
-                        // Add next node to the queue if it hasn't been done yet
-                        if (!done.has(nextNodeName)) {
-                            done.add(nextNodeName)
-                            batch.add(nextNodeName);
-                        } else {
-                            // console.log(`Already processed node ${nodeName}`)
-                        }
-                    })
-                }
-            })
-            queue = [...batch];
-        }
-
-        // Add the rest of the boilerplate
-        builtChart = builtChart.replaceAll(/^/gm, "    ").trim()
-        builtChart = builtChart.replaceAll("https://", "https:\\/\\/")
-        builtChart = builtChart.replaceAll("http://", "http:\\/\\/")
-        builtChart = 
-        `flowchart TD
-        ${builtChart}
-        %% Node-specific styling
-        style Title white-space:nowrap
-        style Title stroke-width:3px;
-
-        %% templateColor ${chartJSON?.config?.color || "#57899E"}`;
-
-        return builtChart;
-
-    } catch (e) {
-        // Most often the reason this would be hit is because of invalid json 
-        return ""
+function getMermaidPath(chartName) {
+    const mermaidPathJson = path.join(__dirname, `../Flowcharts/hackpack-flowcharts/flowcharts/${chartName}.json`);
+    const mermaidPathJsonc = path.join(__dirname, `../Flowcharts/hackpack-flowcharts/flowcharts/${chartName}.jsonc`);
+    if (fs.existsSync(mermaidPathJson)) {
+        return mermaidPathJson;
+    } else if (fs.existsSync(mermaidPathJsonc)) {
+        return mermaidPathJsonc;
+    } else {
+        return null;
     }
 }
 
-async function getPathToFlowchart(chartName, mermaidOnly=false, dumpHTML=false, overrideCache=false) {
+/**
+ * @param {string} chartFileName
+ */
+async function getPathToFlowchart(chartFileName, mermaidOnly=false, dumpHTML=false, overrideCache=false) {
     // returns [imagePath, errorString], if mermaidOnly is false
     // returns [mermaidPath, errorString], if mermaidOnly is true
-    if (!getChartOptions().includes(chartName)) {
+
+    const selectedChartOption = getChartOptions().find(option => option.filename === chartFileName);
+    if (!selectedChartOption) {
         return [null, "That chart could not be found, check the spelling and try using the autocompletes options."]
     }
 
     // Create HTML
-    const mermaidPath = path.join(__dirname, `../Flowcharts/${chartName}.json`);
+    // const mermaidPath = getMermaidPath(chart);
+    const mermaidPath = selectedChartOption.path;
+    
     if (mermaidOnly) return [mermaidPath, null]; // for editing the template we don't need the whole thiing
     const templatePath = path.join(__dirname, `../Flowcharts/template.html`);
 
-    // const mermaidContent = fs.readFileSync(mermaidPath).toString()
-    const mermaidContent = await getMermaidFromJSON(path.join(__dirname, `../Flowcharts/${chartName}.json`))
+    const mermaidJSON = JSONCparse(fs.readFileSync(mermaidPath).toString());
+    const mermaidContent = await getMermaidFromJSON(mermaidJSON);
 
-    let templateContent = fs.readFileSync(templatePath).toString()
-    const templateColor = "#"+mermaidContent.match(/%% templateColor #?([a-zA-Z\d]+)/)?.[1]
-    templateContent = templateContent.replace("##color##", templateColor || "#57899E");
+    // Build template
+    let templateContent = fs.readFileSync(templatePath).toString();
+    templateContent = templateContent.replace("##color##", mermaidJSON.color ? "#"+mermaidJSON.color : "#57899E");
     templateContent = templateContent.replace("##flowchart##", mermaidContent);
 
     if (dumpHTML) {
-        fs.writeFileSync(path.join(__dirname, `../Flowcharts/generated.html`), templateContent)
-        fs.writeFileSync(path.join(__dirname, `../Flowcharts/mermaid.md`), mermaidContent)
+        fs.writeFileSync(path.join(__dirname, `../Flowcharts/generated.html`), templateContent);
+        fs.writeFileSync(path.join(__dirname, `../Flowcharts/mermaid.md`), mermaidContent);
     }
 
     const imageLoc = await renderHTML(templateContent, overrideCache);
     return [imageLoc, null];
 }
 
-
-
-
 if (require.main == module) {
     (async function main(){
         console.log(await getPathToFlowchart("label", false, true))
     })()
 } else {
-    module.exports = { getPathToFlowchart, getChartOptions };
+    module.exports = { getPathToFlowchart, getChartOptions, JSONCparse };
 }

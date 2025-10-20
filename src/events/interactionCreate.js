@@ -4,6 +4,13 @@ const { postProcessForDiscord, getQuestionAndAnswers } = require("../modules/mer
 const Fuse = require('fuse.js');
 const { helpHistoryCache } = require("../commands/help")
 const { ConfigDB, Factions, IssueTrackerDB, FixerDB } = require('../modules/database');
+const { JSONCparse } = require('../modules/flowcharter');
+const fs = require('fs');
+
+function limitLength(str, maxLength) {
+    if (str.length <= maxLength) return str;
+    return str.slice(0, maxLength - 3) + '...';
+}
 
 module.exports = {
     name: Events.InteractionCreate,
@@ -37,7 +44,7 @@ module.exports = {
                 }
 
                 var [mermaidPath, error] = await utils.getPathToFlowchart(context.chart, true);
-                const mermaidJSON = require(mermaidPath)
+                const mermaidJSON = JSONCparse((await fs.promises.readFile(mermaidPath)).toString())
 
                 let questionData, answersArray;
 
@@ -91,26 +98,44 @@ module.exports = {
                     rows.push(new ActionRowBuilder().addComponents(buttons.slice(i, i + 5)));
                 }
 
-                if (!answerEmbed) {
-                    answerEmbed = new EmbedBuilder()
-                        .setColor(0)
-                        .setTitle(`Recorded answers`)
-                        .setFields([])
+                let newAnswerEmbed = new EmbedBuilder()
+                    .setColor(0)
+                    .setTitle(`Recorded answers`)
+                    .setFields([]);
+
+                // Build Q/A history into description, which supports more markdown
+                let historyArray = answerEmbed?.description ? answerEmbed.description.split("\n\n") : [];
+                historyArray.push(
+                    `Q: ${limitLength(question.trim().replace(/\n/g, ' / ').trim(), 100)}\n` +
+                    `> ${thisButton.data.label}`
+                )
+
+                // Limit history description to 2000 characters
+                let totalLength = 0;
+                for (let i = historyArray.length - 1; i >= 0; i--) {
+                    const itemLength = historyArray[i].length + 2; // Account for two newlines
+                    if (totalLength + itemLength > 2000) {
+                        historyArray = historyArray.slice(i + 1);
+                        break;
+                    }
+                    totalLength += itemLength;
                 }
-                answerEmbed.data.fields.push({ name: `Q: ${question}`, value: `> ${thisButton.data.label}` })
-                answerEmbed.data.fields = answerEmbed.data.fields.slice(-25);
+                newAnswerEmbed.setDescription(historyArray.join("\n\n"));
+
                 questionField.value = postProcessForDiscord(questionData?.question, cmd.guild);
 
-                questionEmbedBuild = EmbedBuilder.from(questionEmbed)
+                const questionEmbedBuild = EmbedBuilder.from(questionEmbed)
                 questionEmbedBuild.setThumbnail("attachment://flowchart.png");
 
                 await message.edit({
-                    embeds: [answerEmbed, questionEmbedBuild],
+                    embeds: [newAnswerEmbed, questionEmbedBuild],
                     components: rows,
                 });
                 await cmd.deferUpdate();
                 return;
-            } catch { } // if it doesn't parse right it ain't ours. TODO: look at ID smh.
+            } catch (e) {
+                console.log(e);
+            }
         } else if (cmd.isModalSubmit()) {
             switch (cmd.customId) {
                 case "editModal":
@@ -222,9 +247,31 @@ module.exports = {
                     break;
 
                 case "chart":
-                    const chartOptions = utils.getChartOptions();
-                    const matching = utils.sortByMatch(chartOptions, typedSoFar);
-                    cmd.respond(utils.arrayToAutocorrect(matching))
+                    // This one is a bit more complex so we'll do it without most utils
+                    let chartOptions = utils.getChartOptions();
+
+                    if (typedSoFar) {
+                        const fuse = new Fuse(chartOptions, {
+                            includeScore: true,
+                            keys: ['title', 'filename']
+                        });
+
+                        // Narrow down results
+                        chartOptions = fuse.search(typedSoFar)
+                            .filter(result => result.score <= 2)
+                            .sort((a, b) => a.score - b.score)
+                            .map(result => result.item);
+                    }
+
+                    // Map to desired response format
+                    const chartOptionsResponse = chartOptions.map(result => {
+                        return {
+                            name: result.title,
+                            value: result.filename
+                        };
+                    });
+
+                    cmd.respond(chartOptionsResponse);
                     break;
 
                 case "faction":

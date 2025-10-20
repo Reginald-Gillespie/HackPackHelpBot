@@ -138,7 +138,11 @@ async function getFeaturedHacksLeaderboard(client) {
     try {
         // Get all boxes with featured hack channels
         const boxes = await BoxData.find({
-            featuredHacksChannel: { $exists: true, $ne: null, $ne: '' }
+            $and: [
+                { featuredHacksChannel: { $exists: true } },
+                { featuredHacksChannel: { $ne: null } },
+                { featuredHacksChannel: { $ne: '' } }
+            ]
         }).lean();
 
         if (!boxes || boxes.length === 0) {

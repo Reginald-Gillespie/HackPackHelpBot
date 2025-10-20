@@ -1,0 +1,3 @@
+[submodule "src/Flowcharts/hackpack-flowcharts"]
+	path = src/Flowcharts/hackpack-flowcharts
+	url = https://github.com/HackPackOfficial/hackpack-flowcharts

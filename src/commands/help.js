@@ -1,8 +1,11 @@
 const { SlashCommandBuilder, EmbedBuilder, AttachmentBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, PermissionFlagsBits } = require('discord.js');
-const { getPathToFlowchart } = require('../modules/flowcharter');
+const { getPathToFlowchart, JSONCparse } = require('../modules/flowcharter');
 const { postProcessForDiscord, getQuestionAndAnswers } = require('../modules/mermaidParse');
 const LRUCache = require("lru-cache").LRUCache;
 const ms = require("ms")
+const stripJsonComments = require('strip-json-comments');
+const fs = require("fs");
+const { getChartOptions } = require('../modules/utils');
 
 const helpHistoryCache = new LRUCache({ ttl: ms("1h") })
 
@@ -38,10 +41,12 @@ module.exports = {
             return cmd.reply({ content: "This command only works when the bot is installed in the server", ephemeral: true });
         }
 
-        var chart = cmd.options.getString("chart");
+        let chart = cmd.options.getString("chart");
+        let chartData = getChartOptions().find(c => c.filename == chart);
+
         const who = cmd.options.getUser("who") || cmd.user;
 
-        var [mermaidPath, error] = await getPathToFlowchart(chart, true); // only fetching mermaid path
+        var [mermaidPath, error] = await getPathToFlowchart(chart, true);
         if (error) {
             cmd.reply({ content: error, ephemeral: true });
             return; // Ensure we exit if there's an error.
@@ -49,16 +54,15 @@ module.exports = {
 
         let mermaidJSON;
         try {
-            mermaidJSON = require(mermaidPath);
+            mermaidJSON = JSONCparse((await fs.promises.readFile(mermaidPath)).toString());
         } catch {
             return cmd.reply({ content: "Sorry, this chart has malformed JSON.", ephemeral: true });
         }
         const [questionData, answersArray] = getQuestionAndAnswers(mermaidJSON)
 
         // Store so we know what to go back to
-        helpHistoryCache.set(who.id, 
-            [questionData, answersArray, cmd.id]
-        ) // TODO: this should also be keyed by the message the embed is on's ID
+        helpHistoryCache.set(who.id, [[questionData, answersArray, cmd.id]]);
+        // TODO: this should also be keyed by the message the embed is on's ID
 
         const templateColor = parseInt(mermaidJSON.config?.color?.replaceAll("#", "") || "dd8836", 16)
 
@@ -67,7 +71,7 @@ module.exports = {
 
         const embed = new EmbedBuilder()
             .setColor(templateColor)
-            .setTitle(`Flowchart Walkthrough: \`${chart}\``)
+            .setTitle(chartData.title)
             .setThumbnail(`attachment://flowchart.png`)
             .addFields(
                 { name: "Instructions", value: `Please answer these questions:` },

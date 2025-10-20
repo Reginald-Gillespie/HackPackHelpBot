@@ -1,9 +1,6 @@
 // Helper module to manage flowchart parsing
 // If my flowcharts start using more advanced stuff, this file will need to be changed to support more.
 
-
-const fs = require("fs")
-
 function postProcessForDiscord(message, guild) {
     message = String(message || "This answer appears to be undefined. Please try again later.");
     message = message.replaceAll("#quot;", '"')
@@ -33,6 +30,9 @@ function matchMultipleGroups(content, regex=/./) {
 
 function getQuestionAndAnswers(chartJSON, currentQuestionID, currentAnswerID) {
     // returns [{questionID, question}, [ answer1, answer2, ...]]
+
+    let questions = chartJSON.questions;
+
     try {
         let nextNodeId = null;
 
@@ -41,13 +41,13 @@ function getQuestionAndAnswers(chartJSON, currentQuestionID, currentAnswerID) {
             nextNodeId = "Title";
         } else {
             // If there was an ID, find the next node along this path
-            const currentNode = chartJSON[currentQuestionID];
+            const currentNode = questions[currentQuestionID];
             const selectedAnswer = currentNode.answers.find(answerObj => answerObj?.answer === currentAnswerID);
-            nextNodeId = selectedAnswer?.nextStep;
+            nextNodeId = selectedAnswer?.nextQuestion;
         }
 
         // If no question is provided, find the flowchart entrypoint
-        const nextNode = chartJSON[nextNodeId];
+        const nextNode = questions[nextNodeId];
 
         if (!nextNode) throw new Error("No entry node found");
 
