@@ -41,6 +41,12 @@ function getChartOptions() {
 async function renderHTML(html, overrideCache=false) {
     // returns imageLoc
 
+    // Make sure cache folder is here
+    const cacheDir = path.join(__dirname, "../Flowcharts/cache");
+    if (!fs.existsSync(cacheDir)) {
+        fs.mkdirSync(cacheDir, { recursive: true });
+    }
+
     const fileLoc = path.join(__dirname, `../Flowcharts/cache/${hash(html)}.jpg`);
       
     // Render with puppeteer if this HTML has not been rendered before
