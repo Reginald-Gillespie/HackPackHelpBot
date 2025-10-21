@@ -116,7 +116,14 @@ async function getPathToFlowchart(chartFileName, mermaidOnly=false, dumpHTML=fal
     templateContent = templateContent.replace("##color##", mermaidJSON.color ? "#"+mermaidJSON.color : "#57899E");
     templateContent = templateContent.replace("##flowchart##", mermaidContent);
 
-    if (dumpHTML) {
+    // Change escape method to what works best for vanilla js:
+    templateContent = templateContent
+        .replaceAll('&quot;', '#quot;')
+        .replaceAll('&lt;', '#lt;')
+        .replaceAll('&gt;', '#gt;')
+        .replaceAll('&#96;', '#96;');
+
+    if (true || dumpHTML) {
         fs.writeFileSync(path.join(__dirname, `../Flowcharts/generated.html`), templateContent);
         fs.writeFileSync(path.join(__dirname, `../Flowcharts/mermaid.md`), mermaidContent);
     }
