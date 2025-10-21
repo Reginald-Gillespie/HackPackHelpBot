@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, AttachmentBuilder } = require('discord.js');
-const { getPathToFlowchart } = require('../modules/flowcharter');
+const { getPathToFlowchart, isChartCached } = require('../modules/flowcharter');
 const utils = require('../modules/utils');
 
 module.exports = {
@@ -14,15 +14,26 @@ module.exports = {
             option.setName("override-cache").setDescription("Recreate the chart ignoring the cached version").setRequired(false)
         ),
     async execute(cmd) {
-        await cmd.deferReply();
         var chart = cmd.options.getString("chart");
         const overrideCacheAttempt = cmd.options.getBoolean("override-cache")
         const overrideCache = overrideCacheAttempt && (await utils.isCreator(cmd.user.id));
         const sendHTML = cmd.options.getBoolean("attach-html")
 
+        // Check if chart is cached before deferring
+        const cached = await isChartCached(chart, overrideCache);
+        
+        if (cached) {
+            // Chart is cached, defer normally
+            await cmd.deferReply();
+        } else {
+            // Chart needs rendering, defer with status message
+            await cmd.deferReply();
+            await cmd.editReply({ content: 'Rendering flowchart, please wait...' });
+        }
+
         var [chartPath, error] = await getPathToFlowchart(chart, false, sendHTML, overrideCache);
         if (error) {
-            cmd.followUp({ content: error, ephemeral: true });
+            cmd.editReply({ content: error, ephemeral: true });
             return;
         }
 
@@ -37,7 +48,7 @@ module.exports = {
         ]
         if (sendHTML) files.push(new AttachmentBuilder(`./Flowcharts/generated.html`))
 
-        cmd.followUp({
+        cmd.editReply({
             content: response,
             files: files,
             ephemeral: false

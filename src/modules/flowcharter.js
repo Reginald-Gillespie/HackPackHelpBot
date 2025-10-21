@@ -11,6 +11,9 @@ const stripJsonComments = require('strip-json-comments');
 require('esbuild-register'); // tsx import support
 const { default: getMermaidFromJSON } = require('../Flowcharts/hackpack-flowcharts/utils/parseMermaid');
 
+// Track active rendering processes to prevent DOS
+const activeRenders = new Map(); // Map<htmlHash, Promise<string>>
+
 function JSONCparse(content) {
     const jsonWithoutComments = stripJsonComments(content);
     return JSON.parse(jsonWithoutComments);
@@ -47,34 +50,54 @@ async function renderHTML(html, overrideCache=false) {
         fs.mkdirSync(cacheDir, { recursive: true });
     }
 
-    const fileLoc = path.join(__dirname, `../Flowcharts/cache/${hash(html)}.jpg`);
+    const htmlHash = hash(html);
+    const fileLoc = path.join(__dirname, `../Flowcharts/cache/${htmlHash}.jpg`);
       
-    // Render with puppeteer if this HTML has not been rendered before
-    if (overrideCache || !fs.existsSync(fileLoc)) {
-        var debug = false;
-        // const browser = await puppeteer.launch({headless: !debug});
-        const browser = await puppeteer.launch({
-            executablePath: fs.existsSync("/usr/bin/chromium-browser") ? "/usr/bin/chromium-browser" : undefined, // Use system Chromium if available
-            args: ['--no-sandbox', '--disable-setuid-sandbox'],
-            headless: !debug
-        });
-        await new Promise(resolve => setTimeout(resolve, debug ? 100000 : 1000));
-        const page = await browser.newPage();
-        await new Promise(resolve => setTimeout(resolve, debug ? 100000 : 1000));
-        await page.setViewport({
-            width: 1920*1,
-            height: 1080*1,
-            deviceScaleFactor: 4
-        });
-        await new Promise(resolve => setTimeout(resolve, debug ? 100000 : 1000));
-        await page.setContent(html);
-        await new Promise(resolve => setTimeout(resolve, debug ? 100000 : 2000));
-        await page.screenshot({path: fileLoc, fullPage: true});
-        await new Promise(resolve => setTimeout(resolve, debug ? 100000 : 500));
-        await browser.close();
+    // Return existing file if it exists and not overriding cache
+    if (!overrideCache && fs.existsSync(fileLoc)) {
+        return fileLoc;
     }
 
-    return fileLoc;
+    // Check if this chart is already being rendered
+    if (activeRenders.has(htmlHash)) {
+        return await activeRenders.get(htmlHash);
+    }
+
+    // Start new render and track it
+    const renderPromise = (async () => {
+        try {
+            var debug = false;
+            // const browser = await puppeteer.launch({headless: !debug});
+            const browser = await puppeteer.launch({
+                executablePath: fs.existsSync("/usr/bin/chromium-browser") ? "/usr/bin/chromium-browser" : undefined, // Use system Chromium if available
+                args: ['--no-sandbox', '--disable-setuid-sandbox'],
+                headless: !debug
+            });
+            await new Promise(resolve => setTimeout(resolve, debug ? 100000 : 1000));
+            const page = await browser.newPage();
+            await new Promise(resolve => setTimeout(resolve, debug ? 100000 : 1000));
+            await page.setViewport({
+                width: 1920*1,
+                height: 1080*1,
+                deviceScaleFactor: 4
+            });
+            await new Promise(resolve => setTimeout(resolve, debug ? 100000 : 1000));
+            await page.setContent(html);
+            await new Promise(resolve => setTimeout(resolve, debug ? 100000 : 2000));
+            await page.screenshot({path: fileLoc, fullPage: true});
+            await new Promise(resolve => setTimeout(resolve, debug ? 100000 : 500));
+            await browser.close();
+            return fileLoc;
+        } finally {
+            // Remove from active renders when done (success or failure)
+            activeRenders.delete(htmlHash);
+        }
+    })();
+
+    // Track this render
+    activeRenders.set(htmlHash, renderPromise);
+    
+    return await renderPromise;
 }
 
 function getMermaidPath(chartName) {
@@ -86,6 +109,48 @@ function getMermaidPath(chartName) {
         return mermaidPathJsonc;
     } else {
         return null;
+    }
+}
+
+/**
+ * Check if a chart is already cached without rendering it
+ * @param {string} chartFileName
+ * @param {boolean} overrideCache
+ * @returns {Promise<boolean>}
+ */
+async function isChartCached(chartFileName, overrideCache=false) {
+    if (overrideCache) return false; // If overriding, it's not cached
+
+    try {
+        const selectedChartOption = getChartOptions().find(option => option.filename === chartFileName);
+        if (!selectedChartOption) return false;
+
+        const mermaidPath = selectedChartOption.path;
+        const templatePath = path.join(__dirname, `../Flowcharts/template.html`);
+
+        const mermaidJSON = JSONCparse(fs.readFileSync(mermaidPath).toString());
+        const mermaidContent = await getMermaidFromJSON(mermaidJSON);
+
+        // Build template
+        let templateContent = fs.readFileSync(templatePath).toString();
+        templateContent = templateContent.replace("##color##", mermaidJSON.color ? "#"+mermaidJSON.color : "#57899E");
+        templateContent = templateContent.replace("##flowchart##", mermaidContent);
+
+        // Change escape method to what works best for vanilla js:
+        templateContent = templateContent
+            .replaceAll('&quot;', '#quot;')
+            .replaceAll('&lt;', '#lt;')
+            .replaceAll('&gt;', '#gt;')
+            .replaceAll('&#96;', '#96;');
+
+        const htmlHash = hash(templateContent);
+        const cacheDir = path.join(__dirname, "../Flowcharts/cache");
+        const fileLoc = path.join(cacheDir, `${htmlHash}.jpg`);
+
+        return fs.existsSync(fileLoc);
+    } catch (error) {
+        console.error("Error checking cache:", error);
+        return false;
     }
 }
 
@@ -137,5 +202,5 @@ if (require.main == module) {
         console.log(await getPathToFlowchart("label", false, true))
     })()
 } else {
-    module.exports = { getPathToFlowchart, getChartOptions, JSONCparse };
+    module.exports = { getPathToFlowchart, getChartOptions, JSONCparse, isChartCached };
 }

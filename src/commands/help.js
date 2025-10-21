@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, AttachmentBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, PermissionFlagsBits } = require('discord.js');
-const { getPathToFlowchart, JSONCparse } = require('../modules/flowcharter');
+const { getPathToFlowchart, JSONCparse, isChartCached } = require('../modules/flowcharter');
 const { postProcessForDiscord, getQuestionAndAnswers } = require('../modules/mermaidParse');
 const LRUCache = require("lru-cache").LRUCache;
 const ms = require("ms")
@@ -44,11 +44,20 @@ module.exports = {
         let chart = cmd.options.getString("chart");
         let chartData = getChartOptions().find(c => c.filename == chart);
 
+        // Check if chart is cached and defer appropriately
+        const cached = await isChartCached(chart, false);
+        if (cached) {
+            await cmd.deferReply();
+        } else {
+            await cmd.deferReply();
+            await cmd.editReply({ content: 'Rendering flowchart, please wait...' });
+        }
+
         const who = cmd.options.getUser("who") || cmd.user;
 
         var [mermaidPath, error] = await getPathToFlowchart(chart, true);
         if (error) {
-            cmd.reply({ content: error, ephemeral: true });
+            cmd.editReply({ content: error, ephemeral: true });
             return; // Ensure we exit if there's an error.
         }
 
@@ -56,7 +65,7 @@ module.exports = {
         try {
             mermaidJSON = JSONCparse((await fs.promises.readFile(mermaidPath)).toString());
         } catch {
-            return cmd.reply({ content: "Sorry, this chart has malformed JSON.", ephemeral: true });
+            return cmd.editReply({ content: "Sorry, this chart has malformed JSON.", ephemeral: true });
         }
         const [questionData, answersArray] = getQuestionAndAnswers(mermaidJSON)
 
@@ -104,7 +113,7 @@ module.exports = {
             rows.push(new ActionRowBuilder().addComponents(buttons.slice(i, i + 5)));
         }
 
-        await cmd.reply({
+        await cmd.editReply({
             content: `<@${who.id}>`,
             embeds: [embed],
             components: rows,
