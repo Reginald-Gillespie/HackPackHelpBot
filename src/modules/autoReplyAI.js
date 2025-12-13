@@ -30,20 +30,20 @@ const subtopicInfoMap = require("../assets/subtopicInfoMap.json");
 
 // Zod schemas for structured outputs
 const stage1ResponseSchema = z.object({
-    thoughts: z.string().describe('Think about which response is the best, or if there is even a best response.'),
+    explanation: z.string().describe('Consider which response is the best, or if there is even a best response. Discuss to yourself, this is not shown.'),
     chosen_response: z.number().describe('After thinking, write down your final answer.'),
     confidence: z.number().describe('How confident you are that your answer is relevant, from 1 (somewhat confident) to 5 (very confident).')
 });
 
 const stage2ResponseSchema = z.object({
-    thoughts: z.string().describe('Think about whether the given question can be reliably answered with the provided information.'),
+    explanation: z.string().describe('Consider whether the given question can be reliably answered with the provided information. Discuss to yourself, this is not shown.'),
     reliably_confidence: z.number().describe('How confident you are that FAQ answers the question, from 1 (somewhat confident) to 5 (very confident).'),
     tailored_response: z.string().describe('Your answer that the user will see.'),
     confidence: z.number().describe('How confident you are that your answer is relevant and correct, from 1 (somewhat confident) to 5 (very confident).')
 });
 
 const forumAutoTaggerSchema = z.object({
-    thoughts: z.string().describe('Your reasoning about which tags to apply'),
+    explanation: z.string().describe('Your reasoning about which tags to apply'),
     tags: z.array(z.string()).describe('Array of tag names to apply')
 });
 
@@ -375,9 +375,11 @@ class AutoReplyAI {
                 const stage2Out = await this.stage2AIHandler(discordMessage, stage1Out);
                 if (!stage2Out) return false;
 
-                // If we've come this far, we have a response the AI is confident in
-                // Reply
-                const messageChunks = formatAIResponse(stage2Out.tailored_response);
+                // Preprocess the response to replace literal \n with actual newlines
+                const processedResponse = stage2Out.tailored_response.replace(/\\n/g, '\n');
+
+                // Format the response into chunks
+                const messageChunks = formatAIResponse(processedResponse);
                 await discordMessage.reply({
                     content: messageChunks[0],
                     allowedMentions: { users: [discordMessage.author.id] }
