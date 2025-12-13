@@ -9,8 +9,86 @@ const { getChartOptions } = require('../modules/utils');
 
 const helpHistoryCache = new LRUCache({ ttl: ms("1h") })
 
+/**
+ * Send an interactive flowchart to a user
+ * @param {Object} options - Options for sending the flowchart
+ * @param {string} options.chartFilename - The filename of the chart (without extension)
+ * @param {string} options.chartTitle - The title of the chart
+ * @param {Object} options.user - The Discord user who will interact with the flowchart
+ * @param {Object} options.guild - The Discord guild (server) object
+ * @param {string} options.interactionId - Unique ID for this interaction
+ * @param {Function} options.reply - Function to send the reply (accepts Discord message options)
+ * @returns {Promise<void>}
+ */
+async function sendFlowchartToUser({ chartFilename, chartTitle, user, guild, interactionId, reply }) {
+    var [mermaidPath, error] = await getPathToFlowchart(chartFilename, true);
+    if (error) {
+        throw new Error(error);
+    }
+
+    let mermaidJSON;
+    try {
+        mermaidJSON = JSONCparse((await fs.promises.readFile(mermaidPath)).toString());
+    } catch {
+        throw new Error("Sorry, this chart has malformed JSON.");
+    }
+    const [questionData, answersArray] = getQuestionAndAnswers(mermaidJSON)
+
+    // Store so we know what to go back to
+    helpHistoryCache.set(user.id, [[questionData, answersArray, interactionId]]);
+
+    const templateColor = parseInt(mermaidJSON.config?.color?.replaceAll("#", "") || "dd8836", 16)
+
+    const [flowchart, _] = await getPathToFlowchart(chartFilename)
+    const flowchartAttachment = new AttachmentBuilder(flowchart, { name: 'flowchart.png' });
+
+    const embed = new EmbedBuilder()
+        .setColor(templateColor)
+        .setTitle(chartTitle)
+        .setThumbnail(`attachment://flowchart.png`)
+        .addFields(
+            { name: "Instructions", value: `Please answer these questions:` },
+            { name: '\n', value: '\n' },
+            { name: "Question:", value: postProcessForDiscord(questionData?.question, guild) },
+            { name: '\n', value: '\n' },
+            { name: '\n', value: '\n' },
+        )
+        .setFooter({ text: `Interaction ${interactionId}`, iconURL: user.displayAvatarURL() });
+
+    const buttons = [];
+    for (let i = 0; i < answersArray.length; i++) {
+        const answer = answersArray[i];
+        buttons.push(
+            new ButtonBuilder()
+                .setCustomId("" + answer)
+                .setLabel("" + answer)
+                .setStyle(ButtonStyle.Primary)
+        );
+    }
+
+    if (buttons[0]) buttons[0].data.custom_id += "|" + JSON.stringify({
+        id: user.id,
+        questionID: questionData?.questionID,
+        chart: chartFilename,
+    })
+
+    const rows = [];
+    for (let i = 0; i < buttons.length; i += 5) {
+        rows.push(new ActionRowBuilder().addComponents(buttons.slice(i, i + 5)));
+    }
+
+    await reply({
+        content: `<@${user.id}>`,
+        embeds: [embed],
+        components: rows,
+        files: [flowchartAttachment], 
+        allowedMentions: { users: [ user.id ] }
+    });
+}
+
 module.exports = {
     helpHistoryCache,
+    sendFlowchartToUser,
     
     data: new SlashCommandBuilder().setName("help").setDescription("Walk a user through the a debugging flowcharts")
         .addStringOption(option =>
@@ -55,70 +133,18 @@ module.exports = {
 
         const who = cmd.options.getUser("who") || cmd.user;
 
-        var [mermaidPath, error] = await getPathToFlowchart(chart, true);
-        if (error) {
-            cmd.editReply({ content: error, ephemeral: true });
-            return; // Ensure we exit if there's an error.
-        }
-
-        let mermaidJSON;
         try {
-            mermaidJSON = JSONCparse((await fs.promises.readFile(mermaidPath)).toString());
-        } catch {
-            return cmd.editReply({ content: "Sorry, this chart has malformed JSON.", ephemeral: true });
+            await sendFlowchartToUser({
+                chartFilename: chart,
+                chartTitle: chartData.title,
+                user: who,
+                guild: cmd.guild,
+                interactionId: cmd.id,
+                reply: (options) => cmd.editReply(options)
+            });
+        } catch (error) {
+            console.log("Error in /help command:", error.message);
+            return cmd.editReply({ content: "Sorry, there was an error while executing this command.", ephemeral: true });
         }
-        const [questionData, answersArray] = getQuestionAndAnswers(mermaidJSON)
-
-        // Store so we know what to go back to
-        helpHistoryCache.set(who.id, [[questionData, answersArray, cmd.id]]);
-        // TODO: this should also be keyed by the message the embed is on's ID
-
-        const templateColor = parseInt(mermaidJSON.config?.color?.replaceAll("#", "") || "dd8836", 16)
-
-        const [flowchart, _] = await getPathToFlowchart(chart)
-        const flowchartAttachment = new AttachmentBuilder(flowchart, { name: 'flowchart.png' });
-
-        const embed = new EmbedBuilder()
-            .setColor(templateColor)
-            .setTitle(chartData.title)
-            .setThumbnail(`attachment://flowchart.png`)
-            .addFields(
-                { name: "Instructions", value: `Please answer these questions:` },
-                { name: '\n', value: '\n' },
-                { name: "Question:", value: postProcessForDiscord(questionData?.question, cmd.guild) },
-                { name: '\n', value: '\n' },
-                { name: '\n', value: '\n' },
-            )
-            .setFooter({ text: `Interaction ${cmd.id}`, iconURL: who.displayAvatarURL() });
-
-        const buttons = [];
-        for (let i = 0; i < answersArray.length; i++) {
-            const answer = answersArray[i];
-            buttons.push(
-                new ButtonBuilder()
-                    .setCustomId("" + answer)
-                    .setLabel("" + answer)
-                    .setStyle(ButtonStyle.Primary)
-            );
-        }
-
-        if (buttons[0]) buttons[0].data.custom_id += "|" + JSON.stringify({
-            id: who.id,
-            questionID: questionData?.questionID,
-            chart,
-        })
-
-        const rows = [];
-        for (let i = 0; i < buttons.length; i += 5) {
-            rows.push(new ActionRowBuilder().addComponents(buttons.slice(i, i + 5)));
-        }
-
-        await cmd.editReply({
-            content: `<@${who.id}>`,
-            embeds: [embed],
-            components: rows,
-            files: [flowchartAttachment], 
-            allowedMentions: { users: [ who.id ] }
-        });
     }
 };

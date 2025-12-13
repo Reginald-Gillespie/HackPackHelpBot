@@ -10,11 +10,13 @@ const simpleGit = require('simple-git');
 const { ConfigDB, StoredMessages } = require('../modules/database');
 const { ChannelType, PermissionsBitField } = require("discord.js");
 const { isHelpRequest, getHelpMessageBySubjectTitle } = require('../modules/utils');
+const { sendFlowchartToUser } = require('../commands/help');
 
 // AI SDK imports
 const { groq } = require('@ai-sdk/groq');
 const { generateObject, generateText } = require('ai');
 const { z } = require('zod');
+const { getChartOptions } = require('./flowcharter');
 
 const git = simpleGit();
 
@@ -284,7 +286,9 @@ class AutoReplyAI {
         this.generalAgent = new AdvancedAIAgent();
 
         this.helpMessageList = [];
+        this.flowchartList = [];  // Track flowcharts separately
         this.stage1RequiredConfidence = 3;  // How sure stage1 is that there is a matching FAQ (this will be rejudged by stage2 with extra context, so low is fine)
+        this.flowchartRequiredConfidence = 4;  // Flowcharts require maximum confidence
         this.stage2MessageCount = 8;        // How much context to pull in
         this.stage2PrecisionThreshold = 4;  // How related the FAQ that stage 1 gave was - arguably this is the most important number as it chooses how much the fixed FAQ will be used 
         this.stage2ConfidenceThreshold = 4; // How confident in the final answer stage2 must be.
@@ -355,7 +359,15 @@ class AutoReplyAI {
                 const stage1Out = await this.stage1AIHandler(discordMessage);
                 if (!stage1Out) return false;
 
-                // Pass through stage2
+                // Check if it's a flowchart
+                if (stage1Out.isFlowchart) {
+                    console.log(`Flowchart selected: ${stage1Out.flowchartTitle}`);
+                    await this.sendFlowchart(discordMessage, stage1Out.flowchartFilename, stage1Out.flowchartTitle);
+                    console.log(`=`.repeat(50) + `\n`);
+                    return true;
+                }
+
+                // Pass through stage2 for regular FAQs
 
                 console.log(`Passing into stage2`);
                 const stage2Out = await this.stage2AIHandler(discordMessage, stage1Out);
@@ -384,6 +396,27 @@ class AutoReplyAI {
         }
     }
 
+    /**
+     * Send an interactive flowchart to the user
+     * @param {import('discord.js').Message} discordMessage 
+     * @param {string} chartFilename - The filename of the chart (without extension)
+     * @param {string} chartTitle - The title of the chart
+     */
+    async sendFlowchart(discordMessage, chartFilename, chartTitle) {
+        try {
+            await sendFlowchartToUser({
+                chartFilename,
+                chartTitle,
+                user: discordMessage.author,
+                guild: discordMessage.guild,
+                interactionId: discordMessage.id,
+                reply: (options) => discordMessage.reply(options)
+            });
+        } catch (error) {
+            console.error("Error sending flowchart:", error);
+        }
+    }
+
     // Stage 1:
     // Select relevant FAQ from list of titles and user message
     async buildStage1SystemPrompt(discordMessage) {
@@ -408,6 +441,17 @@ class AutoReplyAI {
             faqs.push(`${index}. ${faq.title} | (${faq.category})`);
         });
 
+        // Add flowcharts after FAQs with non-overlapping numbers
+        const flowcharts = [];
+        const flowchartOptions = getChartOptions();
+        const flowchartStartIndex = allMessages.length + 1;
+        
+        flowchartOptions.forEach((chart, i) => {
+            const index = flowchartStartIndex + i;
+            this.flowchartList[index] = { filename: chart.filename, title: chart.title };
+            flowcharts.push(`${index}. ${chart.title} (Interactive Flowchart)`);
+        });
+
         const subtopicInfo = Object.entries(subtopicInfoMap)
             .map(([box, description]) =>
                 `- ${box}: ${description}\n`
@@ -416,6 +460,7 @@ class AutoReplyAI {
 
         compiledSystemPrompt = compiledSystemPrompt
             .replace("{FAQs}", faqs.join("\n"))
+            .replace("{FLOWCHARTS}", flowcharts.join("\n"))
             .replace("{channelInfo}", getChannelInfo(discordMessage))
             .replace("{allSubtopicInfo}", subtopicInfo);
 
@@ -468,15 +513,32 @@ class AutoReplyAI {
         );
         console.log(`Stage1:\n`, responseJSON);
 
-        if (
-            isNaN(responseNumber) || responseNumber == 0 ||
-            isNaN(confidence) || confidence < this.stage1RequiredConfidence
-        ) return false;
+        if (isNaN(responseNumber) || responseNumber == 0) return false;
+        if (isNaN(confidence)) return false;
 
-        const { message, FAQTitle, subtopic } = await this.getFaqByNum(responseNumber, discordMessage);
-        if (!message) return false;
+        // Check if this is a flowchart
+        const isFlowchart = this.flowchartList[responseNumber] !== undefined;
+        
+        if (isFlowchart) {
+            // Flowcharts require confidence of 5
+            if (confidence < this.flowchartRequiredConfidence) {
+                return false;
+            }
+            // Return flowchart info
+            return { 
+                isFlowchart: true, 
+                flowchartFilename: this.flowchartList[responseNumber].filename,
+                flowchartTitle: this.flowchartList[responseNumber].title
+            };
+        } else {
+            // Regular FAQ - use normal confidence threshold
+            if (confidence < this.stage1RequiredConfidence) return false;
 
-        return { FAQ: message, FAQTitle, subtopic };
+            const { message, FAQTitle, subtopic } = await this.getFaqByNum(responseNumber, discordMessage);
+            if (!message) return false;
+
+            return { isFlowchart: false, FAQ: message, FAQTitle, subtopic };
+        }
     }
 
     // Stage 2:
