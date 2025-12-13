@@ -30,14 +30,16 @@ const subtopicInfoMap = require("../assets/subtopicInfoMap.json");
 
 // Zod schemas for structured outputs
 const stage1ResponseSchema = z.object({
-    chosen_response: z.number().describe('The index number of the chosen FAQ from the list'),
-    confidence: z.number().describe('Confidence level from 1-5, where 5 is most confident')
+    thoughts: z.string().describe('Think about which response is the best, or if there is even a best response.'),
+    chosen_response: z.number().describe('After thinking, write down your final answer.'),
+    confidence: z.number().describe('How confident you are that your answer is relevant, from 1 (somewhat confident) to 5 (very confident).')
 });
 
 const stage2ResponseSchema = z.object({
-    reliably_confidence: z.number().describe('Rating 1-5 on whether the correct FAQ was selected'),
-    tailored_response: z.string().describe('The tailored response to the user'),
-    confidence: z.number().describe('Confidence level 1-5 that the response is correct')
+    thoughts: z.string().describe('Think about whether the given question can be reliably answered with the provided information.'),
+    reliably_confidence: z.number().describe('How confident you are that FAQ answers the question, from 1 (somewhat confident) to 5 (very confident).'),
+    tailored_response: z.string().describe('Your answer that the user will see.'),
+    confidence: z.number().describe('How confident you are that your answer is relevant and correct, from 1 (somewhat confident) to 5 (very confident).')
 });
 
 const forumAutoTaggerSchema = z.object({
