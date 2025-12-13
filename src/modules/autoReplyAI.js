@@ -7,10 +7,14 @@ const path = require('path');
 const { spawn } = require('child_process');
 const NodeCache = require("node-cache");
 const simpleGit = require('simple-git');
-const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { ConfigDB, StoredMessages } = require('../modules/database');
-const { ChannelType, PermissionsBitField } = require("discord.js")
+const { ChannelType, PermissionsBitField } = require("discord.js");
 const { isHelpRequest, getHelpMessageBySubjectTitle } = require('../modules/utils');
+
+// AI SDK imports
+const { groq } = require('@ai-sdk/groq');
+const { generateObject, generateText } = require('ai');
+const { z } = require('zod');
 
 const git = simpleGit();
 
@@ -19,20 +23,33 @@ const stage1SystemPrompt = fs.readFileSync(path.join(__dirname, '../assets/stage
 const stage2SystemPrompt = fs.readFileSync(path.join(__dirname, '../assets/stage2SystemPrompt.txt'), 'utf-8');
 const forumTaggerPrompt = fs.readFileSync(path.join(__dirname, '../assets/forumTaggerPrompt.txt'), 'utf-8');
 
-const forumAutoTaggerSchema = require("../assets/forumAutoTaggerSchema")
-const stage1ResponseSchema = require("../assets/stage1ResponseSchema")
-const stage2ResponseSchema = require("../assets/stage2ResponseSchema")
-
 // Per-box information given to the AI.
-const subtopicInfoMap = require("../assets/subtopicInfoMap.json")
+const subtopicInfoMap = require("../assets/subtopicInfoMap.json");
+
+// Zod schemas for structured outputs
+const stage1ResponseSchema = z.object({
+    chosen_response: z.number().describe('The index number of the chosen FAQ from the list'),
+    confidence: z.number().describe('Confidence level from 1-5, where 5 is most confident')
+});
+
+const stage2ResponseSchema = z.object({
+    reliably_confidence: z.number().describe('Rating 1-5 on whether the correct FAQ was selected'),
+    tailored_response: z.string().describe('The tailored response to the user'),
+    confidence: z.number().describe('Confidence level 1-5 that the response is correct')
+});
+
+const forumAutoTaggerSchema = z.object({
+    thoughts: z.string().describe('Your reasoning about which tags to apply'),
+    tags: z.array(z.string()).describe('Array of tag names to apply')
+});
 
 
 // Utils 
 function getChannelInfo(discordMessage) {
     // Simple function to give the channel name to the AI to help it have more context about what is being asked
-    let channelName = `#${discordMessage.channel.name}`
+    let channelName = `#${discordMessage.channel.name}`;
     const parent = discordMessage.channel.parent;
-    if (parent) channelName = `${parent.name} > ${channelName}`
+    if (parent) channelName = `${parent.name} > ${channelName}`;
 
     return channelName;
 }
@@ -41,7 +58,7 @@ function getChannelInfo(discordMessage) {
 //#region PostProcessor
 
 /**
- * AI message post-processor that splits into ≦2000-char quoted chunks,
+ * AI message post-processor that splits into ≤2000-char quoted chunks,
  * preserving code blocks when possible.
  *
  * @param {string} text - The AI-generated text.
@@ -166,19 +183,19 @@ class AdvancedAIAgent {
         this.geminiPath = path.join(process.cwd(), "./node_modules/.bin/gemini");
         this.advancedAgentPath = "./GeminiAgent";
         this.AdvancedAIContext;
-        this.faqTitle = 
-            "Prompt Advanced Agent - "+
-            "This Agent knows little about specific Hack Pack issues, "+
-            "but it is very good at general factual engineering questions, research, and coding."+
-            "It has access to source code for all Hack Pack Boxes."+
-            "If the question only matches this or if it starts with !ai strongly consider using this module."
+        this.faqTitle =
+            "Prompt Advanced Agent - " +
+            "This Agent knows little about specific Hack Pack issues, " +
+            "but it is very good at general factual engineering questions, research, and coding." +
+            "It has access to source code for all Hack Pack Boxes." +
+            "If the question only matches this or if it starts with !ai strongly consider using this module.";
 
         // Build the GeminiAgent dir, but async so it doesn't impact start time
         this.loaded = false;
         this.loadPromise = new Promise(async (resolve, reject) => {
 
             // Load stuff
-            this.AdvancedAIContext = await fs.promises.readFile(path.join(__dirname, "../assets/AdvancedAIContext.txt"))
+            this.AdvancedAIContext = await fs.promises.readFile(path.join(__dirname, "../assets/AdvancedAIContext.txt"));
             this.AdvancedAIContext = this.AdvancedAIContext?.toString()?.trim() || false;
 
             // Setup Advanced Dir
@@ -187,10 +204,10 @@ class AdvancedAIAgent {
 
             // Clone Hack Pack code into this folder
             await git.clone(
-                'https://github.com/Reginald-Gillespie/HackPackCode.git', 
+                'https://github.com/Reginald-Gillespie/HackPackCode.git',
                 tempDir,
                 ['--depth=1']
-            )
+            );
 
             // Extract the "Code" folder
             await fse.move(
@@ -201,20 +218,20 @@ class AdvancedAIAgent {
 
             // Write config files
             await fs.promises.mkdir(
-                path.join(this.advancedAgentPath, ".gemini"), 
+                path.join(this.advancedAgentPath, ".gemini"),
                 { recursive: true }
             );
             await fs.promises.copyFile(
                 path.join(__dirname, "../assets/GeminiCLIConfig.jsonc"),
                 path.join(this.advancedAgentPath, ".gemini", "settings.json")
-            )
+            );
             await fs.promises.copyFile(
                 path.join(__dirname, "../assets/GeminiENV.env"),
                 path.join(this.advancedAgentPath, ".gemini", ".env")
-            )
+            );
 
             resolve();
-        })
+        });
 
     }
 
@@ -225,12 +242,12 @@ class AdvancedAIAgent {
 
         // Tack on some contextual information to the prompt
         if (this.AdvancedAIContext) {
-            message = 
-                "```\n" + 
+            message =
+                "```\n" +
                 this.AdvancedAIContext + "\n" +
                 "```\n" +
-                "\n"+
-                message
+                "\n" +
+                message;
         }
 
         return new Promise((resolve, reject) => {
@@ -245,8 +262,8 @@ class AdvancedAIAgent {
             child.on('error', reject);
             child.on('close', code => {
                 // Postprocess output
-                output = output.replaceAll("Data collection is disabled.", "")
-                output = output.trim()
+                output = output.replaceAll("Data collection is disabled.", "");
+                output = output.trim();
 
                 console.log("Advanced Agent response:\n", output);
 
@@ -261,10 +278,9 @@ class AutoReplyAI {
     constructor() {
         this.aiForceTrigger = "!ai ";
         this.aiNoCacheTrigger = "!nocache ";
-        this.model = "gemini-2.5-flash";
+        this.model = groq('openai/gpt-oss-120b');
 
         this.autoAICache = new NodeCache({ stdTTL: 3600, checkperiod: 600 }); // Used to only check posted questions that are "out of the blue" not in a long convo
-        this.genAI = new GoogleGenerativeAI(process.env.GeminiKey);
         this.generalAgent = new AdvancedAIAgent();
 
         this.helpMessageList = [];
@@ -278,7 +294,7 @@ class AutoReplyAI {
      * Entrypoint 
      * @param {import('discord.js').Message} discordMessage 
      * */
-    async messageHandler(discordMessage, trusted=false) {
+    async messageHandler(discordMessage, trusted = false) {
         // Trusted users are more likely to trigger higher power AI, for example.
         if (!discordMessage.channel.isSendable()) return;
 
@@ -290,11 +306,11 @@ class AutoReplyAI {
             // Fetch replied to message if it wasn't already fetched
             let repliedMessage = discordMessage.referenceData; // just where I want to store it
             if (!repliedMessage && discordMessage.reference) {
-                repliedMessage = discordMessage.referenceData = await discordMessage.channel.messages.fetch(discordMessage.reference.messageId)
+                repliedMessage = discordMessage.referenceData = await discordMessage.channel.messages.fetch(discordMessage.reference.messageId);
             }
 
             const config = await ConfigDB.findOne({});
-        
+
             let preliminaryTrigger = (
                 !repliedMessage && // Don't run if it was a reply to smth
                 (
@@ -313,79 +329,78 @@ class AutoReplyAI {
                         messageHasForceTrigger
                     )
                 )
-            )
+            );
 
             if (preliminaryTrigger) {
-                console.log("Running AutoAI")
+                console.log("Running AutoAI");
 
                 // Don't reply to this user in this channel after triggering for an hour
                 if (messageHasForceTrigger) {
-                    this.autoAICache.del(aiDontRepeatCacheKey)
-                    if (!trusted) discordMessage.content = discordMessage.content.substring(this.aiForceTrigger.length)
+                    this.autoAICache.del(aiDontRepeatCacheKey);
+                    if (!trusted) discordMessage.content = discordMessage.content.substring(this.aiForceTrigger.length);
                 }
                 else {
-                    this.autoAICache.set(aiDontRepeatCacheKey, true)
+                    this.autoAICache.set(aiDontRepeatCacheKey, true);
                 }
 
                 // Ignore the cache spam prevention for dev testing
                 if (messageHasNoCacheTrigger) {
-                    discordMessage.content = discordMessage.content.substring(this.aiNoCacheTrigger.length)
+                    discordMessage.content = discordMessage.content.substring(this.aiNoCacheTrigger.length);
                 }
-                
-                console.log(`=`.repeat(50)+`\n`)
+
+                console.log(`=`.repeat(50) + `\n`);
 
                 // Run through stage1 AI
-                console.log(`Passing into stage1`)
+                console.log(`Passing into stage1`);
                 const stage1Out = await this.stage1AIHandler(discordMessage);
                 if (!stage1Out) return false;
 
                 // Pass through stage2
 
-                console.log(`Passing into stage2`)
-                const stage2Out = await this.stage2AIHandler(discordMessage, stage1Out)
+                console.log(`Passing into stage2`);
+                const stage2Out = await this.stage2AIHandler(discordMessage, stage1Out);
                 if (!stage2Out) return false;
 
                 // If we've come this far, we have a response the AI is confident in
                 // Reply
                 const messageChunks = formatAIResponse(stage2Out.tailored_response);
-                await discordMessage.reply({ 
+                await discordMessage.reply({
                     content: messageChunks[0],
                     allowedMentions: { users: [discordMessage.author.id] }
                 });
                 for (const chunk of messageChunks.slice(1)) {
-                    await discordMessage.channel.send({ 
-                        content: chunk, 
-                        allowedMentions: { parse: [] } 
+                    await discordMessage.channel.send({
+                        content: chunk,
+                        allowedMentions: { parse: [] }
                     });
                 }
 
-                console.log(`=`.repeat(50)+`\n`)
+                console.log(`=`.repeat(50) + `\n`);
             }
 
         } catch (error) {
-            console.log("AI error:", error)
+            console.log("AI error:", error);
             return false;
         }
     }
 
     // Stage 1:
     // Select relevant FAQ from list of titles and user message
-    async buildStage1Model(discordMessage) {
+    async buildStage1SystemPrompt(discordMessage) {
         let compiledSystemPrompt = stage1SystemPrompt;
         // Build FAQs into the prompt
         const faqs = [];
-        // const config = await ConfigDB.findOne({});
 
         // Build subtopics
         const allMessages = await StoredMessages.find({})
             .lean()
-            .sort({ category: 1 }) // Group categories for AI
+            .sort({ category: 1 }); // Group categories for AI
 
         // Insert an FAQ to allow free replies using the AdvancedAgent
         allMessages.push({
             title: this.generalAgent.faqTitle,
             category: "other"
-        })
+        });
 
         allMessages.forEach((faq, i) => {
             const index = i + 1;
@@ -394,24 +409,17 @@ class AutoReplyAI {
         });
 
         const subtopicInfo = Object.entries(subtopicInfoMap)
-            .map(([box, description]) => 
+            .map(([box, description]) =>
                 `- ${box}: ${description}\n`
             )
-            .join("")
+            .join("");
 
         compiledSystemPrompt = compiledSystemPrompt
             .replace("{FAQs}", faqs.join("\n"))
             .replace("{channelInfo}", getChannelInfo(discordMessage))
-            .replace("{allSubtopicInfo}", subtopicInfo)
+            .replace("{allSubtopicInfo}", subtopicInfo);
 
-        return this.genAI.getGenerativeModel({
-            model: this.model,
-            systemInstruction: compiledSystemPrompt,
-            generationConfig: {
-                responseMimeType: "application/json",
-                responseSchema: stage1ResponseSchema,
-            }
-        });
+        return compiledSystemPrompt;
     }
 
     async getFaqByNum(num, discordMessage) {
@@ -420,10 +428,10 @@ class AutoReplyAI {
 
         if (discordMessage && selectedHelpMessageTitle.title == this.generalAgent.faqTitle) {
             // Advanced AI was called, prompt it instead
-            const message = await this.generalAgent.prompt(discordMessage)
+            const message = await this.generalAgent.prompt(discordMessage);
             return {
-                message: message, 
-                FAQTitle: selectedHelpMessageTitle.title, 
+                message: message,
+                FAQTitle: selectedHelpMessageTitle.title,
                 subtopic: selectedHelpMessageTitle.subtopic
             };
         }
@@ -431,19 +439,26 @@ class AutoReplyAI {
         const helpMessage = await getHelpMessageBySubjectTitle(selectedHelpMessageTitle.subtopic, selectedHelpMessageTitle.title);
         if (!helpMessage) return false;
 
-        return { 
-            message: helpMessage, 
-            FAQTitle: selectedHelpMessageTitle.title, 
+        return {
+            message: helpMessage,
+            FAQTitle: selectedHelpMessageTitle.title,
             subtopic: selectedHelpMessageTitle.subtopic
         };
     }
 
     async stage1AIHandler(discordMessage) {
-        const geminiSession = (await this.buildStage1Model(discordMessage)).startChat();
-        const result = await geminiSession.sendMessage(discordMessage.content);
+        const systemPrompt = await this.buildStage1SystemPrompt(discordMessage);
 
-        const responseText = result.response.text()
-        const responseJSON = JSON.parse(responseText);
+        const result = await generateObject({
+            model: this.model,
+            system: systemPrompt,
+            prompt: discordMessage.content,
+            schema: stage1ResponseSchema,
+            schemaName: 'faq_selection',
+            schemaDescription: 'Select the most relevant FAQ based on the user question'
+        });
+
+        const responseJSON = result.object;
         const responseNumber = +responseJSON.chosen_response;
         const confidence = +responseJSON.confidence;
 
@@ -460,37 +475,37 @@ class AutoReplyAI {
 
         const { message, FAQTitle, subtopic } = await this.getFaqByNum(responseNumber, discordMessage);
         if (!message) return false;
-        
+
         return { FAQ: message, FAQTitle, subtopic };
     }
 
     // Stage 2:
     // This stage tailors the response specifically to this user's case with this FAQ. 
     // It takes in the selected FAQ and category, builds a prompt with additional details of relevant boxes
-    async fetchRecentMessages(discordMessage, limit=50) {
+    async fetchRecentMessages(discordMessage, limit = 50) {
         const thirtyMinutesAgo = Date.now() - 30 * 60 * 1000;
-    
-        const fetchedMessages = await discordMessage.channel.messages.fetch({ 
-            limit, 
-            before: discordMessage.id 
+
+        const fetchedMessages = await discordMessage.channel.messages.fetch({
+            limit,
+            before: discordMessage.id
         });
-    
+
         const recentMessages = fetchedMessages.filter(msg => msg.createdTimestamp >= thirtyMinutesAgo);
-    
-        const inlineFormattedMessages = recentMessages.map(msg => 
+
+        const inlineFormattedMessages = recentMessages.map(msg =>
             `[${msg.createdAt.toLocaleTimeString()}] ${msg.author.username}: ${msg.content}`
         ).join("\n");
-    
-        return {messageText: inlineFormattedMessages, numMessages: recentMessages.size };
+
+        return { messageText: inlineFormattedMessages, numMessages: recentMessages.size };
     }
-    
+
     async stage2AIHandler(discordMessage, { FAQ, FAQTitle, subtopic }) {
         let compiledSystemPrompt = stage2SystemPrompt;
 
-        const { messageText, numMessages } = await this.fetchRecentMessages(discordMessage, this.stage2MessageCount)
-        const subtopicInfo = subtopicInfoMap[subtopic]
+        const { messageText, numMessages } = await this.fetchRecentMessages(discordMessage, this.stage2MessageCount);
+        const subtopicInfo = subtopicInfoMap[subtopic];
 
-        //// Generate prompt and create model
+        //// Generate prompt
         compiledSystemPrompt = compiledSystemPrompt
             .replace("{messages}", messageText)
             .replace("{numMessages}", numMessages)
@@ -499,23 +514,19 @@ class AutoReplyAI {
             .replace("{FAQTitle}", FAQTitle)
             .replace("{subtopic}", subtopic || "<none provided")
             .replace("{subtopicInfo}", subtopicInfo || "<none provided")
-            .replace("{channelInfo}", getChannelInfo(discordMessage))
-
-        const model = this.genAI.getGenerativeModel({
-            model: this.model,
-            systemInstruction: compiledSystemPrompt,
-            generationConfig: {
-                responseMimeType: "application/json",
-                responseSchema: stage2ResponseSchema,
-            }
-        });
+            .replace("{channelInfo}", getChannelInfo(discordMessage));
 
         //// Call model with user question
-        const geminiSession = model.startChat();
-        const result = await geminiSession.sendMessage(discordMessage.content);
-        const responseText = result.response.text();
+        const result = await generateObject({
+            model: this.model,
+            system: compiledSystemPrompt,
+            prompt: discordMessage.content,
+            schema: stage2ResponseSchema,
+            schemaName: 'tailored_response',
+            schemaDescription: 'Generate a tailored response based on the FAQ and user context'
+        });
 
-        const responseJSON = JSON.parse(responseText);
+        const responseJSON = result.object;
         const FAQPrecision = +responseJSON.reliably_confidence; // Rating on whether we selected the correct FAQ
         const tailored_response = responseJSON.tailored_response;
         const confidence = +responseJSON.confidence; // How confident it is that it's response is correct
@@ -527,7 +538,7 @@ class AutoReplyAI {
 
         return { tailored_response };
     }
-    
+
 }
 
 
@@ -536,15 +547,14 @@ class AutoTaggerAI {
     constructor() {
         this.autoAICache = new NodeCache({ stdTTL: 3600, checkperiod: 600 }); // Used to only check posted questions that are "out of the blue" not in a long convo
         this.helpMessageList = [];
-        this.model = "gemini-2.0-flash";
-        this.genAI = new GoogleGenerativeAI(process.env.GeminiKey);
+        this.model = groq('openai/gpt-oss-120b');
     }
 
-    buildModel(tags) {
+    buildSystemPrompt(tags) {
         const extraInfo = Object.entries(subtopicInfoMap)
             .map(([box, content]) => `\n- ${box}: ${content}`)
             .join("");
-        
+
         const compiledSystemPrompt = forumTaggerPrompt
             .replace("{extraInfo}", extraInfo)
             .replace("{tags}", tags
@@ -552,14 +562,7 @@ class AutoTaggerAI {
                 .join("")
             );
 
-        return this.genAI.getGenerativeModel({
-            model: this.model,
-            systemInstruction: compiledSystemPrompt,
-            generationConfig: {
-                responseMimeType: "application/json",
-                responseSchema: forumAutoTaggerSchema,
-            }
-        });
+        return compiledSystemPrompt;
     }
 
     async messageHandler(message) {
@@ -578,21 +581,23 @@ class AutoTaggerAI {
 
                 const appliedTags = message.channel.appliedTags;
                 if (appliedTags.length == 0) {
-                    // If no tags were applied - time for gemini to apply them
+                    // If no tags were applied - time for AI to apply them
                     const availableTags = message.channel.parent.availableTags
                         .filter(tag => config.allowedTags.includes(tag.name));
 
                     // Feed through model
-                    const model = this.buildModel(availableTags);
-                    const geminiSession = model.startChat();
-                    const result = await geminiSession.sendMessage(
-                        `Title: ${starterMessage.channel.name}\n`+
-                        `---\n`+
-                        `${message.content}`
-                    );
-            
-                    const responseText = result.response.text();
-                    const responseJSON = JSON.parse(responseText);
+                    const systemPrompt = this.buildSystemPrompt(availableTags);
+
+                    const result = await generateObject({
+                        model: this.model,
+                        system: systemPrompt,
+                        prompt: `Title: ${starterMessage.channel.name}\n---\n${message.content}`,
+                        schema: forumAutoTaggerSchema,
+                        schemaName: 'forum_tags',
+                        schemaDescription: 'Select appropriate tags for this forum post'
+                    });
+
+                    const responseJSON = result.object;
                     const thoughts = responseJSON.thoughts;
                     const tagNames = responseJSON.tags;
 
@@ -610,7 +615,7 @@ class AutoTaggerAI {
                         message.channel.send({
                             content: `-# No tags were applied, so I added \`${tagsToApply.map(tag => tag.name).join("`, `")}\``,
                             allowedMentions: { parse: [] }
-                        })
+                        });
                     }
 
                 }
