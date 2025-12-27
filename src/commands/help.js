@@ -7,7 +7,8 @@ const stripJsonComments = require('strip-json-comments');
 const fs = require("fs");
 const { getChartOptions } = require('../modules/utils');
 
-const helpHistoryCache = new LRUCache({ ttl: ms("1h") })
+/** @type {LRUCache<string, any[]>} */
+const helpHistoryCache = new LRUCache({ ttl: ms("1h"), max: 200 })
 
 /**
  * Send an interactive flowchart to a user
@@ -87,7 +88,7 @@ async function sendFlowchartToUser({ chartFilename, chartTitle, user, guild, int
 }
 
 module.exports = {
-    helpHistoryCache,
+    helpHistoryCache: helpHistoryCache,
     sendFlowchartToUser,
     
     data: new SlashCommandBuilder().setName("help").setDescription("Walk a user through the a debugging flowcharts")

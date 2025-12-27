@@ -30,7 +30,7 @@ module.exports = {
                 await cmd.reply({ content: 'There was an error while executing this command!', ephemeral: true });
             }
         } else if (cmd.isButton()) {
-            try { 
+            try {
                 const currentButtons = cmd.message.components[0];
                 const thisButton = utils.findButtonOfId(cmd.message.components, cmd.customId)
                 const jsonButton = currentButtons.components[0];
@@ -38,6 +38,14 @@ module.exports = {
                 const context = JSON.parse(contextSTR)
                 const customId = cmd.customId.split("|")[0];
                 const interactionId = (cmd.message.embeds[1]?.footer || cmd.message.embeds[0]?.footer).text.split(" ")[1];
+
+                const history = helpHistoryCache.get(context.id);
+                if (!history) {
+                    return cmd.reply({ 
+                        content: "This flowchart seems old. Please start a new one with /help.", 
+                        ephemeral: true
+                    })
+                }
 
                 if (cmd.user.id !== context.id) {
                     return cmd.reply({ content: "This flowchart is not for you, you can run /help to start your own", ephemeral: true })
@@ -49,8 +57,7 @@ module.exports = {
                 let questionData, answersArray;
 
                 if (customId === "Back") {
-                    const history = helpHistoryCache.get(context.id);
-                    if (!history || !history.length > 1) return cmd.reply({ content: "There is no history to go back to. Please start a new command.", ephemeral: true })
+                    if (!history || !(history.length > 1)) return cmd.reply({ content: "There is no history to go back to. Please start a new command.", ephemeral: true })
                     if (history.slice(-1)[0][2] !== interactionId) return cmd.reply({ content: "There is no history to go back to. Please start a new command.", ephemeral: true })
 
                     history.pop();
@@ -59,7 +66,7 @@ module.exports = {
                 }
                 else {
                     [questionData, answersArray] = getQuestionAndAnswers(mermaidJSON, context.questionID, customId);
-                    helpHistoryCache.get(context.id).push([questionData, answersArray, interactionId])
+                    history.push([questionData, answersArray, interactionId])
                 }
 
                 const message = await cmd.message.fetch().catch(e=>null);

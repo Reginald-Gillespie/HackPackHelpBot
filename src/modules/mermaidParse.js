@@ -49,7 +49,7 @@ function getQuestionAndAnswers(chartJSON, currentQuestionID, currentAnswerID) {
         // If no question is provided, find the flowchart entrypoint
         const nextNode = questions[nextNodeId];
 
-        if (!nextNode) throw new Error("No entry node found");
+        if (!nextNode) throw new Error("Next node not found");
 
         // Format question and answer data as needed
         const questionData = {
@@ -57,7 +57,13 @@ function getQuestionAndAnswers(chartJSON, currentQuestionID, currentAnswerID) {
             question: nextNode?.question
         }
 
-        return [questionData, nextNode?.answers?.filter(answerObj => answerObj?.answer).map(answerObj => answerObj?.answer) ]
+        return [
+            questionData, 
+            nextNode?.answers
+                ?.filter(answerObj => answerObj?.answer)
+                .map(answerObj => answerObj?.answer)
+                || []
+        ]
         
     } catch {
         return [ {}, [] ]
