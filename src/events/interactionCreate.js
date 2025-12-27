@@ -30,6 +30,28 @@ module.exports = {
                 await cmd.reply({ content: 'There was an error while executing this command!', ephemeral: true });
             }
         } else if (cmd.isButton()) {
+            if (cmd.customId.startsWith("lookup_public|")) {
+                const cacheKey = cmd.customId.split("|")[1];
+                const lookupCache = cmd.client.lookupPublicCache;
+
+                if (!lookupCache?.has(cacheKey)) {
+                    return cmd.reply({ content: "That lookup result has expired. Please run /lookup again.", ephemeral: true });
+                }
+
+                const cached = lookupCache.get(cacheKey);
+
+                if (cmd.user.id !== cached.userId) {
+                    return cmd.reply({ content: "Only the person who ran that lookup can post it publicly.", ephemeral: true });
+                }
+
+                lookupCache.delete(cacheKey);
+
+                return cmd.reply({
+                    content: cached.content,
+                    allowedMentions: cached.allowedMentions || { parse: [] },
+                    ephemeral: false
+                });
+            }
             try {
                 const currentButtons = cmd.message.components[0];
                 const thisButton = utils.findButtonOfId(cmd.message.components, cmd.customId)
