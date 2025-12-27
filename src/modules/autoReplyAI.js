@@ -290,7 +290,7 @@ class AutoReplyAI {
         this.helpMessageList = [];
         this.flowchartList = [];  // Track flowcharts separately
         this.stage1RequiredConfidence = 3;  // How sure stage1 is that there is a matching FAQ (this will be rejudged by stage2 with extra context, so low is fine)
-        this.flowchartRequiredConfidence = 4;  // Flowcharts require maximum confidence
+        this.flowchartRequiredConfidence = 5;  // Flowcharts require maximum confidence
         this.stage2MessageCount = 8;        // How much context to pull in
         this.stage2PrecisionThreshold = 4;  // How related the FAQ that stage 1 gave was - arguably this is the most important number as it chooses how much the fixed FAQ will be used 
         this.stage2ConfidenceThreshold = 4; // How confident in the final answer stage2 must be.

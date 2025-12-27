@@ -21,7 +21,6 @@ Here is a list of each FAQ you can select from. These are specific answers to co
 {FAQs}
 
 ## Flowcharts (Interactive Debugging Guides)
-The following flowcharts trigger interactive debugging guides that will walk users through troubleshooting step-by-step
-**IMPORTANT**: Only use flowcharts when the user's question is very general (like "my X won't work") AND there is NOT a more specific FAQ that answers their question.
+The following flowcharts trigger interactive debugging guides that will walk users through troubleshooting step-by-step from the beginning. They are good to use when the user is saying something like general and non-descriptive like "My X won't work", and no other FAQ matches it.
 If a specific FAQ directly addresses the user's issue, prefer the FAQ over the flowchart.
 {FLOWCHARTS}
