@@ -208,7 +208,7 @@ class AdvancedAIAgent {
 
             // Clone Hack Pack code into this folder
             await git.clone(
-                'https://github.com/Reginald-Gillespie/HackPackCode.git',
+                'https://github.com/HackPackOfficial/HackPack-Code.git',
                 tempDir,
                 ['--depth=1']
             );
