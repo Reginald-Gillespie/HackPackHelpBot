@@ -215,7 +215,7 @@ class AdvancedAIAgent {
 
             // Extract the "Code" folder
             await fse.move(
-                path.join(tempDir, "Code"),
+                path.join(tempDir),
                 path.join(this.advancedAgentPath),
                 { overwrite: true }
             );
@@ -261,17 +261,31 @@ class AdvancedAIAgent {
             child.stdin.end();
 
             let output = '';
+            let stderr = '';
             child.stdout.on('data', chunk => output += chunk.toString());
-            child.stderr.on('data', err => reject(new Error(err.toString())));
+            child.stderr.on('data', chunk => stderr += chunk.toString());
             child.on('error', reject);
             child.on('close', code => {
                 // Postprocess output
                 output = output.replaceAll("Data collection is disabled.", "");
                 output = output.trim();
 
+                // Gemini CLI may emit warnings on stderr even when response generation succeeds.
+                const cleanedStderr = stderr
+                    .replaceAll("Data collection is disabled.", "")
+                    .trim();
+
                 console.log("Advanced Agent response:\n", output);
 
-                code === 0 ? resolve(output.trim()) : reject(new Error(`Exited with code ${code}`));
+                if (cleanedStderr) {
+                    console.warn("Advanced Agent stderr:\n", cleanedStderr);
+                }
+
+                if (code === 0) {
+                    return resolve(output.trim());
+                }
+
+                reject(new Error(`Exited with code ${code}${cleanedStderr ? `\n${cleanedStderr}` : ''}`));
             });
         });
     }
